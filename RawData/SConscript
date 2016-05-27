@@ -1,0 +1,6 @@
+p1 = Program(source = ['ConvertGraph.cpp'], LIBS = ['numa', 'boost_iostreams'])
+
+Alias('ConvertGraph', p1)
+
+Return('p1')
+

@@ -1,0 +1,8 @@
+# Build tree.
+/Build/
+
+# Various config files.
+/.cproject
+/.project
+/.sconsign*
+
