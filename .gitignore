@@ -2,7 +2,8 @@
 /Build/
 
 # Various config files.
+/.settings/
 /.cproject
 /.project
+/.pydevproject
 /.sconsign*
-
