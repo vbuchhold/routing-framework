@@ -9,13 +9,14 @@ def parseCommandLine():
   # The countries contained in the standard DIMACS Europe instance.
   DEFAULT_COUNTRIES = [
     'aut', 'bel', 'che', 'deu', 'dnk', 'esp', 'fra',
-    'gbr', 'ita', 'lux', 'nld', 'nor', 'prt', 'swe']
+    'gbr', 'ita', 'lux', 'nld', 'nor', 'prt', 'swe', 'ferries']
 
   # Parse the command line.
   ap = argparse.ArgumentParser(
     description='Merges the XATF files of the specified countries into a single XATF instance. '
     'When no countries are specified, outputs the standard DIMACS Europe instance.')
   ap.add_argument('-m', '--merge', action='store_true', help='merge coinciding vertices')
+  ap.add_argument('-r', '--remove', action='store_true', help='remove self-loops')
   ap.add_argument('-I', '--input-directory', default='.',
                   help='XATF directory containing one subdirectory per country', metavar='DIR')
   ap.add_argument('-O', '--output-directory',
@@ -48,27 +49,29 @@ def main():
   # Read the vertex records and discard unwanted ones.
   vertexRecords = []
   for country in sorted(args.country):
-    print('Reading', country + '.nfx...', end='', flush=True)
-    with open(os.path.join(args.input_directory, country, country + '.nfx'), 'r') as infile:
-      for record in csv.reader(infile):
-        # Eliminate duplicate vertex IDs.
-        vertexId = record[VERTEX_ID]
-        if vertexId in idsSeen:
-          continue
-        idsSeen.add(vertexId)
+    filename = os.path.join(args.input_directory, country, country + '.nfx')
+    if os.path.exists(filename):
+      print('Reading', country + '.nfx...', end='', flush=True)
+      with open(filename, 'r') as infile:
+        for record in csv.reader(infile):
+          # Eliminate duplicate vertex IDs.
+          vertexId = record[VERTEX_ID]
+          if vertexId in idsSeen:
+            continue
+          idsSeen.add(vertexId)
 
-        # Merge coinciding vertices.
-        latLng = int(record[LATITUDE]), int(record[LONGITUDE])
-        if args.merge and latLng in latLngsSeen:
-          changedIds[vertexId] = latLngsSeen[latLng]
-          continue
-        else:
-          latLngsSeen[latLng] = vertexId
-        vertexRecords.append(record)
-    print(' done.')
+          # Merge coinciding vertices.
+          latLng = int(record[LATITUDE]), int(record[LONGITUDE])
+          if args.merge and latLng in latLngsSeen:
+            changedIds[vertexId] = latLngsSeen[latLng]
+            continue
+          else:
+            latLngsSeen[latLng] = vertexId
+          vertexRecords.append(record)
+      print(' done.')
 
   # Free up some variables that possibly occupy much storage.
-  del idsSeen, latLngsSeen
+  del latLngsSeen
   vertexRecords.sort(key=lambda record: int(record[VERTEX_ID]))
 
   if not args.output is None:
@@ -90,9 +93,11 @@ def main():
     print('Reading', country + '.sfx...', end='', flush=True)
     with open(os.path.join(args.input_directory, country, country + '.sfx'), 'r') as infile:
       for record in csv.reader(infile):
-        record[EDGE_TAIL] = changedIds.get(record[EDGE_TAIL], record[EDGE_TAIL])
-        record[EDGE_HEAD] = changedIds.get(record[EDGE_HEAD], record[EDGE_HEAD])
-        edgeRecords.append(record)
+        if record[EDGE_TAIL] in idsSeen and record[EDGE_HEAD] in idsSeen:
+          record[EDGE_TAIL] = changedIds.get(record[EDGE_TAIL], record[EDGE_TAIL])
+          record[EDGE_HEAD] = changedIds.get(record[EDGE_HEAD], record[EDGE_HEAD])
+          if not args.remove or record[EDGE_TAIL] != record[EDGE_HEAD]:
+            edgeRecords.append(record)
     print(' done.')
   edgeRecords.sort(key=lambda record: int(record[EDGE_ID]))
 
