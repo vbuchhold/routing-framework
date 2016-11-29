@@ -357,8 +357,38 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // given bitmask. The bitmask must contain one bit per vertex, which should be set iff the vertex
   // belongs to the subgraph.
   void extractVertexInducedSubgraph(const boost::dynamic_bitset<> bitmask) {
-    GraphT temp = getVertexInducedSubgraph(bitmask);
-    *this = std::move(temp);
+    assert(bitmask.size() == numVertices());
+    int nextId = 0;
+    std::vector<int> origToNewIds(numVertices(), -1);
+    for (int v = bitmask.find_first(); v != boost::dynamic_bitset<>::npos; v = bitmask.find_next(v))
+      origToNewIds[v] = nextId++;
+
+    edgeCount = 0;
+    for (int i = 0, u = bitmask.find_first(); i != nextId; ++i, u = bitmask.find_next(u)) {
+      // Copy the current vertex belonging to the subgraph.
+      const int first = edgeCount; // The index of the first edge out of u.
+      RUN_FORALL(VertexAttributes::values[i] = VertexAttributes::values[u]);
+
+      // Copy the edges out of u going to vertices belonging to the subgraph.
+      for (int e = firstEdge(u); e != lastEdge(u); ++e) {
+        const int v = origToNewIds[edgeHeads[e]];
+        if (v != -1) {
+          edgeHeads[edgeCount] = v;
+          RUN_FORALL(EdgeAttributes::values[edgeCount] = EdgeAttributes::values[e]);
+          ++edgeCount;
+        }
+      }
+
+      outEdges[i].first() = first;
+      if (dynamic)
+        outEdges[i].last() = edgeCount;
+    }
+
+    outEdges.resize(nextId + !dynamic);
+    edgeHeads.resize(edgeCount);
+    RUN_FORALL(VertexAttributes::values.resize(nextId));
+    RUN_FORALL(EdgeAttributes::values.resize(edgeCount));
+    outEdges.back().last() = edgeCount;
   }
 
   // Returns the vertex-induced subgraph specified by the given bitmask. The bitmask must contain
@@ -371,30 +401,39 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     for (int v = bitmask.find_first(); v != boost::dynamic_bitset<>::npos; v = bitmask.find_next(v))
       origToNewIds[v] = nextId++;
 
+    // Count the edges in the subgraph.
+    int numEdges = 0;
+    for (int v = bitmask.find_first(); v != boost::dynamic_bitset<>::npos; v = bitmask.find_next(v))
+      for (int e = firstEdge(v); e != lastEdge(v); ++e)
+        numEdges += origToNewIds[edgeHeads[e]] != -1;
+
     GraphT subgraph;
     subgraph.outEdges.resize(nextId + !dynamic);
+    subgraph.edgeHeads.resize(numEdges);
     RUN_FORALL(subgraph.VertexAttributes::values.resize(nextId));
+    RUN_FORALL(subgraph.EdgeAttributes::values.resize(numEdges));
 
+    int& edgeCount = subgraph.edgeCount;
     for (int i = 0, u = bitmask.find_first(); i != nextId; ++i, u = bitmask.find_next(u)) {
       // Copy the current vertex belonging to the subgraph.
-      subgraph.outEdges[i].first() = subgraph.edgeHeads.size();
+      subgraph.outEdges[i].first() = edgeCount;
       RUN_FORALL(subgraph.VertexAttributes::values[i] = VertexAttributes::values[u]);
 
       // Copy the edges out of u going to vertices belonging to the subgraph.
       for (int e = firstEdge(u); e != lastEdge(u); ++e) {
         const int v = origToNewIds[edgeHeads[e]];
         if (v != -1) {
-          subgraph.edgeHeads.push_back(v);
-          RUN_FORALL(subgraph.EdgeAttributes::values.push_back(EdgeAttributes::values[e]));
+          subgraph.edgeHeads[edgeCount] = v;
+          RUN_FORALL(subgraph.EdgeAttributes::values[edgeCount] = EdgeAttributes::values[e]);
+          ++edgeCount;
         }
       }
 
       if (dynamic)
-        subgraph.outEdges[i].last() = subgraph.edgeHeads.size();
+        subgraph.outEdges[i].last() = edgeCount;
     }
 
-    subgraph.outEdges.back().last() = subgraph.edgeHeads.size();
-    subgraph.edgeCount = subgraph.edgeHeads.size();
+    subgraph.outEdges.back().last() = edgeCount;
     return subgraph;
   }
 
