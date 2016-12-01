@@ -222,13 +222,6 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // Inserts an edge from the last inserted vertex to v. Returns the ID of the inserted edge. Note
   // that v does not need to be already present in static graphs.
   int appendEdge(const std::enable_if_t<dynamic, int> v) {
-    assert(v >= 0);
-    assert(numVertices() > 0);
-    ++outEdges.back().last();
-    edgeHeads.push_back(v);
-    RUN_FORALL(EdgeAttributes::values.push_back(use(EdgeAttributes::DEFAULT_VALUE)));
-    ++edgeCount;
-    return numEdges() - 1;
     return insertEdge(numVertices() - 1, v);
   }
 

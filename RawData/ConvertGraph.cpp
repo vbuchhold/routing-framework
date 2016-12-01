@@ -15,13 +15,6 @@
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "Tools/CommandLineParser.h"
 
-#include "Algorithms/GraphTraversal/DfsNumbering.h"
-#include "DataStructures/Graph/Attributes/AbstractBitAttribute.h"
-#include "DataStructures/Graph/Attributes/RoutingCostAttribute.h"
-#include "DataStructures/Graph/Attributes/TrafficFlowAttribute.h"
-#include "Tools/ProgressBar.h"
-#include "Tools/Timer.h"
-
 // A graph data structure encompassing all vertex and edge attributes available for output.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
 using EdgeAttributes =
