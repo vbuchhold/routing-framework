@@ -26,6 +26,14 @@ enum class XatfRoadCategory {
 // An attribute associating an XATF road category with each edge of a graph.
 class XatfRoadCategoryAttribute : public AbstractAttribute<XatfRoadCategory> {
  public:
+  // A functor that returns the XATF road category of the specified edge in the specified graph.
+  // Used for telling algorithms on which attribute of a graph they should work.
+  template <typename GraphT>
+  struct GetXatfRoadCategory {
+    Type operator()(const GraphT& graph, const int e) const { return graph.xatfRoadCategory(e); }
+    Type& operator()(GraphT& graph, const int e) const { return graph.xatfRoadCategory(e); }
+  };
+
   static constexpr Type DEFAULT_VALUE = XatfRoadCategory::UNUSED; // The attribute's default value.
   static constexpr const char* NAME   = "xatf_road_category";     // The attribute's unique name.
 
@@ -35,9 +43,9 @@ class XatfRoadCategoryAttribute : public AbstractAttribute<XatfRoadCategory> {
     return values[e];
   }
 
-  // Sets the XATF road category of edge e to val.
-  void setXatfRoadCategory(const int e, const Type val) {
+  // Returns a reference to the XATF road category of edge e.
+  Type& xatfRoadCategory(const int e) {
     assert(e >= 0); assert(e < values.size());
-    values[e] = val;
+    return values[e];
   }
 };

@@ -3,10 +3,19 @@
 #include <cassert>
 
 #include "DataStructures/Graph/Attributes/AbstractAttribute.h"
+#include "Tools/Constants.h"
 
 // An attribute associating a travel time with each edge of a graph.
 class TravelTimeAttribute : public AbstractAttribute<int> {
  public:
+  // A functor that returns the travel time of the specified edge in the specified graph. Used for
+  // telling algorithms on which attribute of a graph they should work.
+  template <typename GraphT>
+  struct GetTravelTime {
+    Type operator()(const GraphT& graph, const int e) const { return graph.travelTime(e); }
+    Type& operator()(GraphT& graph, const int e) const { return graph.travelTime(e); }
+  };
+
   static constexpr Type DEFAULT_VALUE = INFTY;         // The attribute's default value.
   static constexpr const char* NAME   = "travel_time"; // The attribute's unique name.
 
@@ -19,10 +28,9 @@ class TravelTimeAttribute : public AbstractAttribute<int> {
     return values[e];
   }
 
-  // Sets the travel time of edge e to the specified value in 0.1 seconds.
-  void setTravelTime(const int e, const Type val) {
+  // Returns a reference to the travel time in 0.1 seconds of edge e.
+  Type& travelTime(const int e) {
     assert(e >= 0); assert(e < values.size());
-    assert(val >= 0);
-    values[e] = val;
+    return values[e];
   }
 };

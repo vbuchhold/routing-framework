@@ -3,10 +3,19 @@
 #include <cassert>
 
 #include "DataStructures/Graph/Attributes/AbstractAttribute.h"
+#include "Tools/Constants.h"
 
 // An attribute associating a physical length with each edge of a graph.
 class LengthAttribute : public AbstractAttribute<int> {
  public:
+  // A functor that returns the physical length of the specified edge in the specified graph. Used
+  // for telling algorithms on which attribute of a graph they should work.
+  template <typename GraphT>
+  struct GetLength {
+    Type operator()(const GraphT& graph, const int e) const { return graph.length(e); }
+    Type& operator()(GraphT& graph, const int e) const { return graph.length(e); }
+  };
+
   static constexpr Type DEFAULT_VALUE = INFTY;    // The attribute's default value.
   static constexpr const char* NAME   = "length"; // The attribute's unique name.
 
@@ -16,10 +25,9 @@ class LengthAttribute : public AbstractAttribute<int> {
     return values[e];
   }
 
-  // Sets the length of edge e to the specified value in meters.
-  void setLength(const int e, const Type val) {
+  // Returns a reference to the length in meters of edge e.
+  Type& length(const int e) {
     assert(e >= 0); assert(e < values.size());
-    assert(val >= 0);
-    values[e] = val;
+    return values[e];
   }
 };
