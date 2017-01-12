@@ -5,15 +5,13 @@
 #include <cassert>
 #include <type_traits>
 
-#include "DataStructures/Labels/ParentInfo.h"
-#include "Tools/Concurrent/NonAtomic.h"
-#include "Tools/Concurrent/RelaxedAtomic.h"
-#include "Tools/TemplateProgramming.h"
+#include <DataStructures/Labels/ParentInfo.h>
+#include <Tools/TemplateProgramming.h>
 
 // A set of consistent distance and parent labels for Dijkstra's algorithm. The template arguments
 // specify the number of shortest paths computed simultaneously and the kind of parent information
 // that should be collected.
-template <int numSources, ParentInfo parentInfo, bool par = false>
+template <int numSources, ParentInfo parentInfo>
 struct BasicLabelSet {
  public:
   static constexpr int K = numSources; // The number of simultaneous shortest-path computations.
@@ -63,34 +61,16 @@ struct BasicLabelSet {
   // tentative distance from a different simultaneous source.
   class DistanceLabel {
    public:
-    // A flag indicating whether this label is intended for use by parallel bidirectional Dijkstra.
-    static constexpr bool parallel = par;
-
-    // A single distance value in this packed label.
-    using DistanceValue = std::conditional_t<parallel, RelaxedAtomic<int>, NonAtomic<int>>;
-
     // Constructs an uninitialized distance label.
     DistanceLabel() = default;
 
-    // Copy-constructs a distance label.
-    DistanceLabel(const DistanceLabel& other) {
-      for (int i = 0; i < K; ++i)
-        values[i].store(other.values[i]);
-    }
-
     // Constructs a distance label with all k values set to val. Converting constructor.
     DistanceLabel(const int val) {
-      *this = val;
-    }
-
-    // Assigns val to all k distance labels.
-    DistanceLabel& operator=(const int val) {
       std::fill(values.begin(), values.end(), val);
-      return *this;
     }
 
     // Returns a reference to the i-th distance value in this label.
-    DistanceValue& operator[](const int i) {
+    int& operator[](const int i) {
       assert(i >= 0); assert(i < K);
       return values[i];
     }
@@ -115,18 +95,18 @@ struct BasicLabelSet {
     int getKey() const {
       int min = values[0];
       for (int i = 1; i < K; ++i)
-        min = std::min(min, values[i].load());
+        min = std::min(min, values[i]);
       return min;
     }
 
     // Take the packed minimum of this and the specified label.
     void min(const DistanceLabel& other) {
       for (int i = 0; i < K; ++i)
-        values[i] = std::min(values[i].load(), other.values[i].load());
+        values[i] = std::min(values[i], other.values[i]);
     }
 
    private:
-    std::array<DistanceValue, K> values; // The k distance values, one for each simultaneous source.
+    std::array<int, K> values; // The k distance values, one for each simultaneous source.
   };
 
  private:
