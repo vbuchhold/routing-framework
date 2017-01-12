@@ -14,20 +14,19 @@ class StampedDistanceLabelContainer {
  public:
   // Constructs a distance label container using timestamps.
   explicit StampedDistanceLabelContainer(const int numVertices)
-      : distanceLabels(numVertices, INFTY), timestamps(numVertices, 0), clock(0) {}
+      : distanceLabels(numVertices), timestamps(numVertices, 0), clock(0) {}
 
   // Initializes all distance labels to infinity.
   void init() {
     ++clock;
     if (UNLIKELY(clock < 0)) {
       // Clock overflow occurred. Extremely unlikely.
-      std::fill(distanceLabels.begin(), distanceLabels.end(), INFTY);
       std::fill(timestamps.begin(), timestamps.end(), 0);
-      clock = 0;
+      clock = 1;
     }
   }
 
-  // Returns the distance label of v.
+  // Returns a reference to the distance label of v.
   DistanceLabelT& operator[](const int v) {
     assert(v >= 0); assert(v < distanceLabels.size());
     if (timestamps[v] != clock) {

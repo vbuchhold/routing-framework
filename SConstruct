@@ -11,12 +11,17 @@ ccflags = (
   '-Wno-strict-overflow -Wno-sign-compare ')
 
 # Additional compiler options per build variant.
-debug = '-O0 -g'
-devel = '-O3'
-release = '-O3 -DNDEBUG'
+debug = '-O0 -g '
+devel = '-O3 '
+release = '-O3 -DNDEBUG '
 
-# Get build variant from the command line (defaults to 'Devel').
+# Additional compiler options per instruction set extension.
+sse = '-msse4'
+avx = '-mavx2'
+
+# Get options from the command line.
 variant = ARGUMENTS.get('variant', 'Devel')
+ext = ARGUMENTS.get('ext', 'sse')
 
 # Assemble ccflags according to the build variant.
 if variant == 'Debug':
@@ -28,6 +33,16 @@ elif variant == 'Release':
 else:
   print('Invalid value for option variant: ' + variant + '.')
   print("Valid values are: ('Debug', 'Devel', 'Release')")
+  Exit(1)
+
+# Assemble ccflags according to the instruction set extension.
+if ext == 'sse':
+  ccflags += sse
+elif ext == 'avx':
+  ccflags += avx
+else:
+  print('Invalid value for option ext: ' + ext + '.')
+  print("Valid values are: ('sse', 'avx')")
   Exit(1)
 
 # Forward macro definitions to the compiler.

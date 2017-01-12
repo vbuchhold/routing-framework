@@ -26,6 +26,7 @@ class Dijkstra {
   using Graph = GraphT;                                    // The graph type on which we operate.
   using LabelMask = typename LabelSetT::LabelMask;         // Marks subset of components in a label.
   using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
+  using ParentLabel = typename LabelSetT::ParentLabel;     // The parent label of a vertex.
 
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
@@ -158,8 +159,8 @@ class Dijkstra {
   template <bool cond = LabelSetT::KEEP_PARENT_EDGES>
   std::enable_if_t<!cond> setParentEdge(const int, const int, const LabelMask&) {}
 
-  using DistanceLabelContainer = DistanceLabelContainerT<typename LabelSetT::DistanceLabel>;
-  using ParentLabelContainer = std::vector<typename LabelSetT::ParentLabel>;
+  using DistanceLabelContainer = DistanceLabelContainerT<DistanceLabel>;
+  using ParentLabelContainer = std::vector<ParentLabel>;
 
   const Graph& graph;                    // The graph on which we compute shortest paths.
   DistanceLabelContainer distanceLabels; // The distance labels of the vertices.

@@ -13,7 +13,7 @@
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
-#include "Tools/CommandLineParser.h"
+#include "Tools/CommandLine/CommandLineParser.h"
 
 // A graph data structure encompassing all vertex and edge attributes available for output.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
