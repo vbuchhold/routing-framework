@@ -75,11 +75,11 @@ struct BasicLabelSet {
       return values[i];
     }
 
-    // Returns the packed sum of this label plus a scalar value.
-    DistanceLabel operator+(const int rhs) const {
+    // Returns the packed sum of this label plus rhs.
+    DistanceLabel operator+(const DistanceLabel& rhs) const {
       DistanceLabel sum;
       for (int i = 0; i < K; ++i)
-        sum[i] = values[i] + rhs;
+        sum[i] = values[i] + rhs.values[i];
       return sum;
     }
 
@@ -97,6 +97,14 @@ struct BasicLabelSet {
       for (int i = 1; i < K; ++i)
         min = std::min(min, values[i]);
       return min;
+    }
+
+    // Returns the horizontal maximum amongst the packed distance values in this label.
+    int horizontalMax() const {
+      int max = values[0];
+      for (int i = 1; i < K; ++i)
+        max = std::max(max, values[i]);
+      return max;
     }
 
     // Take the packed minimum of this and the specified label.
@@ -129,8 +137,9 @@ struct BasicLabelSet {
     std::array<int, K> edges; // The k parent edges, one for each simultaneous source.
   };
 
+ public:
   // A packed label for a vertex, storing k parent vertices and possibly k parent edges.
-  class ParentVertex : public std::conditional_t<KEEP_PARENT_EDGES, ParentEdge, EmptyClass> {
+  class ParentLabel : public std::conditional_t<KEEP_PARENT_EDGES, ParentEdge, EmptyClass> {
    public:
     // Returns the parent vertex on the shortest path from the i-th source.
     int vertex(const int i) const {
@@ -147,7 +156,4 @@ struct BasicLabelSet {
    private:
     std::array<int, K> vertices; // The k parent vertices, one for each simultaneous source.
   };
-
- public:
-  using ParentLabel = std::conditional_t<KEEP_PARENT_VERTICES, ParentVertex, EmptyClass>;
 };

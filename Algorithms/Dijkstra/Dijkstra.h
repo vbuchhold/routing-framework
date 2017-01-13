@@ -19,23 +19,26 @@ template <
     typename QueueT, template <typename> class GetWeightT>
 class Dijkstra {
   // Bidirectional Dijkstra is allowed to execute a Dijkstra search step by step.
-  template <typename DijkstraT>
+  template <typename DijkstraT, template <typename> class StoppingCriterionT>
   friend class BiDijkstra;
 
  private:
-  using Graph = GraphT;                                    // The graph type on which we operate.
-  using LabelMask = typename LabelSetT::LabelMask;         // Marks subset of components in a label.
-  using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
-  using ParentLabel = typename LabelSetT::ParentLabel;     // The parent label of a vertex.
+  using Graph = GraphT;       // The graph type on which we compute shortest paths.
+  using LabelSet = LabelSetT; // The distance and parent label type we use.
+  using Queue = QueueT;       // The priority queue type.
 
-  static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
+  using LabelMask = typename LabelSet::LabelMask;         // Marks subset of components in a label.
+  using DistanceLabel = typename LabelSet::DistanceLabel; // The distance label of a vertex.
+  using ParentLabel = typename LabelSet::ParentLabel;     // The parent label of a vertex.
+
+  static constexpr int K = LabelSet::K; // The number of simultaneous shortest-path computations.
 
  public:
   // Constructs a Dijkstra instance.
   Dijkstra(const Graph& graph)
       : graph(graph),
         distanceLabels(graph.numVertices()),
-        parent(LabelSetT::KEEP_PARENT_VERTICES ? graph.numVertices() : 0),
+        parent(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0),
         queue(graph.numVertices()) {}
 
   // Runs a Dijkstra search from s to t. If t is omitted, runs a one-to-all search from s.
@@ -70,8 +73,8 @@ class Dijkstra {
   }
 
   // Returns the vertices along the shortest path from the i-th source to t in reverse order.
-  template <bool cond = LabelSetT::KEEP_PARENT_VERTICES, typename = std::enable_if_t<cond>>
   std::vector<int> getReversePath(int t, const int i = 0) {
+    static_assert(LabelSet::KEEP_PARENT_VERTICES, "We currently do not keep parent vertices.");
     assert(distanceLabels[t][i] != INFTY);
     std::vector<int> path;
     while (parent[t].vertex(i) != INVALID_VERTEX) {
@@ -84,14 +87,14 @@ class Dijkstra {
   }
 
   // Returns the edges along the shortest path from the i-th source to t in reverse order.
-  template <bool cond = LabelSetT::KEEP_PARENT_EDGES, typename = std::enable_if_t<cond>>
   std::vector<int> getReverseEdgePath(int t, const int i = 0) {
+    static_assert(LabelSet::KEEP_PARENT_EDGES, "We currently do not keep parent edges.");
     assert(distanceLabels[t][i] != INFTY);
     std::vector<int> path;
     while (parent[t].vertex(i) != INVALID_VERTEX) {
       assert(graph.containsEdge(parent[t].vertex(i), t));
       assert(graph.edgeHead(parent[t].edge(i)) == t);
-      path.push_back(parent[t].edge(i));
+      path.push_back(graph.edgeId(parent[t].edge(i)));
       t = parent[t].vertex(i);
     }
     return path;
@@ -139,24 +142,24 @@ class Dijkstra {
 
   // Sets the parent vertex of v to u on all shortest paths specified by mask.
 
-  template <bool cond = LabelSetT::KEEP_PARENT_VERTICES>
+  template <bool cond = LabelSet::KEEP_PARENT_VERTICES>
   std::enable_if_t<cond> setParentVertex(const int v, const int u, const LabelMask& mask) {
     assert(v >= 0); assert(v < parent.size());
     parent[v].setVertex(u, mask);
   }
 
-  template <bool cond = LabelSetT::KEEP_PARENT_VERTICES>
+  template <bool cond = LabelSet::KEEP_PARENT_VERTICES>
   std::enable_if_t<!cond> setParentVertex(const int, const int, const LabelMask&) {}
 
   // Sets the parent edge of v to e on all shortest paths specified by mask.
 
-  template <bool cond = LabelSetT::KEEP_PARENT_EDGES>
+  template <bool cond = LabelSet::KEEP_PARENT_EDGES>
   std::enable_if_t<cond> setParentEdge(const int v, const int e, const LabelMask& mask) {
     assert(v >= 0); assert(v < parent.size());
     parent[v].setEdge(e, mask);
   }
 
-  template <bool cond = LabelSetT::KEEP_PARENT_EDGES>
+  template <bool cond = LabelSet::KEEP_PARENT_EDGES>
   std::enable_if_t<!cond> setParentEdge(const int, const int, const LabelMask&) {}
 
   using DistanceLabelContainer = DistanceLabelContainerT<DistanceLabel>;
@@ -165,7 +168,7 @@ class Dijkstra {
   const Graph& graph;                    // The graph on which we compute shortest paths.
   DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
   ParentLabelContainer parent;           // The parent information for each vertex.
-  QueueT queue;                          // The priority queue of unsettled vertices.
+  Queue queue;                           // The priority queue of unsettled vertices.
   GetWeightT<Graph> getWeight;           // A functor returning the edge weight used for routing.
 };
 

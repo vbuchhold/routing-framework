@@ -72,10 +72,6 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   template <typename, typename, bool>
   friend class Graph;
 
- private:
-  // The type of this template specialization.
-  using GraphT = Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dynamic>;
-
  public:
   // Constructs an empty graph.
   Graph() {
@@ -207,8 +203,8 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     RUN_FORALL(VertexAttributes::values.resize(size, use(VertexAttributes::DEFAULT_VALUE)));
   }
 
-  // Inserts an edge from the last inserted vertex to v. Returns the ID of the inserted edge. Note
-  // that v does not need to be already present in static graphs.
+  // Inserts an edge from the last inserted vertex to v. Returns the index of the inserted edge.
+  // Note that v does not need to be already present in static graphs.
   int appendEdge(const std::enable_if_t<!dynamic, int> v) {
     assert(v >= 0);
     assert(numVertices() > 0);
@@ -219,14 +215,14 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return numEdges() - 1;
   }
 
-  // Inserts an edge from the last inserted vertex to v. Returns the ID of the inserted edge. Note
-  // that v does not need to be already present in static graphs.
+  // Inserts an edge from the last inserted vertex to v. Returns the index of the inserted edge.
+  // Note that v does not need to be already present in static graphs.
   int appendEdge(const std::enable_if_t<dynamic, int> v) {
     return insertEdge(numVertices() - 1, v);
   }
 
   // Inserts an edge with the specified attributes from the last inserted vertex to v. Returns the
-  // ID of the inserted edge. Note that v does not need to be already present in static graphs.
+  // index of the inserted edge. Note that v does not need to be already present in static graphs.
   template <typename ...Attrs>
   int appendEdge(const int v, Attrs&& ...attrs) {
     const int idx = appendEdge(v);
@@ -234,14 +230,18 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return idx;
   }
 
-  // Inserts an edge from u to v. Returns the ID of the newly inserted edge. Note that this
+  // Inserts an edge from u to v. Returns the index of the newly inserted edge. Note that this
   // operation is not supported by static graphs.
-  std::enable_if_t<dynamic, int> insertEdge(const int /*u*/, const int /*v*/) { return 0; }
+  int insertEdge(const int /*u*/, const int /*v*/) {
+    static_assert(dynamic, "Graph::insertEdge is not supported by static graphs.");
+    return 0;
+  }
 
-  // Inserts an edge with the specified attributes from u to v. Returns the ID of the newly
+  // Inserts an edge with the specified attributes from u to v. Returns the index of the newly
   // inserted edge. Note that this operation is not supported by static graphs.
   template <typename ...Attrs>
-  std::enable_if_t<dynamic, int> insertEdge(const int u, const int v, Attrs&& ...attrs) {
+  int insertEdge(const int u, const int v, Attrs&& ...attrs) {
+    static_assert(dynamic, "Graph::insertEdge is not supported by static graphs.");
     const int idx = insertEdge(u, v);
     RUN_FORALL(EdgeAttributes::values[idx] = std::forward<Attrs>(attrs));
     return idx;
@@ -386,7 +386,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
   // Returns the vertex-induced subgraph specified by the given bitmask. The bitmask must contain
   // one bit per vertex, which should be set iff the corresponding vertex belongs to the subgraph.
-  GraphT getVertexInducedSubgraph(const boost::dynamic_bitset<>& bitmask) const {
+  Graph getVertexInducedSubgraph(const boost::dynamic_bitset<>& bitmask) const {
     // Assign new sequential IDs to the vertices in the subgraph.
     assert(bitmask.size() == numVertices());
     int nextId = 0;
@@ -400,7 +400,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
       for (int e = firstEdge(v); e != lastEdge(v); ++e)
         numEdges += origToNewIds[edgeHeads[e]] != -1;
 
-    GraphT subgraph;
+    Graph subgraph;
     subgraph.outEdges.resize(nextId + !dynamic);
     subgraph.edgeHeads.resize(numEdges);
     RUN_FORALL(subgraph.VertexAttributes::values.resize(nextId));
@@ -428,6 +428,51 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
     subgraph.outEdges.back().last() = edgeCount;
     return subgraph;
+  }
+
+  // Reverses the graph.
+  void reverse() {
+    *this = getReverseGraph();
+  }
+
+  // Returns the reverse graph, in which every vertex stores its incoming edges.
+  Graph getReverseGraph() const {
+    Graph reverse;
+    reverse.outEdges.resize(outEdges.size());
+    reverse.edgeHeads.resize(numEdges());
+    reverse.edgeCount = numEdges();
+    RUN_FORALL(reverse.VertexAttributes::values = VertexAttributes::values);
+    RUN_FORALL(reverse.EdgeAttributes::values.resize(numEdges()));
+
+    // Obtain the indegree for each vertex v and store it in reverse.outEdges[v].first().
+    for (int e = 0; e < edgeHeads.size(); ++e)
+      if (isValidEdge(e))
+        ++reverse.outEdges[edgeHeads[e]].first();
+
+    // Before the loop, reverse.outEdges[v].first() stores the indegree of v. After the loop,
+    // reverse.outEdges[v].first() stores the index of the first edge into v.
+    int first = 0; // The index of the first edge into the current/next vertex.
+    std::swap(reverse.outEdges[0].first(), first);
+    for (int v = 1; v != numVertices(); ++v) {
+      std::swap(reverse.outEdges[v].first(), first);
+      reverse.outEdges[v - dynamic].last() = reverse.outEdges[v].first();
+      first += reverse.outEdges[v].first();
+    }
+    reverse.outEdges.back().last() = numEdges();
+
+    // Copy each edge and its attributes to the correct position in the reverse graph.
+    for (int u = 0; u != numVertices(); ++u)
+      for (int e = firstEdge(u); e != lastEdge(u); ++e) {
+        const int idx = reverse.outEdges[edgeHeads[e]].first()++;
+        reverse.edgeHeads[idx] = u;
+        RUN_FORALL(reverse.EdgeAttributes::values[idx] = EdgeAttributes::values[e]);
+      }
+
+    // Restore the correct values in the vertex array.
+    for (int v = numVertices() - 1; v != 0; --v)
+      reverse.outEdges[v].first() = reverse.outEdges[v - 1].first();
+    reverse.outEdges[0].first() = 0;
+    return reverse;
   }
 
   // Reads a graph from disk. Different importers support different file formats.
