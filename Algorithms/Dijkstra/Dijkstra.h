@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <vector>
 
+#include <boost/align/aligned_allocator.hpp>
+
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
 #include "DataStructures/Queues/Heap.h"
@@ -163,7 +165,8 @@ class Dijkstra {
   std::enable_if_t<!cond> setParentEdge(const int, const int, const LabelMask&) {}
 
   using DistanceLabelContainer = DistanceLabelContainerT<DistanceLabel>;
-  using ParentLabelContainer = std::vector<ParentLabel>;
+  using ParentLabelContainer =
+      std::vector<ParentLabel, boost::alignment::aligned_allocator<ParentLabel>>;
 
   const Graph& graph;                    // The graph on which we compute shortest paths.
   DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
