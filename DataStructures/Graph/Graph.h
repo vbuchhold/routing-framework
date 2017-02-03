@@ -207,11 +207,10 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
   // Inserts an edge from the last inserted vertex to v. Returns the index of the inserted edge.
   // Note that v does not need to be already present in static graphs.
-  int appendEdge(const int v) {
-    if (dynamic)
-      return insertEdge(numVertices() - 1, v);
-    assert(v >= 0);
+  template <bool cond = dynamic>
+  std::enable_if_t<!cond, int> appendEdge(const int v) {
     assert(numVertices() > 0);
+    assert(v >= 0);
     ++outEdges.back().last();
     edgeHeads.push_back(v);
     RUN_FORALL(EdgeAttributes::values.push_back(use(EdgeAttributes::DEFAULT_VALUE)));
@@ -219,11 +218,18 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return numEdges() - 1;
   }
 
+  // Inserts an edge from the last inserted vertex to v. Returns the index of the inserted edge.
+  // Note that v does not need to be already present in static graphs.
+  template <bool cond = dynamic>
+  std::enable_if_t<cond, int> appendEdge(const int v) {
+    return insertEdge(numVertices() - 1, v);
+  }
+
   // Inserts an edge with the specified attributes from the last inserted vertex to v. Returns the
   // index of the inserted edge. Note that v does not need to be already present in static graphs.
   template <typename ...Attrs>
   int appendEdge(const int v, Attrs&& ...attrs) {
-    const int idx = appendEdge(v);
+    const int idx = appendEdge<dynamic>(v);
     RUN_FORALL(EdgeAttributes::values[idx] = std::forward<Attrs>(attrs));
     return idx;
   }
