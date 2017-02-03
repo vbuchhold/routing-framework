@@ -58,7 +58,10 @@ DefaultEnvironment(
   CCFLAGS = ccflags,
   CPPDEFINES = cppdefines,
   CPPPATH = '#',
-  ENV = {'PATH': os.environ['PATH']})
+  ENV = {
+    'CPATH': os.environ.get('CPATH'),
+    'LIBRARY_PATH': os.environ.get('LIBRARY_PATH'),
+    'PATH': os.environ.get('PATH')})
 
 # Execute subsidiary SConscript files.
 for dir in srcDirs:

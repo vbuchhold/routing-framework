@@ -40,6 +40,19 @@ struct SseLabelSet {
       isMarked[i / 4] = mm_insert_epi32(isMarked[i / 4], -1, i % 4);
     }
 
+    // Constructs a mask with all k components set to val. Converting constructor.
+    LabelMask(const bool val) {
+      for (int i = 0; i < K / 4; ++i)
+        isMarked[i] = _mm_set1_epi32(val * -1);
+    }
+
+    // Takes the logical AND of this and the specified mask.
+    LabelMask& operator&=(const LabelMask& rhs) {
+      for (int i = 0; i < K / 4; ++i)
+        isMarked[i] = _mm_and_si128(isMarked[i], rhs.isMarked[i]);
+      return *this;
+    }
+
     // Returns the i-th block of flags in this mask.
     __m128i operator[](const int i) const {
       assert(i >= 0); assert(i < K / 4);

@@ -11,6 +11,17 @@ $ sudo apt-get install scons
 $ sudo apt-get install python3
 $ sudo apt-get install libboost-all-dev
 $ sudo apt-get install libnuma-dev
+$ sudo apt-get install zlib1g-dev
+```
+
+Next, you need to clone, build and install the libraries in the `External` subdirectory. To do so,
+type the following commands at the top-level directory of the framework:
+
+```
+$ git submodule update --init
+$ cd External/RoutingKit
+$ make
+$ sudo cp -r include lib /usr/local
 ```
 
 ## Building

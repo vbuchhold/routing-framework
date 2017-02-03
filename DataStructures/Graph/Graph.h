@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <fstream>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -13,6 +14,7 @@
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "DataStructures/Utilities/Permutation.h"
+#include "Tools/BinaryIO.h"
 #include "Tools/TemplateProgramming.h"
 #include "Tools/Workarounds.h"
 
@@ -93,6 +95,11 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     importFrom(filename, im);
   }
 
+  // Constructs a graph from a binary file.
+  explicit Graph(std::ifstream& in) {
+    readFrom(in);
+  }
+
   // Converts an arbitrary source graph into in arbitrary destination graph. Attributes associated
   // with both the source and the destination graph are copied or, if possible, moved. Attributes
   // associated only with the destination graph are defaulted.
@@ -108,6 +115,12 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     edgeCount = src.edgeCount;
     RUN_FORALL(setAttribute<VertexAttributes>(std::forward<SourceT>(src), numVertices()));
     RUN_FORALL(setAttribute<EdgeAttributes>(std::forward<SourceT>(src), edgeHeads.size()));
+  }
+
+  // Returns true if this graph type has the specified attribute.
+  template <typename Attr>
+  static constexpr bool has() {
+    return std::is_base_of<Attr, Graph>::value;
   }
 
   // Returns a vector with the names of all attributes of the graph.
@@ -566,6 +579,49 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // Writes a graph to disk. Different exporters support different file formats.
   template <typename ExporterT = DefaultExporter>
   void exportTo(const std::string& /*filename*/, ExporterT /*ex*/ = ExporterT()) const {}
+
+  // Reads a graph from a binary file.
+  void readFrom(std::ifstream& in) {
+    int numVertices;
+    read(in, numVertices);
+    read(in, edgeCount);
+    assert(numVertices >= 0);
+    assert(edgeCount >= 0);
+
+    outEdges.resize(numVertices + !dynamic);
+    edgeHeads.resize(edgeCount);
+    RUN_FORALL(VertexAttributes::values.resize(numVertices));
+    RUN_FORALL(EdgeAttributes::values.resize(edgeCount));
+
+    // Read the out-edge ranges.
+    outEdges[0].first() = 0;
+    for (int v = 1; v < numVertices; ++v) {
+      read(in, outEdges[v].first());
+      outEdges[v - dynamic].last() = outEdges[v].first();
+    }
+    outEdges.back().last() = edgeCount;
+
+    // Read the vertex and edge attributes.
+    read(in, edgeHeads);
+    RUN_FORALL(read(in, VertexAttributes::values));
+    RUN_FORALL(read(in, EdgeAttributes::values));
+    assert(validate());
+  }
+
+  // Writes a graph to a binary file.
+  // CAUTION: THE GRAPH HAS TO BE DEFRAGMENTED.
+  void writeTo(std::ofstream& out) const {
+    assert(validate()); assert(isDefrag());
+    write(out, numVertices());
+    write(out, edgeCount);
+
+    for (int v = 1; v < numVertices(); ++v)
+      write(out, outEdges[v].first());
+
+    write(out, edgeHeads);
+    RUN_FORALL(write(out, VertexAttributes::values));
+    RUN_FORALL(write(out, EdgeAttributes::values));
+  }
 
   // Checks if the graph is consistent.
   bool validate() const {

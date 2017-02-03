@@ -54,9 +54,11 @@ class BiDijkstra {
 
  public:
   // Constructs a bidirectional search instance.
-  BiDijkstra(const Graph& graph, const Graph& reverseGraph)
-      : forwardSearch(graph),
-        reverseSearch(reverseGraph),
+  BiDijkstra(const Graph& graph, const Graph& reverseGraph,
+             const typename DijkstraT::PruningCriterion& pruneForwardSearch = {},
+             const typename DijkstraT::PruningCriterion& pruneReverseSearch = {})
+      : forwardSearch(graph, pruneForwardSearch),
+        reverseSearch(reverseGraph, pruneReverseSearch),
         stoppingCriterion(forwardSearch.queue, reverseSearch.queue, maxTentativeDistance) {}
 
   // Run a bidirectional search from s to t.

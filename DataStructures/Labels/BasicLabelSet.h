@@ -35,6 +35,18 @@ struct BasicLabelSet {
       isMarked[i] = true;
     }
 
+    // Constructs a mask with all k components set to val. Converting constructor.
+    LabelMask(const bool val) {
+      std::fill(isMarked.begin(), isMarked.end(), val);
+    }
+
+    // Takes the logical AND of this and the specified mask.
+    LabelMask& operator&=(const LabelMask& rhs) {
+      for (int i = 0; i < K; ++i)
+        isMarked[i] &= rhs.isMarked[i];
+      return *this;
+    }
+
     // Returns the i-th block of flags in this mask.
     bool operator[](const int i) const {
       assert(i >= 0); assert(i < K);

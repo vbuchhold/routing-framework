@@ -12,22 +12,37 @@
 #include "DataStructures/Queues/Heap.h"
 #include "Tools/Constants.h"
 
+namespace impl {
+
+// A dummy pruning criterion for Dijkstra's algorithm that does no pruning at all.
+struct NoPruningCriterion {
+  // Returns always false.
+  template <typename DistanceLabelT, typename DistanceLabelContainerT>
+  bool operator()(const int, const DistanceLabelT&, DistanceLabelContainerT&) const {
+    return false;
+  }
+};
+
+}
+
 // Implementation of Dijkstra's shortest-path algorithm. Depending on the used label set, it keeps
 // track of parent vertices and/or edges, and computes multiple shortest paths simultaneously,
 // possibly using SSE or AVX instructions. The algorithm can be used with different distance label
 // containers and priority queues.
 template <
     typename GraphT, template <typename> class DistanceLabelContainerT, typename LabelSetT,
-    typename QueueT, template <typename> class GetWeightT>
+    typename QueueT, template <typename> class GetWeightT,
+    typename PruningCriterionT = impl::NoPruningCriterion>
 class Dijkstra {
   // Bidirectional Dijkstra is allowed to execute a Dijkstra search step by step.
   template <typename DijkstraT, template <typename> class StoppingCriterionT>
   friend class BiDijkstra;
 
  private:
-  using Graph = GraphT;       // The graph type on which we compute shortest paths.
-  using LabelSet = LabelSetT; // The distance and parent label type we use.
-  using Queue = QueueT;       // The priority queue type.
+  using Graph    = GraphT;                    // The graph type on which we compute shortest paths.
+  using LabelSet = LabelSetT;                 // The distance and parent label type we use.
+  using Queue    = QueueT;                    // The priority queue type.
+  using PruningCriterion = PruningCriterionT; // The criterion applied to prune the search.
 
   using LabelMask = typename LabelSet::LabelMask;         // Marks subset of components in a label.
   using DistanceLabel = typename LabelSet::DistanceLabel; // The distance label of a vertex.
@@ -37,11 +52,12 @@ class Dijkstra {
 
  public:
   // Constructs a Dijkstra instance.
-  Dijkstra(const Graph& graph)
+  Dijkstra(const Graph& graph, const PruningCriterionT& pruneSearch = {})
       : graph(graph),
         distanceLabels(graph.numVertices()),
         parent(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0),
-        queue(graph.numVertices()) {}
+        queue(graph.numVertices()),
+        pruneSearch(pruneSearch) {}
 
   // Runs a Dijkstra search from s to t. If t is omitted, runs a one-to-all search from s.
   void run(const int s, const int t = INVALID_VERTEX) {
@@ -123,6 +139,10 @@ class Dijkstra {
     queue.deleteMin(u, key);
     const DistanceLabel& distToU = distanceLabels[u];
 
+    // Check if the search can be pruned at u.
+    if (pruneSearch(u, distToU, distanceLabels))
+      return u;
+
     // Relax all edges out of u.
     FORALL_INCIDENT_EDGES(graph, u, e) {
       const int v = graph.edgeHead(e);
@@ -173,6 +193,7 @@ class Dijkstra {
   ParentLabelContainer parent;           // The parent information for each vertex.
   Queue queue;                           // The priority queue of unsettled vertices.
   GetWeightT<Graph> getWeight;           // A functor returning the edge weight used for routing.
+  PruningCriterionT pruneSearch;         // A criterion applied to prune the search.
 };
 
 // An alias template for a standard Dijkstra search.
