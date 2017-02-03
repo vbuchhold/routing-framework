@@ -34,9 +34,11 @@ template <
     typename QueueT, template <typename> class GetWeightT,
     typename PruningCriterionT = impl::NoPruningCriterion>
 class Dijkstra {
-  // Bidirectional Dijkstra is allowed to execute a Dijkstra search step by step.
-  template <typename DijkstraT, template <typename> class StoppingCriterionT>
+  // Some classes are allowed to execute a Dijkstra search step by step.
+  template <typename, template <typename> class>
   friend class BiDijkstra;
+  template <typename, template <typename> class, typename>
+  friend class ODPairGenerator;
 
  private:
   using Graph    = GraphT;                    // The graph type on which we compute shortest paths.
