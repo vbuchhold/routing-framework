@@ -43,15 +43,12 @@ class ODPairGenerator {
 
   // Returns a random O-D pair, where the distance between O and D is distance.
   OriginDestination getRandomODPairChosenByDistance(const int distance) {
-    assert(distance >= 0); assert(distance < INFTY);
+    assert(distance >= 0);
     const int o = dist(rand);
     int d = o;
     dijkstra.init({o});
-    while (dijkstra.getDistance(d) < distance) {
-      if (dijkstra.queue.empty())
-        assert(false);
+    while (!dijkstra.queue.empty() && dijkstra.getDistance(d) < distance)
       d = dijkstra.settleNextVertex();
-    }
     return {o, d};
   }
 
