@@ -19,9 +19,9 @@ type the following commands at the top-level directory of the framework:
 
 ```
 $ git submodule update --init
-$ cd External/RoutingKit
-$ make
-$ sudo cp -r include lib /usr/local
+$ cd External
+$ cd nanoflann && sudo cp -r include /usr/local && cd ..
+$ cd RoutingKit && make && sudo cp -r include lib /usr/local && cd ..
 ```
 
 ## Building
