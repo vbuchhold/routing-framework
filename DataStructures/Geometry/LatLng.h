@@ -5,6 +5,7 @@
 #include <cmath>
 #include <ostream>
 
+#include "DataStructures/Geometry/Point.h"
 #include "Tools/Constants.h"
 #include "Tools/Math.h"
 #include "Tools/Workarounds.h"
@@ -32,7 +33,7 @@ class LatLng {
     const int a = (lng + DEG_180) % DEG_360;
     this->lng = wrap ? (a < 0 ? a + DEG_180 : a - DEG_180) : lng;
 
-	// Coordinates have to be valid at this point, even if automatic wrapping is disabled.
+    // Coordinates have to be valid at this point, even if automatic wrapping is disabled.
     assert(this->lat >= -DEG_90); assert(this->lat <= DEG_90);
     assert(this->lng >= -DEG_180); assert(this->lng <= DEG_180);
   }
@@ -101,6 +102,24 @@ class LatLng {
     const double c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
 
     return EARTH_RADIUS * c;
+  }
+
+  // Translates this LatLng to a point on a two-dimensional plane using Plate Carree projection.
+  // The projection's origin is at 180 degrees longitude and -90 degrees latitude. Coordinates
+  // increase in the x (y) direction towards the east (north).
+  Point plateCarreeProjection() const {
+    return {lng + DEG_180, lat + DEG_90};
+  }
+
+  // Translates this LatLng to a point on a two-dimensional plane using Web Mercator projection.
+  // The projection's origin is at 180 degrees longitude and approximately -85 degrees latitude.
+  // Coordinates increase in the x (y) direction towards the east (north).
+  // For more details, see: www.math.ubc.ca/~israel/m103/mercator/mercator.html
+  Point webMercatorProjection() const {
+    const double lat = toRadians(latInDeg());
+    const int x = lng + DEG_180;
+    const int y = std::round((std::log(std::tan(lat / 2 + PI / 4)) / (2 * PI) + 0.5) * DEG_360);
+    return {x, y};
   }
 
  private:
