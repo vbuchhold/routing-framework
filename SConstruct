@@ -59,7 +59,7 @@ DefaultEnvironment(
   CPPDEFINES = cppdefines,
   CPPPATH = '#',
   ENV = {
-    'CPATH': os.environ.get('CPATH'),
+    'CPLUS_INCLUDE_PATH': os.environ.get('CPLUS_INCLUDE_PATH'),
     'LIBRARY_PATH': os.environ.get('LIBRARY_PATH'),
     'PATH': os.environ.get('PATH')})
 
