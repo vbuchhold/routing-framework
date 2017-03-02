@@ -44,7 +44,7 @@ class ProgressBar {
       return;
     assert(step >= stepsDone); assert(step <= numSteps);
     stepsDone = step;
-    print(stepsDone * 100 / numSteps);
+    print(stepsDone * 100l / numSteps);
   }
 
   // Advances the progress bar by one step.
