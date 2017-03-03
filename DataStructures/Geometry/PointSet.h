@@ -50,6 +50,11 @@ class PointSet {
     points.push_back(p);
   }
 
+  // Removes all points from this set.
+  void clear() {
+    points.clear();
+  }
+
  private:
   std::vector<Point> points; // The points of this set.
   Rectangle boundingBox;     // A bounding box containing all points of this set.

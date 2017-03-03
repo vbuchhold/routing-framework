@@ -24,6 +24,11 @@ class PointSubsetAdapter {
     return pointSet.size();
   }
 
+  // Returns the point with index idx.
+  const Point& operator[](const int idx) const {
+    return pointSet[idx];
+  }
+
   // Returns the index in the PointSet of the point with index idx.
   int getIndexInPointSet(const int idx) const {
     assert(idx >= 0); assert(idx < indexInPointSet.size());

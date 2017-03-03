@@ -14,7 +14,12 @@ class PointSetAdapter {
   // Constructs an adapter for the specified PointSet.
   PointSetAdapter(const PointSet& pointSet) : pointSet(pointSet) {}
 
-  // Return the index in the PointSet of the point with index idx.
+  // Returns the point with index idx.
+  const Point& operator[](const int idx) const {
+    return pointSet[idx];
+  }
+
+  // Returns the index in the PointSet of the point with index idx.
   int getIndexInPointSet(const int idx) const {
     assert(idx >= 0); assert(idx < pointSet.size());
     return idx;
