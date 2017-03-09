@@ -30,15 +30,15 @@ class XatfRoadCategoryAttribute : public AbstractAttribute<XatfRoadCategory> {
   // Used for telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetXatfRoadCategory {
-    Type operator()(const GraphT& graph, const int e) const { return graph.xatfRoadCategory(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.xatfRoadCategory(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.xatfRoadCategory(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.xatfRoadCategory(e); }
   };
 
   static constexpr Type DEFAULT_VALUE = XatfRoadCategory::UNUSED; // The attribute's default value.
   static constexpr const char* NAME   = "xatf_road_category";     // The attribute's unique name.
 
   // Returns the XATF road category of edge e.
-  Type xatfRoadCategory(const int e) const {
+  const Type& xatfRoadCategory(const int e) const {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }

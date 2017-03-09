@@ -12,8 +12,8 @@ class TravelTimeAttribute : public AbstractAttribute<int> {
   // telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetTravelTime {
-    Type operator()(const GraphT& graph, const int e) const { return graph.travelTime(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.travelTime(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.travelTime(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.travelTime(e); }
   };
 
   static constexpr Type DEFAULT_VALUE = INFTY;         // The attribute's default value.
@@ -23,7 +23,7 @@ class TravelTimeAttribute : public AbstractAttribute<int> {
   static constexpr int PRECISION = 10;
 
   // Returns the travel time in 0.1 seconds of edge e.
-  Type travelTime(const int e) const {
+  const Type& travelTime(const int e) const {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }

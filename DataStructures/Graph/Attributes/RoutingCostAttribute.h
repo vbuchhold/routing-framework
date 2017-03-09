@@ -12,15 +12,15 @@ class RoutingCostAttribute : public AbstractAttribute<int> {
   // telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetRoutingCost {
-    Type operator()(const GraphT& graph, const int e) const { return graph.routingCost(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.routingCost(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.routingCost(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.routingCost(e); }
   };
 
   static constexpr Type DEFAULT_VALUE = INFTY;          // The attribute's default value.
   static constexpr const char* NAME   = "routing_cost"; // The attribute's unique name.
 
   // Returns the routing cost of edge e.
-  Type routingCost(const int e) const {
+  const Type& routingCost(const int e) const {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }

@@ -15,8 +15,15 @@ template <typename DistanceLabelT>
 class StampedDistanceLabelContainer {
  public:
   // Constructs a distance label container using timestamps.
-  explicit StampedDistanceLabelContainer(const int numVertices)
-      : distanceLabels(numVertices), timestamps(numVertices, 0), clock(0) {}
+  explicit StampedDistanceLabelContainer(const int numVertices) : clock(0) {
+    resize(numVertices);
+  }
+
+  // Ensures that this container can hold the specified number of distance labels.
+  void resize(const int numVertices) {
+    distanceLabels.resize(numVertices);
+    timestamps.resize(numVertices);
+  }
 
   // Initializes all distance labels to infinity.
   void init() {

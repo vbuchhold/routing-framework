@@ -8,9 +8,14 @@
 
 #include <boost/dynamic_bitset.hpp>
 
+#include "Tools/BinaryIO.h"
+
 // A permutation is a rearrangement of members of a sequence into a new sequence.
 class Permutation {
  public:
+  // Constructs an empty permutation.
+  Permutation() = default;
+
   // Constructs an uninitialized permutation of the specified size.
   explicit Permutation(const int size) : permutation(size) {}
 
@@ -82,6 +87,16 @@ class Permutation {
       isContained[elem] = true;
     }
     return true;
+  }
+
+  // Reads a permutation from a binary file.
+  void readFrom(std::ifstream& in) {
+    read(in, permutation);
+  }
+
+  // Write a permutation to a binary file.
+  void writeTo(std::ofstream& out) const {
+    write(out, permutation);
   }
 
  private:

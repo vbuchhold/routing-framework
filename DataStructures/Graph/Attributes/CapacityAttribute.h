@@ -11,14 +11,14 @@ class CapacityAttribute : public AbstractAttribute<int> {
   // telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetCapacity {
-    Type operator()(const GraphT& graph, const int e) const { return graph.capacity(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.capacity(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.capacity(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.capacity(e); }
   };
 
   static constexpr const char* NAME = "capacity"; // The attribute's unique name.
 
   // Returns the capacity in vehicles/h of edge e.
-  Type capacity(const int e) const {
+  const Type& capacity(const int e) const {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }

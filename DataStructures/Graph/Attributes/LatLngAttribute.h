@@ -12,8 +12,8 @@ class LatLngAttribute : public AbstractAttribute<LatLng> {
   // telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetLatLng {
-    const Type& operator()(const GraphT& graph, const int e) const { return graph.latLng(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.latLng(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.latLng(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.latLng(e); }
   };
 
   static constexpr const Type& DEFAULT_VALUE = Type();    // The attribute's default value.

@@ -12,15 +12,15 @@ class LengthAttribute : public AbstractAttribute<int> {
   // for telling algorithms on which attribute of a graph they should work.
   template <typename GraphT>
   struct GetLength {
-    Type operator()(const GraphT& graph, const int e) const { return graph.length(e); }
-    Type& operator()(GraphT& graph, const int e) const { return graph.length(e); }
+    const Type& operator()(const GraphT& g, const int e) const { return g.length(e); }
+    Type& operator()(GraphT& g, const int e) const { return g.length(e); }
   };
 
   static constexpr Type DEFAULT_VALUE = INFTY;    // The attribute's default value.
   static constexpr const char* NAME   = "length"; // The attribute's unique name.
 
   // Returns the length in meters of edge e.
-  Type length(const int e) const {
+  const Type& length(const int e) const {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }

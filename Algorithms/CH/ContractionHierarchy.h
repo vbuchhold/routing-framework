@@ -1,64 +1,109 @@
 #pragma once
 
+#include <cassert>
 #include <fstream>
+#include <utility>
 
+#include <routingkit/contraction_hierarchy.h>
+
+#include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Utilities/Permutation.h"
+#include "Tools/BinaryIO.h"
 
-// Implementation of a contraction hierarchy (CH).
-template <typename GraphT, template <typename> class GetWeightT>
+// An implementation of a contraction hierarchy (CH). The vertices in the upward and downward graph
+// are reordered by rank to improve data locality during queries.
+template <typename SearchGraphT, template <typename> class GetWeightT>
 class ContractionHierarchy {
-  // Only the CH preprocessing is allowed to construct new CHs.
-  template <typename, template <typename> class>
-  friend class CHPreprocessing;
+  // The search graphs are required to have IDs associated with the edges.
+  static_assert(SearchGraphT::template has<EdgeIdAttribute>(), "Search graph is missing edge IDs.");
+
+  // Converts the specified CH from RoutingKit's representation into our representation.
+  template <typename ContractionHierarchyT>
+  friend ContractionHierarchyT convert(const RoutingKit::ContractionHierarchy&, const int);
 
  public:
-  using Graph = GraphT;            // The type of the upward and downward graphs.
   template <typename G>
-  using GetWeight = GetWeightT<G>; // A functor returning the edge weight used for routing.
+  using GetWeight = GetWeightT<G>;  // A functor returning the edge weight used for routing.
+  using SearchGraph = SearchGraphT; // The type of the upward and downward graph.
+
+  // Constructs an empty CH.
+  ContractionHierarchy() : numOrigEdges(0) {}
 
   // Constructs a CH from a binary file.
   explicit ContractionHierarchy(std::ifstream& in) {
     readFrom(in);
-  };
+  }
 
   // Returns the graph containing all upward edges.
-  const Graph& upwardGraph() const {
-    return upwardSearchGraph;
+  const SearchGraph& getUpwardGraph() const {
+    return upwardGraph;
   }
 
   // Returns the graph containing all downward edges.
-  const Graph& downwardGraph() const {
-    return downwardSearchGraph;
+  const SearchGraph& getDownwardGraph() const {
+    return downwardGraph;
   }
 
-  // Returns the order in which vertices were contracted.
-  const std::vector<int>& contractionOrder() const {
-    return order;
+  // Returns the i-th vertex in the contraction order.
+  int vertexInContractionOrder(const int i) const {
+    assert(i >= 0); assert(i < order.size());
+    return order[i];
   }
 
-  // Reorders the vertices according to the specified permutation.
-  void permuteVertices(const Permutation& perm) {
-    upwardSearchGraph.permuteVertices(perm);
-    downwardSearchGraph.permuteVertices(perm);
+  // Returns the rank of vertex v.
+  int rank(const int v) const {
+    assert(v >= 0); assert(v < ranks.size());
+    return ranks[v];
+  }
+
+  // Returns the number of original edges.
+  int numEdges() const {
+    return numOrigEdges;
+  }
+
+  // Returns the number of shortcut edges.
+  int numShortcuts() const {
+    return constituentEdges.size();
+  }
+
+  // Returns the first constituent edge of shortcut s.
+  int shortcutsFirstEdge(const int s) const {
+    assert(s >= numOrigEdges); assert(s < numOrigEdges + constituentEdges.size());
+    return constituentEdges[s - numOrigEdges].first;
+  }
+
+  // Returns the second constituent edge of shortcut s.
+  int shortcutsSecondEdge(const int s) const {
+    assert(s >= numOrigEdges); assert(s < numOrigEdges + constituentEdges.size());
+    return constituentEdges[s - numOrigEdges].second;
   }
 
   // Reads a CH from a binary file.
   void readFrom(std::ifstream& in) {
-    upwardSearchGraph.readFrom(in);
-    downwardSearchGraph.readFrom(in);
+    upwardGraph.readFrom(in);
+    downwardGraph.readFrom(in);
+    order.readFrom(in);
+    read(in, numOrigEdges);
+    read(in, constituentEdges);
+    ranks = order.getInversePermutation();
   }
 
   // Writes a CH to a binary file.
   void writeTo(std::ofstream& out) const {
-    upwardSearchGraph.writeTo(out);
-    downwardSearchGraph.writeTo(out);
+    upwardGraph.writeTo(out);
+    downwardGraph.writeTo(out);
+    order.writeTo(out);
+    write(out, numOrigEdges);
+    write(out, constituentEdges);
   }
 
  private:
-  // Constructs an empty CH.
-  ContractionHierarchy() = default;
+  SearchGraph upwardGraph;   // The graph containing all upward edges.
+  SearchGraph downwardGraph; // The graph containing all downward edges.
+  Permutation order;         // order[i] = v indicates that v was the i-th vertex contracted.
+  Permutation ranks;         // ranks[v] = i indicates that v was the i-th vertex contracted.
+  int numOrigEdges;          // The number of original edges in the input graph.
 
-  Graph upwardSearchGraph;   // The graph containing all upward edges.
-  Graph downwardSearchGraph; // The graph containing all downward edges.
-  std::vector<int> order;    // order[i] = v indicates that v was the i-th vertex contracted.
+  // For each shortcut s, the two (shortcut) edges constituting s.
+  std::vector<std::pair<int, int>> constituentEdges;
 };

@@ -587,11 +587,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     read(in, edgeCount);
     assert(numVertices >= 0);
     assert(edgeCount >= 0);
-
     outEdges.resize(numVertices + !dynamic);
-    edgeHeads.resize(edgeCount);
-    RUN_FORALL(VertexAttributes::values.resize(numVertices));
-    RUN_FORALL(EdgeAttributes::values.resize(edgeCount));
 
     // Read the out-edge ranges.
     outEdges[0].first() = 0;

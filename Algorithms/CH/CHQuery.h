@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <type_traits>
 
 #include "Algorithms/Dijkstra/BiDijkstra.h"
 #include "Algorithms/Dijkstra/Dijkstra.h"
@@ -13,11 +14,11 @@
 // instructions. The algorithm can be used with different distance label containers and queues.
 template <
     typename ContractionHierarchyT, template <typename> class DistanceLabelContT,
-    typename LabelSetT, typename QueueT>
+    typename LabelSetT, typename QueueT, bool useStallOnDemand = true>
 class CHQuery {
  private:
   // The graph type on which we compute shortest paths.
-  using Graph = typename ContractionHierarchyT::Graph;
+  using Graph = typename ContractionHierarchyT::SearchGraph;
 
   // A functor returning the edge weight used for routing.
   template <typename G>
@@ -26,10 +27,22 @@ class CHQuery {
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
  public:
-  // Constructs a CH search instance.
-  CHQuery(const ContractionHierarchyT& ch)
-      : chSearch(ch.upwardGraph(), ch.downwardGraph(), CHQueryPruningCriterion(ch.downwardGraph()),
-                 CHQueryPruningCriterion(ch.upwardGraph())) {}
+  // Constructs a CH search instance that uses stall-on-demand.
+  template <bool cond = useStallOnDemand>
+  CHQuery(std::enable_if_t<cond, const ContractionHierarchyT&> ch)
+      : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph(),
+                 CHQueryPruningCriterion(ch.getDownwardGraph()),
+                 CHQueryPruningCriterion(ch.getUpwardGraph())) {}
+
+  // Constructs a CH search instance that does not use stall-on-demand.
+  template <bool cond = useStallOnDemand>
+  CHQuery(std::enable_if_t<!cond, const ContractionHierarchyT&> ch)
+      : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph()) {}
+
+  // Ensures that the internal data structures fit for the size of the graph.
+  void resize() {
+    chSearch.resize();
+  }
 
   // Runs a CH search from s to t.
   void run(const int s, const int t) {
@@ -106,14 +119,16 @@ class CHQuery {
     const int& maxTentativeDistance; // The largest of all k tentative distances.
   };
 
-  using CHDijkstra =
-      Dijkstra<Graph, DistanceLabelContT, LabelSetT, QueueT, GetWeight, CHQueryPruningCriterion>;
+  using CHDijkstra = std::conditional_t<
+      useStallOnDemand,
+      Dijkstra<Graph, DistanceLabelContT, LabelSetT, QueueT, GetWeight, CHQueryPruningCriterion>,
+      Dijkstra<Graph, DistanceLabelContT, LabelSetT, QueueT, GetWeight>>;
   using CHSearch = BiDijkstra<CHDijkstra, CHQueryStoppingCriterion>;
 
   CHSearch chSearch; // The modified bidirectional Dijkstra search.
 };
 
 // An alias template for a standard CH search.
-template <typename ContractionHierarchyT, typename LabelSetT>
-using StandardCHQuery =
-    CHQuery<ContractionHierarchyT, StampedDistanceLabelContainer, LabelSetT, QuadHeap>;
+template <typename ContractionHierarchyT, typename LabelSetT, bool useStallOnDemand = true>
+using StandardCHQuery = CHQuery<
+    ContractionHierarchyT, StampedDistanceLabelContainer, LabelSetT, QuadHeap, useStallOnDemand>;

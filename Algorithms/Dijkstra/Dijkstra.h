@@ -12,7 +12,7 @@
 #include "DataStructures/Queues/Heap.h"
 #include "Tools/Constants.h"
 
-namespace impl {
+namespace dijkstra {
 
 // A dummy pruning criterion for Dijkstra's algorithm that does no pruning at all.
 struct NoPruningCriterion {
@@ -32,7 +32,7 @@ struct NoPruningCriterion {
 template <
     typename GraphT, template <typename> class DistanceLabelContainerT, typename LabelSetT,
     typename QueueT, template <typename> class GetWeightT,
-    typename PruningCriterionT = impl::NoPruningCriterion>
+    typename PruningCriterionT = dijkstra::NoPruningCriterion>
 class Dijkstra {
   // Some classes are allowed to execute a Dijkstra search step by step.
   template <typename, template <typename> class>
@@ -60,6 +60,13 @@ class Dijkstra {
         parent(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0),
         queue(graph.numVertices()),
         pruneSearch(pruneSearch) {}
+
+  // Ensures that the internal data structures fit for the size of the graph.
+  void resize() {
+    distanceLabels.resize(graph.numVertices());
+    parent.resize(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0);
+    queue.resize(graph.numVertices());
+  }
 
   // Runs a Dijkstra search from s to t. If t is omitted, runs a one-to-all search from s.
   void run(const int s, const int t = INVALID_VERTEX) {

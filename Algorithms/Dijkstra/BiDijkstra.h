@@ -8,7 +8,7 @@
 
 #include "Tools/Constants.h"
 
-namespace impl {
+namespace bidijkstra {
 
 // The stopping criterion for a standard bidirectional Dijkstra search computing k shortest paths.
 // We can stop the search as soon as mu_i <= Qf.minKey + Qr.minKey for all i = 1, ..., k.
@@ -45,7 +45,7 @@ struct BiDijkstraStoppingCriterion {
 // possibly using SSE or AVX instructions. The algorithm can be used with various stopping criteria,
 // allowing it to be used as CH query algorithm.
 template <typename DijkstraT,
-          template <typename> class StoppingCriterionT = impl::BiDijkstraStoppingCriterion>
+          template <typename> class StoppingCriterionT = bidijkstra::BiDijkstraStoppingCriterion>
 class BiDijkstra {
  private:
   using Graph = typename DijkstraT::Graph; // The graph type on which we compute shortest paths.
@@ -60,6 +60,12 @@ class BiDijkstra {
       : forwardSearch(graph, pruneForwardSearch),
         reverseSearch(reverseGraph, pruneReverseSearch),
         stoppingCriterion(forwardSearch.queue, reverseSearch.queue, maxTentativeDistance) {}
+
+  // Ensures that the internal data structures fit for the size of the graph.
+  void resize() {
+    forwardSearch.resize();
+    reverseSearch.resize();
+  }
 
   // Run a bidirectional search from s to t.
   void run(const int s, const int t) {
