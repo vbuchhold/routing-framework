@@ -11,13 +11,13 @@
 
 // An implementation of the CH preprocessing. The vertices in the upward and downward graph are
 // reordered by rank to improve data locality during queries.
-template <typename GraphT, template <typename> class GetWeightT>
+template <typename InputGraphT, typename SearchGraphT, template <typename> class GetWeightT>
 class CHPreprocessing {
  public:
-  using CH = ContractionHierarchy<GraphT, GetWeightT>; // The CH type we build.
+  using CH = ContractionHierarchy<SearchGraphT, GetWeightT>; // The CH type we build.
 
   // Constructs a CH preprocessing instance.
-  CHPreprocessing(const GraphT& inputGraph) : inputGraph(inputGraph) {
+  CHPreprocessing(const InputGraphT& inputGraph) : inputGraph(inputGraph) {
     assert(inputGraph.isDefrag());
   }
 
@@ -39,6 +39,6 @@ class CHPreprocessing {
   }
 
  private:
-  const GraphT& inputGraph;     // The input graph that should be contracted.
-  GetWeightT<GraphT> getWeight; // A functor returning the edge weight used for routing.
+  const InputGraphT& inputGraph;     // The input graph that should be contracted.
+  GetWeightT<InputGraphT> getWeight; // A functor returning the edge weight used for routing.
 };
