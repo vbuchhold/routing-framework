@@ -6,12 +6,9 @@
 #include "DataStructures/Utilities/Permutation.h"
 
 // Converts the specified CH from RoutingKit's representation to our representation.
-template <typename ContractionHierarchyT>
-ContractionHierarchyT convert(const RoutingKit::ContractionHierarchy& src, const int numOrigEdges) {
-  using SearchGraph = typename ContractionHierarchyT::SearchGraph;
-  typename ContractionHierarchyT::template GetWeight<SearchGraph> getWeight;
-
-  ContractionHierarchyT dst;
+template <typename CH>
+CH convert(const RoutingKit::ContractionHierarchy& src, const int numOrigEdges) {
+  CH dst;
   dst.order = Permutation({src.order.begin(), src.order.end()});
   dst.ranks = Permutation({src.rank.begin(), src.rank.end()});
   dst.numOrigEdges = numOrigEdges;
@@ -22,7 +19,7 @@ ContractionHierarchyT convert(const RoutingKit::ContractionHierarchy& src, const
     dst.upwardGraph.appendVertex();
     for (int e = src.forward.first_out[v]; e != src.forward.first_out[v + 1]; ++e) {
       dst.upwardGraph.appendEdge(src.forward.head[e]);
-      getWeight(dst.upwardGraph, e) = src.forward.weight[e];
+      dst.upwardGraph.template get<typename CH::Weight>(e) = src.forward.weight[e];
     }
   }
 
@@ -32,7 +29,7 @@ ContractionHierarchyT convert(const RoutingKit::ContractionHierarchy& src, const
     dst.downwardGraph.appendVertex();
     for (int e = src.backward.first_out[v]; e != src.backward.first_out[v + 1]; ++e) {
       dst.downwardGraph.appendEdge(src.backward.head[e]);
-      getWeight(dst.downwardGraph, e) = src.backward.weight[e];
+      dst.downwardGraph.template get<typename CH::Weight>(e) = src.backward.weight[e];
     }
   }
 

@@ -12,8 +12,7 @@
 // algorithms. It supports choosing O and D uniformly at random, and more advanced methodologies
 // such as choosing D by Dijkstra rank.
 template <
-    typename GraphT, template <typename> class GetWeightT,
-    typename RandomNumberGeneratorT = std::default_random_engine>
+    typename GraphT, typename WeightT, typename RandomNumberGeneratorT = std::default_random_engine>
 class ODPairGenerator {
  public:
   // Constructs an O-D pair generator for the specified graph.
@@ -54,7 +53,7 @@ class ODPairGenerator {
 
  private:
   using LabelSet = BasicLabelSet<1, ParentInfo::NO_PARENT_INFO>;
-  using Dijkstra = StandardDijkstra<GraphT, LabelSet, GetWeightT>;
+  using Dijkstra = StandardDijkstra<GraphT, WeightT, LabelSet>;
 
   Dijkstra dijkstra;                    // The Dijkstra search used to compute Dijkstra ranks.
   RandomNumberGeneratorT& rand;         // The random number engine providing randomness.

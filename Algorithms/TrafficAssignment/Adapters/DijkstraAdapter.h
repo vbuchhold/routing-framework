@@ -10,11 +10,8 @@
 #include "Tools/Constants.h"
 
 // An adapter that makes Dijkstra's algorithm usable in the all-or-nothing assignment procedure.
-template <typename InputGraphT, template <typename> class GetWeightT>
+template <typename InputGraphT, typename WeightT>
 class DijkstraAdapter {
-  // The requirements for the input graph demanded by this adapter.
-  static_assert(InputGraphT::template has<EdgeIdAttribute>(), "Input graph is missing edge IDs.");
-
  public:
   using InputGraph = InputGraphT;
 
@@ -62,5 +59,5 @@ class DijkstraAdapter {
  private:
   using LabelSet = BasicLabelSet<1, ParentInfo::FULL_PARENT_INFO>;
 
-  StandardDijkstra<InputGraph, LabelSet, GetWeightT> dijkstra; // The Dijkstra search.
+  StandardDijkstra<InputGraph, WeightT, LabelSet> dijkstra; // The Dijkstra search.
 };

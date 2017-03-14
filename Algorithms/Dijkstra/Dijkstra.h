@@ -30,14 +30,13 @@ struct NoPruningCriterion {
 // possibly using SSE or AVX instructions. The algorithm can be used with different distance label
 // containers and priority queues.
 template <
-    typename GraphT, template <typename> class DistanceLabelContainerT, typename LabelSetT,
-    typename QueueT, template <typename> class GetWeightT,
-    typename PruningCriterionT = dijkstra::NoPruningCriterion>
+    typename GraphT, typename WeightT, template <typename> class DistanceLabelContainerT,
+    typename LabelSetT, typename QueueT, typename PruningCriterionT = dijkstra::NoPruningCriterion>
 class Dijkstra {
   // Some classes are allowed to execute a Dijkstra search step by step.
   template <typename, template <typename> class>
   friend class BiDijkstra;
-  template <typename, template <typename> class, typename>
+  template <typename, typename, typename>
   friend class ODPairGenerator;
 
  private:
@@ -156,7 +155,7 @@ class Dijkstra {
     FORALL_INCIDENT_EDGES(graph, u, e) {
       const int v = graph.edgeHead(e);
       DistanceLabel& distToV = distanceLabels[v];
-      const DistanceLabel tentativeDist = distToU + getWeight(graph, e);
+      const DistanceLabel tentativeDist = distToU + graph.template get<WeightT>(e);
       const LabelMask mask = tentativeDist < distToV;
       if (mask) {
         distToV.min(tentativeDist);
@@ -201,11 +200,10 @@ class Dijkstra {
   DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
   ParentLabelContainer parent;           // The parent information for each vertex.
   Queue queue;                           // The priority queue of unsettled vertices.
-  GetWeightT<Graph> getWeight;           // A functor returning the edge weight used for routing.
   PruningCriterionT pruneSearch;         // A criterion applied to prune the search.
 };
 
 // An alias template for a standard Dijkstra search.
-template <typename GraphT, typename LabelSetT, template <typename> class GetWeightT>
+template <typename GraphT, typename WeightT, typename LabelSetT>
 using StandardDijkstra =
-    Dijkstra<GraphT, StampedDistanceLabelContainer, LabelSetT, QuadHeap, GetWeightT>;
+    Dijkstra<GraphT, WeightT, StampedDistanceLabelContainer, LabelSetT, QuadHeap>;

@@ -13,30 +13,26 @@
 // and/or edges, and computes multiple shortest paths simultaneously, possibly using SSE or AVX
 // instructions. The algorithm can be used with different distance label containers and queues.
 template <
-    typename ContractionHierarchyT, template <typename> class DistanceLabelContT,
-    typename LabelSetT, typename QueueT, bool useStallOnDemand = true>
+    typename CH, template <typename> class DistanceLabelContT, typename LabelSetT, typename QueueT,
+    bool useStallOnDemand = true>
 class CHQuery {
  private:
-  // The graph type on which we compute shortest paths.
-  using Graph = typename ContractionHierarchyT::SearchGraph;
-
-  // A functor returning the edge weight used for routing.
-  template <typename G>
-  using GetWeight = typename ContractionHierarchyT::template GetWeight<G>;
+  using Graph = typename CH::SearchGraph; // The graph type on which we compute shortest paths.
+  using Weight = typename CH::Weight;     // The attribute used as edge weight.
 
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
  public:
   // Constructs a CH search instance that uses stall-on-demand.
   template <bool cond = useStallOnDemand>
-  CHQuery(std::enable_if_t<cond, const ContractionHierarchyT&> ch)
+  CHQuery(std::enable_if_t<cond, const CH&> ch)
       : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph(),
                  CHQueryPruningCriterion(ch.getDownwardGraph()),
                  CHQueryPruningCriterion(ch.getUpwardGraph())) {}
 
   // Constructs a CH search instance that does not use stall-on-demand.
   template <bool cond = useStallOnDemand>
-  CHQuery(std::enable_if_t<!cond, const ContractionHierarchyT&> ch)
+  CHQuery(std::enable_if_t<!cond, const CH&> ch)
       : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph()) {}
 
   // Ensures that the internal data structures fit for the size of the graph.
@@ -59,12 +55,12 @@ class CHQuery {
     return chSearch.getDistance(i);
   }
 
-  // Returns the vertices along the i-th packed shortest path.
+  // Returns the vertices on the i-th packed shortest path.
   std::vector<int> getPackedPath(const int i = 0) {
     return chSearch.getPath(i);
   }
 
-  // Returns the edges along the i-th packed shortest path.
+  // Returns the edges on the i-th packed shortest path.
   std::vector<int> getPackedEdgePath(const int i = 0) {
     return chSearch.getEdgePath(i);
   }
@@ -84,12 +80,11 @@ class CHQuery {
       LabelMask continueSearch = true;
       FORALL_INCIDENT_EDGES(oppositeGraph, u, e)
         continueSearch &=
-            distToU < distLabels[oppositeGraph.edgeHead(e)] + getWeight(oppositeGraph, e);
+            distToU < distLabels[oppositeGraph.edgeHead(e)] + oppositeGraph.template get<Weight>(e);
       return !continueSearch;
     }
 
     const Graph& oppositeGraph; // The downward graph if we prune the upward search or vice versa.
-    GetWeight<Graph> getWeight; // A functor returning the edge weight used for routing.
   };
 
   // The stopping criterion for a CH query computing k shortest paths simultaneously. We can stop
@@ -121,14 +116,13 @@ class CHQuery {
 
   using CHDijkstra = std::conditional_t<
       useStallOnDemand,
-      Dijkstra<Graph, DistanceLabelContT, LabelSetT, QueueT, GetWeight, CHQueryPruningCriterion>,
-      Dijkstra<Graph, DistanceLabelContT, LabelSetT, QueueT, GetWeight>>;
-  using CHSearch = BiDijkstra<CHDijkstra, CHQueryStoppingCriterion>;
+      Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT, CHQueryPruningCriterion>,
+      Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT>>;
 
-  CHSearch chSearch; // The modified bidirectional Dijkstra search.
+  BiDijkstra<CHDijkstra, CHQueryStoppingCriterion> chSearch; // The modified bidirectional search.
 };
 
 // An alias template for a standard CH search.
-template <typename ContractionHierarchyT, typename LabelSetT, bool useStallOnDemand = true>
+template <typename CH, typename LabelSetT, bool useStallOnDemand = true>
 using StandardCHQuery = CHQuery<
-    ContractionHierarchyT, StampedDistanceLabelContainer, LabelSetT, QuadHeap, useStallOnDemand>;
+    CH, StampedDistanceLabelContainer, LabelSetT, QuadHeap, useStallOnDemand>;

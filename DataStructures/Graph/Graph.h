@@ -171,6 +171,20 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return edgeHeads[e];
   }
 
+  // Returns the value of the attribute Attr for the vertex/edge with index idx.
+  template <typename Attr>
+  const typename Attr::Type& get(const int idx) const {
+    assert(idx >= 0); assert(idx < Attr::values.size());
+    return Attr::values[idx];
+  }
+
+  // Returns the value of the attribute Attr for the vertex/edge with index idx.
+  template <typename Attr>
+  typename Attr::Type& get(const int idx) {
+    assert(idx >= 0); assert(idx < Attr::values.size());
+    return Attr::values[idx];
+  }
+
   // Returns true if the graph contains an edge from tail to head.
   bool containsEdge(const int tail, const int head) const {
     for (int e = firstEdge(tail); e != lastEdge(tail); ++e)

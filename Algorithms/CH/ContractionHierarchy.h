@@ -11,9 +11,8 @@
 #include "DataStructures/Utilities/Permutation.h"
 #include "Tools/BinaryIO.h"
 
-// An implementation of a contraction hierarchy (CH). The vertices in the upward and downward graph
-// are reordered by rank to improve data locality during queries.
-template <typename SearchGraphT, template <typename> class GetWeightT>
+// An implementation of a contraction hierarchy (CH).
+template <typename SearchGraphT, typename WeightT>
 class ContractionHierarchy {
   // The search graphs are required to have IDs associated with the edges.
   static_assert(SearchGraphT::template has<EdgeIdAttribute>(), "Search graph is missing edge IDs.");
@@ -23,9 +22,8 @@ class ContractionHierarchy {
   friend ContractionHierarchyT convert(const RoutingKit::ContractionHierarchy&, const int);
 
  public:
-  template <typename G>
-  using GetWeight = GetWeightT<G>;  // A functor returning the edge weight used for routing.
   using SearchGraph = SearchGraphT; // The type of the upward and downward graph.
+  using Weight = WeightT;           // The attribute used as edge weight.
 
   // Constructs an empty CH.
   ContractionHierarchy() : numOrigEdges(0) {}
@@ -55,11 +53,6 @@ class ContractionHierarchy {
   int rank(const int v) const {
     assert(v >= 0); assert(v < ranks.size());
     return ranks[v];
-  }
-
-  // Returns the number of original edges.
-  int numEdges() const {
-    return numOrigEdges;
   }
 
   // Returns the number of shortcut edges.

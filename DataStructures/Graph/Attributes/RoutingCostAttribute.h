@@ -8,14 +8,6 @@
 // An attribute associating a routing cost with each edge of a graph.
 class RoutingCostAttribute : public AbstractAttribute<int> {
  public:
-  // A functor that returns the routing cost of the specified edge in the specified graph. Used for
-  // telling algorithms on which attribute of a graph they should work.
-  template <typename GraphT>
-  struct GetRoutingCost {
-    const Type& operator()(const GraphT& g, const int e) const { return g.routingCost(e); }
-    Type& operator()(GraphT& g, const int e) const { return g.routingCost(e); }
-  };
-
   static constexpr Type DEFAULT_VALUE = INFTY;          // The attribute's default value.
   static constexpr const char* NAME   = "routing_cost"; // The attribute's unique name.
 

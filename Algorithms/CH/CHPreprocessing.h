@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cassert>
 #include <vector>
 
 #include <routingkit/contraction_hierarchy.h>
@@ -11,15 +10,13 @@
 
 // An implementation of the CH preprocessing. The vertices in the upward and downward graph are
 // reordered by rank to improve data locality during queries.
-template <typename InputGraphT, typename SearchGraphT, template <typename> class GetWeightT>
+template <typename InputGraphT, typename SearchGraphT, typename WeightT>
 class CHPreprocessing {
  public:
-  using CH = ContractionHierarchy<SearchGraphT, GetWeightT>; // The CH type we build.
+  using CH = ContractionHierarchy<SearchGraphT, WeightT>; // The CH type we build.
 
   // Constructs a CH preprocessing instance.
-  CHPreprocessing(const InputGraphT& inputGraph) : inputGraph(inputGraph) {
-    assert(inputGraph.isDefrag());
-  }
+  CHPreprocessing(const InputGraphT& inputGraph) : inputGraph(inputGraph) {}
 
   // Contracts the input graph.
   CH run() {
@@ -30,7 +27,7 @@ class CHPreprocessing {
     FORALL_VALID_EDGES(inputGraph, u, e) {
       tails[e] = u;
       heads[e] = inputGraph.edgeHead(e);
-      weights[e] = getWeight(inputGraph, e);
+      weights[e] = inputGraph.template get<WeightT>(e);
     }
 
     const RoutingKit::ContractionHierarchy ch =
@@ -40,5 +37,4 @@ class CHPreprocessing {
 
  private:
   const InputGraphT& inputGraph;     // The input graph that should be contracted.
-  GetWeightT<InputGraphT> getWeight; // A functor returning the edge weight used for routing.
 };

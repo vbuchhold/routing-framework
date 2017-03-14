@@ -9,7 +9,6 @@
 #include "Algorithms/CH/CHConversion.h"
 #include "Algorithms/CH/CHQuery.h"
 #include "Algorithms/CH/ContractionHierarchy.h"
-#include "DataStructures/Graph/Attributes/RoutingCostAttribute.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Graph.h"
@@ -18,16 +17,12 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 
 // An adapter that makes CCHs usable in the all-or-nothing assignment procedure.
-template <typename InputGraphT, template <typename> class GetWeightT>
+template <typename InputGraphT, typename WeightT>
 class CCHAdapter {
-  // The requirements for the input graph demanded by this adapter.
-  static_assert(InputGraphT::template has<LatLngAttribute>(), "Input graph is missing LatLngs.");
-  static_assert(InputGraphT::template has<EdgeIdAttribute>(), "Input graph is missing edge IDs.");
-
  private:
   // The type of the CH resulting from perfectly customizing the CCH.
-  using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, RoutingCostAttribute>>;
-  using CH = ContractionHierarchy<CHGraph, CHGraph::GetRoutingCost>;
+  using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, WeightT>>;
+  using CH = ContractionHierarchy<CHGraph, WeightT>;
 
  public:
   // The input graph type.
@@ -61,15 +56,16 @@ class CCHAdapter {
 
     // Build the metric-independent CCH.
     cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
+    const int* const weights = &inputGraph.template get<WeightT>(0);
+    currentMetric.reset(cch, reinterpret_cast<const unsigned int*>(weights));
   }
 
   // Invoked before each iteration.
   void customize() {
     // Customize the CCH using perfect witness searches.
-    const unsigned int* weights = reinterpret_cast<const unsigned int*>(&getWeight(inputGraph, 0));
-    RoutingKit::CustomizableContractionHierarchyMetric metric(cch, weights);
+    const int numEdges = inputGraph.numEdges();
     perfectCH = convert<CH>(
-        metric.build_contraction_hierarchy_using_perfect_witness_search(), inputGraph.numEdges());
+        currentMetric.build_contraction_hierarchy_using_perfect_witness_search(), numEdges);
     chSearch.resize();
   }
 
@@ -105,11 +101,12 @@ class CCHAdapter {
 
  private:
   using CCH = RoutingKit::CustomizableContractionHierarchy;
+  using CCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
   using CHQuery = StandardCHQuery<CH, BasicLabelSet<1, ParentInfo::FULL_PARENT_INFO>, false>;
 
   const InputGraph& inputGraph;     // The input graph.
   CCH cch;                          // The metric-independent CCH.
+  CCHMetric currentMetric;          // The current metric for the CCH.
   CH perfectCH;                     // The CH resulting from perfectly customizing the CCH.
   CHQuery chSearch;                 // A CH search on the perfect CH.
-  GetWeightT<InputGraph> getWeight; // A functor returning the edge weight used for routing.
 };

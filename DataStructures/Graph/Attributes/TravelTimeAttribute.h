@@ -8,14 +8,6 @@
 // An attribute associating a travel time with each edge of a graph.
 class TravelTimeAttribute : public AbstractAttribute<int> {
  public:
-  // A functor that returns the travel time of the specified edge in the specified graph. Used for
-  // telling algorithms on which attribute of a graph they should work.
-  template <typename GraphT>
-  struct GetTravelTime {
-    const Type& operator()(const GraphT& g, const int e) const { return g.travelTime(e); }
-    Type& operator()(GraphT& g, const int e) const { return g.travelTime(e); }
-  };
-
   static constexpr Type DEFAULT_VALUE = INFTY;         // The attribute's default value.
   static constexpr const char* NAME   = "travel_time"; // The attribute's unique name.
 

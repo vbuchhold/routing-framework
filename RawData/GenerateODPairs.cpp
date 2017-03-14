@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
+#include "DataStructures/Graph/Attributes/RoutingCostAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Experiments/ODPairGenerator.h"
@@ -57,13 +57,13 @@ int main(int argc, char* argv[]) {
   }
 
   std::default_random_engine rand(clp.getValue<int>("s", 19900325));
-  using Graph = StaticGraph<VertexAttrs<>, EdgeAttrs<TravelTimeAttribute>>;
+  using Graph = StaticGraph<VertexAttrs<>, EdgeAttrs<RoutingCostAttribute>>;
   std::ifstream in(clp.getValue<std::string>("i"), std::ios::binary);
   std::cout << "Reading the input graph..." << std::flush;
   Graph graph(in);
   std::cout << " done." << std::endl;
   in.close();
-  ODPairGenerator<Graph, Graph::GetTravelTime> gen(graph, rand);
+  ODPairGenerator<Graph, RoutingCostAttribute> gen(graph, rand);
 
   const int numPairs = clp.getValue<int>("n");
   std::ofstream out(clp.getValue<std::string>("o") + ".od");
