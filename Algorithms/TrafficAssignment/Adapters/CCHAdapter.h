@@ -57,7 +57,7 @@ class CCHAdapter {
     // Build the metric-independent CCH.
     cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
     const int* const weights = &inputGraph.template get<WeightT>(0);
-    currentMetric.reset(cch, reinterpret_cast<const unsigned int*>(weights));
+    currentMetric = {cch, reinterpret_cast<const unsigned int*>(weights)};
   }
 
   // Invoked before each iteration.
