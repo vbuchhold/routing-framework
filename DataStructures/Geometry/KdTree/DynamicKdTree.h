@@ -4,7 +4,6 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-#include "DataStructures/Geometry/KdTree/Adapters/PointSubsetAdapter.h"
 #include "DataStructures/Geometry/KdTree/Metrics/EuclideanMetric.h"
 #include "DataStructures/Geometry/KdTree/StaticKdTree.h"
 

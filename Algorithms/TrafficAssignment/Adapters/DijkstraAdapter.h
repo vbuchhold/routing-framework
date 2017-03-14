@@ -6,6 +6,7 @@
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
+#include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/Constants.h"
 
 // An adapter that makes Dijkstra's algorithm usable in the all-or-nothing assignment procedure.

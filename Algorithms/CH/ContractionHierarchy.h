@@ -3,6 +3,7 @@
 #include <cassert>
 #include <fstream>
 #include <utility>
+#include <vector>
 
 #include <routingkit/contraction_hierarchy.h>
 

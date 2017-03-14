@@ -6,9 +6,12 @@
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
+#include "Algorithms/CH/CHConversion.h"
 #include "Algorithms/CH/CHQuery.h"
 #include "Algorithms/CH/ContractionHierarchy.h"
 #include "DataStructures/Graph/Attributes/RoutingCostAttribute.h"
+#include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
+#include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
