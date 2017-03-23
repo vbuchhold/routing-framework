@@ -11,6 +11,8 @@
 #include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 
+namespace trafficassign {
+
 // An adapter that makes CHs usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>
 class CHAdapter {
@@ -70,3 +72,5 @@ class CHAdapter {
   CHPrepro chPrepro;            // A CH preprocessing instance.
   CHQuery chSearch;             // A CH search instance.
 };
+
+}

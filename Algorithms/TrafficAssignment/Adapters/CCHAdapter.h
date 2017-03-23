@@ -16,6 +16,8 @@
 #include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 
+namespace trafficassign {
+
 // An adapter that makes CCHs usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>
 class CCHAdapter {
@@ -110,3 +112,5 @@ class CCHAdapter {
   CH perfectCH;                     // The CH resulting from perfectly customizing the CCH.
   CHQuery chSearch;                 // A CH search on the perfect CH.
 };
+
+}

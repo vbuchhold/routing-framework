@@ -11,6 +11,8 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/Constants.h"
 
+namespace trafficassign {
+
 // An adapter that makes bidirectional search usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>
 class BiDijkstraAdapter {
@@ -77,3 +79,5 @@ class BiDijkstraAdapter {
   InputGraph reverseGraph;          // The reverse graph.
   BiDijkstra<Dijkstra> biDijkstra;  // The bidirectional search.
 };
+
+}
