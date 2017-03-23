@@ -1,13 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 // Statistics about an iterative all-or-nothing assignment, including checksums and running times.
 struct AllOrNothingAssignmentStats {
   // Constructs a struct collecting statistics about an iterative all-or-nothing assignment.
-  AllOrNothingAssignmentStats()
+  AllOrNothingAssignmentStats(const int numODPairs)
       : lastChecksum(0),
         totalChecksum(0),
+        lastDistances(numODPairs, -1),
+        maxChangeInDistances(0),
+        avgChangeInDistances(0),
         lastCustomizationTime(0),
         lastQueryTime(0),
         totalPreprocessingTime(0),
@@ -15,15 +19,27 @@ struct AllOrNothingAssignmentStats {
         totalQueryTime(0),
         numIterations(0) {}
 
+  // Resets the values from the last iteration.
+  void startIteration() {
+    lastChecksum = 0;
+    maxChangeInDistances = 0;
+    avgChangeInDistances = 0;
+  }
+
   // Adds the values from the last iteration to the totals.
-  void addLastValuesToTotals() {
+  void finishIteration() {
     totalChecksum += lastChecksum;
     totalCustomizationTime += lastCustomizationTime;
     totalQueryTime += lastQueryTime;
+    avgChangeInDistances /= lastDistances.size();
   }
 
   int64_t lastChecksum;  // The sum of the distances computed in the last iteration.
   int64_t totalChecksum; // The total sum of distances computed.
+
+  std::vector<int> lastDistances; // The OD-distances from the last iteration.
+  double maxChangeInDistances;    // The max change in the OD-distances between the last iterations.
+  double avgChangeInDistances;    // The avg change in the OD-distances between the last iterations.
 
   int lastCustomizationTime; // The time spent on customization in the last iteration.
   int lastQueryTime;         // The time spent on queries in the last iteration.

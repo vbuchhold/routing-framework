@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
+#include <cstdlib>
 #include <iostream>
 #include <ostream>
 #include <vector>
@@ -23,7 +25,11 @@ class AllOrNothingAssignment {
   // Constructs an all-or-nothing assignment instance.
   AllOrNothingAssignment(const InputGraph& graph, const std::vector<OriginDestination>& odPairs,
                          const bool verbose = true)
-      : shortestPathAlgo(graph), inputGraph(graph), odPairs(odPairs), verbose(verbose) {
+      : stats(odPairs.size()),
+        shortestPathAlgo(graph),
+        inputGraph(graph),
+        odPairs(odPairs),
+        verbose(verbose) {
     Timer timer;
     shortestPathAlgo.preprocess();
     stats.totalPreprocessingTime = timer.elapsed();
@@ -41,11 +47,20 @@ class AllOrNothingAssignment {
     ProgressBar bar(odPairs.size(), verbose);
     trafficFlows.clear();
     trafficFlows.resize(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts());
-    stats.lastChecksum = 0;
-    for (const auto& od : odPairs) {
-      shortestPathAlgo.query(od);
-      stats.lastChecksum += shortestPathAlgo.getDistance(od.destination);
-      for (const auto e : shortestPathAlgo.getPackedEdgePath(od.destination)) {
+    stats.startIteration();
+    for (int i = 0; i != odPairs.size(); ++i) {
+      shortestPathAlgo.query(odPairs[i]);
+      const int dist = shortestPathAlgo.getDistance(odPairs[i].destination);
+      stats.lastChecksum += dist;
+
+      // Keep track of the max and avg change in the OD-distances between the last two iterations.
+      const double change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
+      stats.lastDistances[i] = dist;
+      stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, change);
+      stats.avgChangeInDistances += std::max(0.0, change);
+
+      // Assign the OD-flow to each edge on the computed path.
+      for (const auto e : shortestPathAlgo.getPackedEdgePath(odPairs[i].destination)) {
         assert(e >= 0); assert(e < trafficFlows.size());
         ++trafficFlows[e];
       }
@@ -59,7 +74,7 @@ class AllOrNothingAssignment {
       trafficFlows[shortestPathAlgo.getShortcutsSecondEdge(s)] += trafficFlows[s];
     }
     stats.lastQueryTime = timer.elapsed();
-    stats.addLastValuesToTotals();
+    stats.finishIteration();
 
     if (verbose) {
       std::cout << " done.\n";
