@@ -5,7 +5,6 @@
 #include "Algorithms/CH/CHPreprocessing.h"
 #include "Algorithms/CH/CHQuery.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
-#include "DataStructures/Graph/Attributes/RoutingCostAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
