@@ -15,15 +15,15 @@ class InverseFunction {
   InverseFunction(const GraphT& graph) : graph(graph) {}
 
   // Returns the travel cost on edge e, given the traffic flow x on e.
-  double operator()(const int e, const int x) const {
+  double operator()(const int e, const double x) const {
     assert(x >= 0);
-    return 1.0 * graph.length(e) * (155.0 / (x + 1) + 0.85) + 0.0 * graph.travelTime(e);
+    return 1.0 * graph.length(e) * (155 / (x + 1) + 0.85) + 0.0 * graph.travelTime(e);
   }
 
   // Returns the derivative of e's travel cost function at x.
-  double derivative(const int e, const int x) const {
+  double derivative(const int e, const double x) const {
     assert(x >= 0);
-    return 1.0 * graph.length(e) * -155.0 / std::pow(x + 1, 2);
+    return 1.0 * graph.length(e) * -155 / std::pow(x + 1, 2);
   }
 
  private:
