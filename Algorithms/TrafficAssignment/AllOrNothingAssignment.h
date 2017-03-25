@@ -74,6 +74,7 @@ class AllOrNothingAssignment {
       trafficFlows[shortestPathAlgo.getShortcutsSecondEdge(s)] += trafficFlows[s];
     }
     stats.lastQueryTime = timer.elapsed();
+    stats.avgChangeInDistances /= odPairs.size();
     stats.finishIteration();
 
     if (verbose) {

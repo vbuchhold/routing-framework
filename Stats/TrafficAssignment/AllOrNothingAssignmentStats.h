@@ -31,7 +31,6 @@ struct AllOrNothingAssignmentStats {
     totalChecksum += lastChecksum;
     totalCustomizationTime += lastCustomizationTime;
     totalQueryTime += lastQueryTime;
-    avgChangeInDistances /= lastDistances.size();
   }
 
   int64_t lastChecksum;  // The sum of the distances computed in the last iteration.
