@@ -16,7 +16,7 @@
 #include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 
-namespace trafficassign {
+namespace trafficassignment {
 
 // An adapter that makes CCHs usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>

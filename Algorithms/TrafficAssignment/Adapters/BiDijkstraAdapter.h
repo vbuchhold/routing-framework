@@ -11,7 +11,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/Constants.h"
 
-namespace trafficassign {
+namespace trafficassignment {
 
 // An adapter that makes bidirectional search usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>

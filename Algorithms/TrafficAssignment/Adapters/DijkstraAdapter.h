@@ -9,7 +9,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/Constants.h"
 
-namespace trafficassign {
+namespace trafficassignment {
 
 // An adapter that makes Dijkstra's algorithm usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>
