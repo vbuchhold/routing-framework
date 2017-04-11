@@ -2,12 +2,10 @@
 
 #include <array>
 #include <cassert>
-#include <type_traits>
 #include <vector>
 
-#include <boost/align/aligned_allocator.hpp>
-
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Labels/Containers/ParentLabelContainer.h"
 #include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
 #include "DataStructures/Queues/Heap.h"
 #include "Tools/Constants.h"
@@ -56,14 +54,14 @@ class Dijkstra {
   Dijkstra(const Graph& graph, const PruningCriterionT& pruneSearch = {})
       : graph(graph),
         distanceLabels(graph.numVertices()),
-        parent(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0),
+        parent(graph),
         queue(graph.numVertices()),
         pruneSearch(pruneSearch) {}
 
   // Ensures that the internal data structures fit for the size of the graph.
   void resize() {
     distanceLabels.resize(graph.numVertices());
-    parent.resize(LabelSet::KEEP_PARENT_VERTICES ? graph.numVertices() : 0);
+    parent.resize();
     queue.resize(graph.numVertices());
   }
 
@@ -100,30 +98,14 @@ class Dijkstra {
 
   // Returns the vertices along the shortest path from the i-th source to t in reverse order.
   std::vector<int> getReversePath(int t, const int i = 0) {
-    static_assert(LabelSet::KEEP_PARENT_VERTICES, "We currently do not keep parent vertices.");
     assert(distanceLabels[t][i] != INFTY);
-    std::vector<int> path;
-    while (parent[t].vertex(i) != INVALID_VERTEX) {
-      assert(graph.containsEdge(parent[t].vertex(i), t));
-      path.push_back(t);
-      t = parent[t].vertex(i);
-    }
-    path.push_back(t);
-    return path;
+    return parent.getReversePath(t, i);
   }
 
   // Returns the edges along the shortest path from the i-th source to t in reverse order.
   std::vector<int> getReverseEdgePath(int t, const int i = 0) {
-    static_assert(LabelSet::KEEP_PARENT_EDGES, "We currently do not keep parent edges.");
     assert(distanceLabels[t][i] != INFTY);
-    std::vector<int> path;
-    while (parent[t].vertex(i) != INVALID_VERTEX) {
-      assert(graph.containsEdge(parent[t].vertex(i), t));
-      assert(graph.edgeHead(parent[t].edge(i)) == t);
-      path.push_back(graph.edgeId(parent[t].edge(i)));
-      t = parent[t].vertex(i);
-    }
-    return path;
+    return parent.getReverseEdgePath(t, i);
   }
 
  private:
@@ -134,8 +116,8 @@ class Dijkstra {
     for (int i = 0; i < K; ++i) {
       const int s = sources[i];
       distanceLabels[s][i] = 0;
-      setParentVertex(s, INVALID_VERTEX, LabelMask(i));
-      setParentEdge(s, INVALID_EDGE, LabelMask(i));
+      parent.setVertex(s, INVALID_VERTEX, LabelMask(i));
+      parent.setEdge(s, INVALID_EDGE, LabelMask(i));
       if (!queue.contains(s))
         queue.insert(s, 0);
     }
@@ -159,8 +141,8 @@ class Dijkstra {
       const LabelMask mask = tentativeDist < distToV;
       if (mask) {
         distToV.min(tentativeDist);
-        setParentVertex(v, u, mask);
-        setParentEdge(v, e, mask);
+        parent.setVertex(v, u, mask);
+        parent.setEdge(v, e, mask);
         if (queue.contains(v))
           queue.decreaseKey(v, distToV.getKey());
         else
@@ -170,37 +152,14 @@ class Dijkstra {
     return u;
   }
 
-  // Sets the parent vertex of v to u on all shortest paths specified by mask.
+  using DistanceLabelCont = DistanceLabelContainerT<DistanceLabel>;
+  using ParentLabelCont   = ParentLabelContainer<Graph, LabelSet>;
 
-  template <bool cond = LabelSet::KEEP_PARENT_VERTICES>
-  std::enable_if_t<cond> setParentVertex(const int v, const int u, const LabelMask& mask) {
-    assert(v >= 0); assert(v < parent.size());
-    parent[v].setVertex(u, mask);
-  }
-
-  template <bool cond = LabelSet::KEEP_PARENT_VERTICES>
-  std::enable_if_t<!cond> setParentVertex(const int, const int, const LabelMask&) {}
-
-  // Sets the parent edge of v to e on all shortest paths specified by mask.
-
-  template <bool cond = LabelSet::KEEP_PARENT_EDGES>
-  std::enable_if_t<cond> setParentEdge(const int v, const int e, const LabelMask& mask) {
-    assert(v >= 0); assert(v < parent.size());
-    parent[v].setEdge(e, mask);
-  }
-
-  template <bool cond = LabelSet::KEEP_PARENT_EDGES>
-  std::enable_if_t<!cond> setParentEdge(const int, const int, const LabelMask&) {}
-
-  using DistanceLabelContainer = DistanceLabelContainerT<DistanceLabel>;
-  using ParentLabelContainer =
-      std::vector<ParentLabel, boost::alignment::aligned_allocator<ParentLabel>>;
-
-  const Graph& graph;                    // The graph on which we compute shortest paths.
-  DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
-  ParentLabelContainer parent;           // The parent information for each vertex.
-  Queue queue;                           // The priority queue of unsettled vertices.
-  PruningCriterionT pruneSearch;         // A criterion applied to prune the search.
+  const Graph& graph;               // The graph on which we compute shortest paths.
+  DistanceLabelCont distanceLabels; // The distance labels of the vertices.
+  ParentLabelCont parent;           // The parent information for each vertex.
+  Queue queue;                      // The priority queue of unsettled vertices.
+  PruningCriterionT pruneSearch;    // A criterion applied to prune the search.
 };
 
 // An alias template for a standard Dijkstra search.
