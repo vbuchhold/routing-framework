@@ -12,3 +12,15 @@ inline constexpr double toRadians(const double angdeg) {
 inline constexpr double toDegrees(const double angrad) {
   return 180 / PI * angrad;
 }
+
+// Sets min to the smaller and max to the greater of a and b.
+template <typename T>
+inline constexpr void minmax(const T a, const T b, T& min, T& max) {
+  if (b < a) {
+    min = b;
+    max = a;
+  } else {
+    min = a;
+    max = b;
+  }
+}
