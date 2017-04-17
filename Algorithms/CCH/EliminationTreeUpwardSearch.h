@@ -6,11 +6,13 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/ParentLabelContainer.h"
 #include "DataStructures/Labels/Containers/SimpleDistanceLabelContainer.h"
+#include "DataStructures/Queues/TournamentTree.h"
 #include "Tools/Constants.h"
 
 // An upward search in an elimination tree query. It enumerates all the vertices on a path in the
 // elimination tree from a source vertex to the root, relaxing their outgoing edges. Depending on
-// the label set, the algorithm keeps parent vertices and/or edges.
+// the label set, the algorithm keeps parent vertices and/or edges and computes multiple shortest
+// paths simultaneously, possibly using SSE or AVX instructions.
 template <typename SearchGraphT, typename WeightT, typename LabelSetT>
 class EliminationTreeUpwardSearch {
  private:
@@ -28,7 +30,7 @@ class EliminationTreeUpwardSearch {
         tentativeDistances(tentativeDist),
         distanceLabels(graph.numVertices()),
         parent(graph),
-        nextVertex(INVALID_VERTEX) {}
+        nextVertices({INVALID_VERTEX}) {}
 
   // Ensures that the internal data structures fit the size of the graph.
   void resize() {
@@ -36,32 +38,41 @@ class EliminationTreeUpwardSearch {
     parent.resize();
   }
 
-  // Initializes the labels of the source vertex.
-  void init(const int s) {
-    distanceLabels[s][0] = 0;
-    parent.setVertex(s, INVALID_VERTEX, LabelMask(0));
-    parent.setEdge(s, INVALID_EDGE, LabelMask(0));
-    nextVertex = s;
+  // Initializes the labels of the source vertices.
+  void init(const std::array<int, LabelSetT::K>& sources) {
+    nextVertices.build(sources);
+    distanceLabels[searchGraph.numVertices() - 1] = INFTY;
+    for (int i = 0; i < LabelSetT::K; ++i) {
+      const int s = sources[i];
+      distanceLabels[s][i] = 0;
+      parent.setVertex(s, INVALID_VERTEX, LabelMask(i));
+      parent.setEdge(s, INVALID_EDGE, LabelMask(i));
+    }
   }
 
   // Relaxes the edges out of the next vertex.
   void settleNextVertex() {
-    assert(nextVertex >= 0); assert(nextVertex < searchGraph.numVertices());
-    DistanceLabel& distToU = distanceLabels[nextVertex];
+    const int u = getNextVertex();
+    assert(u >= 0); assert(u < searchGraph.numVertices());
+    DistanceLabel& distToU = distanceLabels[u];
     if (distToU < tentativeDistances)
-      FORALL_INCIDENT_EDGES(searchGraph, nextVertex, e) {
+      FORALL_INCIDENT_EDGES(searchGraph, u, e) {
         const int v = searchGraph.edgeHead(e);
         DistanceLabel& distToV = distanceLabels[v];
         const DistanceLabel tentativeDist = distToU + searchGraph.template get<WeightT>(e);
         const LabelMask mask = tentativeDist < distToV;
         if (mask) {
           distToV.min(tentativeDist);
-          parent.setVertex(v, nextVertex, mask);
+          parent.setVertex(v, u, mask);
           parent.setEdge(v, e, mask);
         }
       }
     distToU = INFTY;
-    nextVertex = eliminationTree[nextVertex];
+
+    // Find the next vertex to be settled. If two or more searches merged at u, block all but one.
+    nextVertices.deleteMin(eliminationTree[u]);
+    while (getNextVertex() == u)
+      nextVertices.deleteMin(INFTY);
   }
 
   // Returns the distance label of the specified vertex.
@@ -69,19 +80,19 @@ class EliminationTreeUpwardSearch {
     return distanceLabels[v];
   }
 
-  // Returns the vertices on the shortest path to t in reverse order.
-  std::vector<int> getReversePath(int t) {
-    return parent.getReversePath(t);
+  // Returns the vertices on the shortest path from the i-th source to t in reverse order.
+  std::vector<int> getReversePath(int t, const int i) {
+    return parent.getReversePath(t, i);
   }
 
-  // Returns the edges on the shortest path to t in reverse order.
-  std::vector<int> getReverseEdgePath(int t) {
-    return parent.getReverseEdgePath(t);
+  // Returns the edges on the shortest path from the i-th source to t in reverse order.
+  std::vector<int> getReverseEdgePath(int t, const int i) {
+    return parent.getReverseEdgePath(t, i);
   }
 
   // Returns the vertex to be settled next.
   int getNextVertex() const {
-    return nextVertex;
+    return nextVertices.minKey();
   }
 
  private:
@@ -92,7 +103,7 @@ class EliminationTreeUpwardSearch {
   const std::vector<int>& eliminationTree; // eliminationTree[v] is the parent of v in the tree.
   const DistanceLabel& tentativeDistances; // One tentative distance for each simultaneous search.
 
-  DistanceLabelCont distanceLabels; // The distance labels of the vertices.
-  ParentLabelCont parent;           // The parent information for each vertex.
-  int nextVertex;                   // The vertex to be settled next.
+  DistanceLabelCont distanceLabels;             // The distance labels of the vertices.
+  ParentLabelCont parent;                       // The parent information for each vertex.
+  TournamentTree<LabelSetT::logK> nextVertices; // The vertices settled next in the k searches.
 };

@@ -8,10 +8,13 @@
 #include "Tools/Constants.h"
 
 // An implementation of an elimination tree query, computing shortest paths in CCHs without using
-// priority queues. Depending on the label set, the algorithm keeps parent vertices and/or edges.
+// priority queues. Depending on the label set, the algorithm keeps parent vertices and/or edges,
+// and computes multiple shortest paths simultaneously, possibly using SSE or AVX instructions.
 template <typename CH, typename LabelSetT>
 class EliminationTreeQuery {
  public:
+  static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
+
   // Constructs an elimination tree query instance.
   EliminationTreeQuery(const CH& ch, const std::vector<int>& eliminationTree)
       : forwardSearch(ch.getUpwardGraph(), eliminationTree, tentativeDistances),
@@ -25,47 +28,48 @@ class EliminationTreeQuery {
 
   // Runs an elimination tree query from s to t.
   void run(const int s, const int t) {
-    forwardSearch.init(s);
-    reverseSearch.init(t);
+    std::array<int, K> sources;
+    std::array<int, K> targets;
+    sources.fill(s);
+    targets.fill(t);
+    run(sources, targets);
+  }
+
+  // Runs an elimination tree query that computes multiple shortest paths simultaneously.
+  void run(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+    forwardSearch.init(sources);
+    reverseSearch.init(targets);
     tentativeDistances = INFTY;
-
-    // Settles all vertices on the path in the elimination tree from s (t) to the LCA.
-    while (forwardSearch.getNextVertex() != reverseSearch.getNextVertex())
-      if (forwardSearch.getNextVertex() < reverseSearch.getNextVertex())
+    while (forwardSearch.getNextVertex() != INVALID_VERTEX)
+      if (forwardSearch.getNextVertex() <= reverseSearch.getNextVertex()) {
+        updateTentativeDistances(forwardSearch.getNextVertex());
         forwardSearch.settleNextVertex();
-      else
+      } else {
         reverseSearch.settleNextVertex();
-
-    // Settles all vertices on the path in the elimination tree from the LCA to the root.
-    while (forwardSearch.getNextVertex() != INVALID_VERTEX) {
-      assert(forwardSearch.getNextVertex() == reverseSearch.getNextVertex());
-      updateTentativeDistances(forwardSearch.getNextVertex());
-      forwardSearch.settleNextVertex();
-      reverseSearch.settleNextVertex();
-    }
+      }
   }
 
-  // Returns the shortest-path distance.
-  int getDistance() {
-    return tentativeDistances[0];
+  // Returns the length of the i-th shortest path.
+  int getDistance(const int i = 0) {
+    return tentativeDistances[i];
   }
 
-  // Returns the vertices on the packed shortest path.
-  std::vector<int> getPackedPath() {
-    assert(tentativeDistances[0] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(0));
-    std::vector<int> subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(0));
+  // Returns the vertices on the i-th packed shortest path.
+  std::vector<int> getPackedPath(const int i = 0) {
+    assert(tentativeDistances[i] != INFTY);
+    std::vector<int> subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
+    std::vector<int> subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
     std::reverse(subpath1.begin(), subpath1.end());
     subpath1.pop_back();
     subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
     return subpath1;
   }
 
-  // Returns the edges on the packed shortest path.
-  std::vector<int> getPackedEdgePath() {
-    assert(tentativeDistances[0] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReverseEdgePath(meetingVertices.vertex(0));
-    std::vector<int> subpath2 = reverseSearch.getReverseEdgePath(meetingVertices.vertex(0));
+  // Returns the edges on the i-th packed shortest path.
+  std::vector<int> getPackedEdgePath(const int i = 0) {
+    assert(tentativeDistances[i] != INFTY);
+    std::vector<int> subpath1 = forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
+    std::vector<int> subpath2 = reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
     std::reverse(subpath1.begin(), subpath1.end());
     subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
     return subpath1;
@@ -86,8 +90,8 @@ class EliminationTreeQuery {
   using Weight      = typename CH::Weight;
   using UpwardSearch = EliminationTreeUpwardSearch<SearchGraph, Weight, LabelSetT>;
 
-  UpwardSearch forwardSearch;       // The forward search from the source vertex.
-  UpwardSearch reverseSearch;       // The reverse search from the target vertex.
+  UpwardSearch forwardSearch;       // The forward search from the source vertices.
+  UpwardSearch reverseSearch;       // The reverse search from the target vertices.
   DistanceLabel tentativeDistances; // One tentative distance for each simultaneous search.
   ParentLabel meetingVertices;      // One meeting vertex for each simultaneous search.
 };
