@@ -64,7 +64,7 @@ class CHAdapter {
   using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, WeightT>>;
   using CHPrepro = CHPreprocessing<InputGraph, CHGraph, WeightT>;
   using CH = typename CHPrepro::CH;
-  using CHQuery = StandardCHQuery<CH, BasicLabelSet<1, ParentInfo::FULL_PARENT_INFO>>;
+  using CHQuery = StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>>;
 
   const InputGraph& inputGraph; // The input graph.
   CH ch;                        // The CH rebuilt in each iteration.

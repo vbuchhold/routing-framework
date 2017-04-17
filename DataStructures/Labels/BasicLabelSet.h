@@ -11,10 +11,12 @@
 // A set of consistent distance and parent labels for Dijkstra's algorithm. The template arguments
 // specify the number of shortest paths computed simultaneously and the kind of parent information
 // that should be collected.
-template <int numSources, ParentInfo parentInfo>
+template <int logSearches, ParentInfo parentInfo>
 struct BasicLabelSet {
  public:
-  static constexpr int K = numSources; // The number of simultaneous shortest-path computations.
+  // The number of simultaneous shortest-path computations.
+  static constexpr int logK = logSearches;
+  static constexpr int K = 1 << logK;
 
   // Flags indicating whether parent vertices and/or parent edges should be collected.
   static constexpr bool KEEP_PARENT_VERTICES = parentInfo != ParentInfo::NO_PARENT_INFO;

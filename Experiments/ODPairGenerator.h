@@ -52,7 +52,7 @@ class ODPairGenerator {
   }
 
  private:
-  using LabelSet = BasicLabelSet<1, ParentInfo::NO_PARENT_INFO>;
+  using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
   using Dijkstra = StandardDijkstra<GraphT, WeightT, LabelSet>;
 
   Dijkstra dijkstra;                    // The Dijkstra search used to compute Dijkstra ranks.

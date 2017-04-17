@@ -104,7 +104,7 @@ class CCHAdapter {
  private:
   using CCH = RoutingKit::CustomizableContractionHierarchy;
   using CCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
-  using CHQuery = StandardCHQuery<CH, BasicLabelSet<1, ParentInfo::FULL_PARENT_INFO>, false>;
+  using CHQuery = StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>, false>;
 
   const InputGraph& inputGraph;     // The input graph.
   CCH cch;                          // The metric-independent CCH.

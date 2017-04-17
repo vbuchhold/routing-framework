@@ -72,7 +72,7 @@ class BiDijkstraAdapter {
   }
 
  private:
-  using LabelSet = BasicLabelSet<1, ParentInfo::FULL_PARENT_INFO>;
+  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
   using Dijkstra = StandardDijkstra<InputGraph, WeightT, LabelSet>;
 
   const InputGraph& inputGraph;     // The input graph.
