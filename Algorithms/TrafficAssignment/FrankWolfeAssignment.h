@@ -42,7 +42,7 @@ class FrankWolfeAssignment {
     // Initialization.
     Timer timer;
     FORALL_EDGES(inputGraph, e)
-      inputGraph.travelCost(e) = objFunction.getEdgeWeight(e, 0);
+      inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, 0));
     allOrNothingAssignment.run();
     FORALL_EDGES(inputGraph, e) {
       trafficFlows[e] = allOrNothingAssignment.trafficFlowOn(e);
@@ -65,7 +65,7 @@ class FrankWolfeAssignment {
 
       // Update travel costs.
       FORALL_EDGES(inputGraph, e)
-        inputGraph.travelCost(e) = objFunction.getEdgeWeight(e, trafficFlows[e]);
+        inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, trafficFlows[e]));
 
       // Direction finding.
       allOrNothingAssignment.run();

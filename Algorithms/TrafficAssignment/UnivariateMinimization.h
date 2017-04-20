@@ -6,7 +6,7 @@
 // a ditonic function in the interval [a, b], with a tolerance of +/- epsilon. Note that the first
 // parameter is the derivative of the function to be minimized.
 template <typename DerivativeT>
-inline float bisectionMethod(DerivativeT derivative, float a, float b, float epsilon = 1e-10) {
+inline float bisectionMethod(DerivativeT derivative, float a, float b, float epsilon = 1e-3) {
   assert(a <= b);
   assert(epsilon > 0);
 

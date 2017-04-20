@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cmath>
-
 // Represents the system-optimum (SO) objective function. The flow pattern that minimizes the SO
 // objective function (while satisfying the flow conservation constraint) minimizes the total
 // travel cost. The SO flow pattern is obtained by iterative shortest-path computations using
@@ -13,8 +11,8 @@ class SystemOptimum {
   SystemOptimum(TravelCostFunctionT function) : travelCostFunction(function) {}
 
   // Returns the weight of edge e, given the traffic flow x on e.
-  int getEdgeWeight(const int e, const float x) const {
-    return std::round(travelCostFunction(e, x) + x * travelCostFunction.derivative(e, x));
+  float getEdgeWeight(const int e, const float x) const {
+    return travelCostFunction(e, x) + x * travelCostFunction.derivative(e, x);
   }
 
  private:

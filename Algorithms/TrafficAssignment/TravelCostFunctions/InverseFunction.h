@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <cmath>
 
 // An inverse travel cost function, which decreases (rather than increases) as the flow increases.
 // It should model the costs for operating public transit. The more people use public transit, the
@@ -23,7 +22,8 @@ class InverseFunction {
   // Returns the derivative of e's travel cost function at x.
   float derivative(const int e, const float x) const {
     assert(x >= 0);
-    return 1.0 * graph.length(e) * -155 / std::pow(x + 1, 2);
+    const float tmp = x + 1;
+    return 1.0 * graph.length(e) * -155 / (tmp * tmp);
   }
 
  private:

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cmath>
-
 // The BPR travel cost function, relating the travel time on an edge to the flow on this edge.
 template <typename GraphT>
 class BprFunction {
@@ -11,13 +9,14 @@ class BprFunction {
 
   // Returns the travel time on edge e, given the traffic flow x on e.
   float operator()(const int e, const float x) const {
-    return graph.travelTime(e) * (1 + 0.15 * std::pow(x / graph.capacity(e), 4));
+    const float tmp = x / graph.capacity(e);
+    return graph.travelTime(e) * (1 + 0.15 * tmp * tmp * tmp * tmp);
   }
 
   // Returns the derivative of e's travel cost function at x.
   float derivative(const int e, const float x) const {
-    const int capacity = graph.capacity(e);
-    return graph.travelTime(e) * 0.15 * 4 * std::pow(x / capacity, 4 - 1) / capacity;
+    const float tmp = x / graph.capacity(e);
+    return graph.travelTime(e) * 0.15 * 4 * tmp * tmp * tmp / graph.capacity(e);
   }
 
  private:
