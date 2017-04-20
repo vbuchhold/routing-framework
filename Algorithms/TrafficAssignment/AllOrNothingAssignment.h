@@ -33,6 +33,8 @@ class AllOrNothingAssignment {
     Timer timer;
     shortestPathAlgo.preprocess();
     stats.totalPreprocessingTime = timer.elapsed();
+    stats.lastRoutingTime = stats.totalPreprocessingTime;
+    stats.totalRoutingTime = stats.totalPreprocessingTime;
     if (verbose) std::cout << "  Prepro: " << stats.totalPreprocessingTime << "ms" << std::endl;
   }
 
@@ -82,7 +84,7 @@ class AllOrNothingAssignment {
       std::cout << "  Checksum: " << stats.lastChecksum;
       std::cout << "  Custom: " << stats.lastCustomizationTime << "ms";
       std::cout << "  Queries: " << stats.lastQueryTime << "ms";
-      std::cout << "  Total: " << stats.lastCustomizationTime + stats.lastQueryTime << "ms\n";
+      std::cout << "  Routing: " << stats.lastRoutingTime << "ms\n";
       std::cout << std::flush;
     }
   }

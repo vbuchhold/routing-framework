@@ -14,9 +14,11 @@ struct AllOrNothingAssignmentStats {
         avgChangeInDistances(0),
         lastCustomizationTime(0),
         lastQueryTime(0),
+        lastRoutingTime(0),
         totalPreprocessingTime(0),
         totalCustomizationTime(0),
         totalQueryTime(0),
+        totalRoutingTime(0),
         numIterations(0) {}
 
   // Resets the values from the last iteration.
@@ -28,9 +30,11 @@ struct AllOrNothingAssignmentStats {
 
   // Adds the values from the last iteration to the totals.
   void finishIteration() {
+    lastRoutingTime = lastCustomizationTime + lastQueryTime;
     totalChecksum += lastChecksum;
     totalCustomizationTime += lastCustomizationTime;
     totalQueryTime += lastQueryTime;
+    totalRoutingTime += lastRoutingTime;
   }
 
   int64_t lastChecksum;  // The sum of the distances computed in the last iteration.
@@ -42,10 +46,12 @@ struct AllOrNothingAssignmentStats {
 
   int lastCustomizationTime; // The time spent on customization in the last iteration.
   int lastQueryTime;         // The time spent on queries in the last iteration.
+  int lastRoutingTime;       // The time spent on routing in the last iteration.
 
   int totalPreprocessingTime; // The total time spent on preprocessing.
   int totalCustomizationTime; // The total time spent on customization.
   int totalQueryTime;         // The total time spent on queries.
+  int totalRoutingTime;       // The total time spent on routing.
 
   int numIterations; // The number of iterations performed.
 };

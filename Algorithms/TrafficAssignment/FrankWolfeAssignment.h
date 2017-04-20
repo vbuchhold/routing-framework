@@ -31,7 +31,9 @@ class FrankWolfeAssignment {
         trafficFlows(graph.numEdges()),
         travelCostFunction(graph),
         objFunction(travelCostFunction),
-        verbose(verbose) {}
+        verbose(verbose) {
+    stats.totalRunningTime = allOrNothingAssignment.stats.totalRoutingTime;
+  }
 
   // Assigns all OD-flows onto the input graph.
   void run() {
@@ -47,10 +49,12 @@ class FrankWolfeAssignment {
       stats.totalTravelCost += trafficFlows[e] * travelCostFunction(e, trafficFlows[e]);
     }
     stats.lastRunningTime = timer.elapsed();
+    stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
     stats.finishIteration();
 
     if (verbose) {
-      std::cout << "  Running time: " << stats.lastRunningTime << "ms\n";
+      std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
+      std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
       std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
       std::cout << std::flush;
     }
@@ -77,23 +81,20 @@ class FrankWolfeAssignment {
       }, 0, 1);
 
       // Move along the descent direction.
-      float totalFlow = 0;
       FORALL_EDGES(inputGraph, e) {
         const float direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
-        stats.changeInEdgeFlows += std::abs(alpha * direction);
-        totalFlow += trafficFlows[e];
         trafficFlows[e] = trafficFlows[e] + alpha * direction;
         stats.totalTravelCost += trafficFlows[e] * travelCostFunction(e, trafficFlows[e]);
       }
       stats.lastRunningTime = timer.elapsed();
-      stats.changeInEdgeFlows /= totalFlow;
+      stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
       stats.finishIteration();
 
       if (verbose) {
-        std::cout << "  Running time: " << stats.lastRunningTime << "ms\n";
+        std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
+        std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
         std::cout << "  Max change in OD-distances: " << substats.maxChangeInDistances << "\n";
         std::cout << "  Avg change in OD-distances: " << substats.avgChangeInDistances << "\n";
-        std::cout << "  Change in edge flows: " << stats.changeInEdgeFlows << "\n";
         std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
         std::cout << std::flush;
       }
@@ -104,8 +105,10 @@ class FrankWolfeAssignment {
       std::cout << "  Checksum: " << substats.totalChecksum;
       std::cout << "  Prepro: " << substats.totalPreprocessingTime << "ms";
       std::cout << "  Custom: " << substats.totalCustomizationTime << "ms";
-      std::cout << "  Queries: " << substats.totalQueryTime << "ms\n";
-      std::cout << "  Running time: " << stats.totalRunningTime << "ms\n";
+      std::cout << "  Queries: " << substats.totalQueryTime << "ms";
+      std::cout << "  Routing: " << substats.totalRoutingTime << "ms\n";
+      std::cout << "  Line search: " << stats.totalLineSearchTime << "ms";
+      std::cout << "  Total: " << stats.totalRunningTime << "ms\n";
       std::cout << std::flush;
     }
   }

@@ -4,25 +4,28 @@
 struct FrankWolfeAssignmentStats {
   // Constructs a struct collecting statistics about a Frank-Wolfe assignment.
   FrankWolfeAssignmentStats()
-      : changeInEdgeFlows(0),
-        totalTravelCost(0),
+      : totalTravelCost(0),
+        lastLineSearchTime(0),
         lastRunningTime(0),
+        totalLineSearchTime(0),
         totalRunningTime(0) {}
 
   // Resets the values from the last iteration.
   void startIteration() {
-    changeInEdgeFlows = 0;
     totalTravelCost = 0;
   }
 
   // Adds the values from the last iteration to the totals.
   void finishIteration() {
+    totalLineSearchTime += lastLineSearchTime;
     totalRunningTime += lastRunningTime;
   }
 
-  float changeInEdgeFlows; // The change in the edge flows between the last two iterations.
-  float totalTravelCost;   // The total travel cost resulting from the current edge flows.
+  float totalTravelCost; // The total travel cost resulting from the current edge flows.
 
-  int lastRunningTime;  // The running time for the last iteration.
-  int totalRunningTime; // The total running time.
+  int lastLineSearchTime; // The time spent on the line search in the last iteration.
+  int lastRunningTime;    // The running time for the last iteration.
+
+  int totalLineSearchTime; // The total time spent on the line search.
+  int totalRunningTime;    // The total running time.
 };
