@@ -17,7 +17,7 @@ release = '-O3 -DNDEBUG '
 
 # Additional compiler options per instruction set extension.
 sse = '-msse4'
-avx = '-mavx2'
+avx = '-mavx2 -mfma'
 
 # Get options from the command line.
 variant = ARGUMENTS.get('variant', 'Devel')

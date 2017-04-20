@@ -22,6 +22,7 @@ $ git submodule update --init
 $ cd External
 $ cd nanoflann && sudo cp -r include /usr/local && cd ..
 $ cd RoutingKit && make && sudo cp -r include lib /usr/local && cd ..
+$ cd vectorclass && sudo mkdir /usr/local/include/vectorclass && sudo cp *.h special/* $_ && cd ..
 ```
 
 ## Building
