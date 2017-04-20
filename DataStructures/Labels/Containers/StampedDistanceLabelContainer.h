@@ -4,8 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include <boost/align/aligned_allocator.hpp>
-
+#include "Tools/Simd/AlignVector.h"
 #include "Tools/CompilerSpecific.h"
 #include "Tools/Constants.h"
 
@@ -47,10 +46,7 @@ class StampedDistanceLabelContainer {
   }
 
  private:
-  using DistanceLabelContainer =
-      std::vector<DistanceLabelT, boost::alignment::aligned_allocator<DistanceLabelT>>;
-
-  DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
-  std::vector<int> timestamps;           // The timestamps indicating whether a label is valid.
-  int clock;                             // The global clock.
+  AlignVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
+  std::vector<int> timestamps;                // The timestamps indicating whether a label is valid.
+  int clock;                                  // The global clock.
 };

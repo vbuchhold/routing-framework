@@ -15,3 +15,12 @@
 #ifndef UNLIKELY // Default definition.
 # define UNLIKELY(cond) (cond)
 #endif
+
+// The weakest alignment a type shall have for use with SIMD instructions.
+#if defined __AVX2__
+constexpr int MIN_ALIGNMENT = 32;
+#elif defined __SSE4_2__
+constexpr int MIN_ALIGNMENT = 16;
+#else
+constexpr int MIN_ALIGNMENT = 1;
+#endif

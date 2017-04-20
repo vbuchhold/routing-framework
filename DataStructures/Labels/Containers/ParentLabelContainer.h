@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/align/aligned_allocator.hpp>
+#include "Tools/Simd/AlignVector.h"
 
 // A container maintaining parent information during a shortest-path search. Depending on the used
 // label set, the parent information consists of parent vertices and/or edges.
@@ -73,8 +73,6 @@ class ParentLabelContainer {
   }
 
  private:
-  using Container = std::vector<ParentLabel, boost::alignment::aligned_allocator<ParentLabel>>;
-
-  const GraphT& graph; // The graph on which we compute shortest paths.
-  Container parent;    // The parent information for each vertex.
+  const GraphT& graph;             // The graph on which we compute shortest paths.
+  AlignVector<ParentLabel> parent; // The parent information for each vertex.
 };

@@ -4,8 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include <boost/align/aligned_allocator.hpp>
-
+#include "Tools/Simd/AlignVector.h"
 #include "Tools/Constants.h"
 
 // The simplest implementation of a container maintaining distance labels during a shortest-path
@@ -35,8 +34,5 @@ class SimpleDistanceLabelContainer {
   }
 
  private:
-  using DistanceLabelContainer =
-      std::vector<DistanceLabelT, boost::alignment::aligned_allocator<DistanceLabelT>>;
-
-  DistanceLabelContainer distanceLabels; // The distance labels of the vertices.
+  AlignVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
 };
