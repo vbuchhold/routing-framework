@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "Tools/Simd/AlignVector.h"
+
 // The common base class for all attributes. It associates with each vertex/edge a value of type T.
 template <typename T>
 class AbstractAttribute {
@@ -20,5 +22,5 @@ class AbstractAttribute {
     values.reserve(num);
   }
 
-  std::vector<Type> values; // The attribute's values for the vertices/edges.
+  AlignVector<Type> values; // The attribute's values for the vertices/edges.
 };

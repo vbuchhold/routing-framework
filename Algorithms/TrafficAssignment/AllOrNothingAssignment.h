@@ -10,6 +10,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/AllOrNothingAssignmentStats.h"
 #include "Tools/CommandLine/ProgressBar.h"
+#include "Tools/Simd/AlignVector.h"
 #include "Tools/Timer.h"
 
 // Implementation of an iterative all-or-nothing traffic assignment. Each OD-pair is processed in
@@ -90,7 +91,7 @@ class AllOrNothingAssignment {
   }
 
   // Returns the traffic flow on edge e.
-  int trafficFlowOn(const int e) const {
+  const int& trafficFlowOn(const int e) const {
     assert(e >= 0); assert(e < inputGraph.numEdges());
     return trafficFlows[e];
   }
@@ -101,6 +102,6 @@ class AllOrNothingAssignment {
   ShortestPathAlgoT shortestPathAlgo;            // Algo computing shortest paths between OD-pairs.
   const InputGraph& inputGraph;                  // The input graph.
   const std::vector<OriginDestination>& odPairs; // The OD-pairs to be assigned onto the graph.
-  std::vector<int> trafficFlows;                 // The traffic flows on the edges.
+  AlignVector<int> trafficFlows;                 // The traffic flows on the edges.
   const bool verbose;                            // Should informative messages be displayed?
 };

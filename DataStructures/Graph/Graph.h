@@ -14,6 +14,7 @@
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "DataStructures/Utilities/Permutation.h"
+#include "Tools/Simd/AlignVector.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/TemplateProgramming.h"
 #include "Tools/Workarounds.h"
@@ -741,8 +742,8 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     RUN_FORALL(perm.applyTo(EdgeAttributes::values));
   }
 
-  std::vector<OutEdgeRange> outEdges; // The ranges of outgoing edges of the vertices.
-  std::vector<int> edgeHeads;         // The head vertices of the edges.
+  AlignVector<OutEdgeRange> outEdges; // The ranges of outgoing edges of the vertices.
+  AlignVector<int> edgeHeads;         // The head vertices of the edges.
 
   int edgeCount; // The number of edges in the graph.
 };
@@ -769,6 +770,7 @@ using DynamicGraph = Graph<VertexAttributes, EdgeAttributes, true>;
 // Iteration macros for conveniently looping through vertices or edges of a graph.
 #define FORALL_VERTICES(G, u) for (int u = 0; u != G.numVertices(); ++u)
 #define FORALL_EDGES(G, e) for (int e = 0; e <= G.maxEdgeIndex(); ++e)
+#define FORALL_EDGES_SIMD(G, e, vecSize) for (int e = 0; e <= G.maxEdgeIndex(); e += vecSize)
 #define FORALL_VALID_EDGES(G, u, e) for (int u = 0; u != G.numVertices(); ++u) \
     for (int e = G.firstEdge(u); e != G.lastEdge(u); ++e)
 #define FORALL_INCIDENT_EDGES(G, u, e) for (int e = G.firstEdge(u); e != G.lastEdge(u); ++e)
