@@ -67,19 +67,19 @@ class FrankWolfeAssignment {
       allOrNothingAssignment.run();
 
       // Line search.
-      const double alpha = bisectionMethod([this](const double alpha) {
-        double sum = 0;
+      const float alpha = bisectionMethod([this](const float alpha) {
+        float sum = 0;
         FORALL_EDGES(inputGraph, e) {
-          const double direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
+          const float direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
           sum += direction * objFunction.getEdgeWeight(e, trafficFlows[e] + alpha * direction);
         }
         return sum;
       }, 0, 1);
 
       // Move along the descent direction.
-      double totalFlow = 0;
+      float totalFlow = 0;
       FORALL_EDGES(inputGraph, e) {
-        const double direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
+        const float direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
         stats.changeInEdgeFlows += std::abs(alpha * direction);
         totalFlow += trafficFlows[e];
         trafficFlows[e] = trafficFlows[e] + alpha * direction;
@@ -111,7 +111,7 @@ class FrankWolfeAssignment {
   }
 
   // Returns the traffic flow on edge e.
-  double trafficFlowOn(const int e) const {
+  float trafficFlowOn(const int e) const {
     assert(e >= 0); assert(e < inputGraph.numEdges());
     return trafficFlows[e];
   }
@@ -125,7 +125,7 @@ class FrankWolfeAssignment {
 
   AllOrNothing allOrNothingAssignment;   // The all-or-nothing assignment algo used as a subroutine.
   InputGraphT& inputGraph;               // The input graph.
-  std::vector<double> trafficFlows;      // The traffic flows on the edges.
+  std::vector<float> trafficFlows;       // The traffic flows on the edges.
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
   const bool verbose;                    // Should informative messages be displayed?

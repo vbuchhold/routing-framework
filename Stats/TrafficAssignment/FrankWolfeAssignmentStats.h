@@ -20,8 +20,8 @@ struct FrankWolfeAssignmentStats {
     totalRunningTime += lastRunningTime;
   }
 
-  double changeInEdgeFlows; // The change in the edge flows between the last two iterations.
-  double totalTravelCost;   // The total travel cost resulting from the current edge flows.
+  float changeInEdgeFlows; // The change in the edge flows between the last two iterations.
+  float totalTravelCost;   // The total travel cost resulting from the current edge flows.
 
   int lastRunningTime;  // The running time for the last iteration.
   int totalRunningTime; // The total running time.

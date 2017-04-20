@@ -10,12 +10,12 @@ class BprFunction {
   BprFunction(const GraphT& graph) : graph(graph) {}
 
   // Returns the travel time on edge e, given the traffic flow x on e.
-  double operator()(const int e, const double x) const {
+  float operator()(const int e, const float x) const {
     return graph.travelTime(e) * (1 + 0.15 * std::pow(x / graph.capacity(e), 4));
   }
 
   // Returns the derivative of e's travel cost function at x.
-  double derivative(const int e, const double x) const {
+  float derivative(const int e, const float x) const {
     const int capacity = graph.capacity(e);
     return graph.travelTime(e) * 0.15 * 4 * std::pow(x / capacity, 4 - 1) / capacity;
   }

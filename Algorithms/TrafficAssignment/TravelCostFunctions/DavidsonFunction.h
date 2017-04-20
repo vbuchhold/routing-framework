@@ -11,13 +11,13 @@ class DavidsonFunction {
   DavidsonFunction(const GraphT& graph) : graph(graph) {}
 
   // Returns the travel time on edge e, given the traffic flow x on e.
-  double operator()(const int e, const double x) const {
+  float operator()(const int e, const float x) const {
     assert(x >= 0); assert(x < graph.capacity(e));
     return graph.travelTime(e) * (1 + 0.25 * x / (graph.capacity(e) - x));
   }
 
   // Returns the derivative of e's travel cost function at x.
-  double derivative(const int e, const double x) const {
+  float derivative(const int e, const float x) const {
     assert(x >= 0); assert(x < graph.capacity(e));
     return graph.travelTime(e) * 0.25 * graph.capacity(e) / std::pow(graph.capacity(e) - x, 2);
   }

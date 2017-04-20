@@ -37,8 +37,8 @@ struct AllOrNothingAssignmentStats {
   int64_t totalChecksum; // The total sum of distances computed.
 
   std::vector<int> lastDistances; // The OD-distances from the last iteration.
-  double maxChangeInDistances;    // The max change in the OD-distances between the last iterations.
-  double avgChangeInDistances;    // The avg change in the OD-distances between the last iterations.
+  float maxChangeInDistances;    // The max change in the OD-distances between the last iterations.
+  float avgChangeInDistances;    // The avg change in the OD-distances between the last iterations.
 
   int lastCustomizationTime; // The time spent on customization in the last iteration.
   int lastQueryTime;         // The time spent on queries in the last iteration.

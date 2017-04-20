@@ -13,7 +13,7 @@ class SystemOptimum {
   SystemOptimum(TravelCostFunctionT function) : travelCostFunction(function) {}
 
   // Returns the weight of edge e, given the traffic flow x on e.
-  int getEdgeWeight(const int e, const double x) const {
+  int getEdgeWeight(const int e, const float x) const {
     return std::round(travelCostFunction(e, x) + x * travelCostFunction.derivative(e, x));
   }
 

@@ -43,7 +43,7 @@ class Point {
   }
 
   // Returns the Euclidean distance to the specified point.
-  double getEuclideanDistanceTo(const Point& other) const {
+  float getEuclideanDistanceTo(const Point& other) const {
     return std::sqrt(getSquaredEuclideanDistanceTo(other));
   }
 

@@ -41,7 +41,7 @@ class LatLng {
   // Constructs a LatLng. Coordinates are specified in degrees. If wrap is set to true, latitude is
   // automatically clamped to the range [-90 deg, 90 deg] and longitude is automatically wrapped so
   // that it falls within the range [-180 deg, 180 deg].
-  LatLng(const double lat, const double lng, const bool wrap = false)
+  LatLng(const float lat, const float lng, const bool wrap = false)
       : LatLng(static_cast<int>(std::round(lat * PRECISION)),
                static_cast<int>(std::round(lng * PRECISION)), wrap) {}
 
@@ -63,15 +63,15 @@ class LatLng {
   }
 
   // Returns the latitude in degrees.
-  double latInDeg() const {
+  float latInDeg() const {
     assert(isValid());
-    return lat / static_cast<double>(PRECISION);
+    return lat / static_cast<float>(PRECISION);
   }
 
   // Returns the longitude in degrees.
-  double lngInDeg() const {
+  float lngInDeg() const {
     assert(isValid());
-    return lng / static_cast<double>(PRECISION);
+    return lng / static_cast<float>(PRECISION);
   }
 
   // Takes the coordinate-wise minimum of this and the specified LatLng.
@@ -90,16 +90,16 @@ class LatLng {
 
   // Returns the great-circle distance in meters to the specified LatLng using haversine formula.
   // For more details, see: www.movable-type.co.uk/scripts/latlong.html
-  double getGreatCircleDistanceTo(const LatLng& other) const {
+  float getGreatCircleDistanceTo(const LatLng& other) const {
     assert(isValid()); assert(other.isValid());
-    const double lat1 = toRadians(latInDeg());
-    const double lat2 = toRadians(other.latInDeg());
-    const double deltaLat = toRadians(other.latInDeg() - latInDeg());
-    const double deltaLng = toRadians(other.lngInDeg() - lngInDeg());
+    const float lat1 = toRadians(latInDeg());
+    const float lat2 = toRadians(other.latInDeg());
+    const float deltaLat = toRadians(other.latInDeg() - latInDeg());
+    const float deltaLng = toRadians(other.lngInDeg() - lngInDeg());
 
-    const double a = std::sin(deltaLat / 2) * std::sin(deltaLat / 2) +
+    const float a = std::sin(deltaLat / 2) * std::sin(deltaLat / 2) +
         std::cos(lat1) * std::cos(lat2) * std::sin(deltaLng / 2) * std::sin(deltaLng / 2);
-    const double c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
+    const float c = 2 * std::atan2(std::sqrt(a), std::sqrt(1 - a));
 
     return EARTH_RADIUS * c;
   }
@@ -116,7 +116,7 @@ class LatLng {
   // Coordinates increase in the x (y) direction towards the east (north).
   // For more details, see: www.math.ubc.ca/~israel/m103/mercator/mercator.html
   Point webMercatorProjection() const {
-    const double lat = toRadians(latInDeg());
+    const float lat = toRadians(latInDeg());
     const int x = lng + DEG_180;
     const int y = std::round((std::log(std::tan(lat / 2 + PI / 4)) / (2 * PI) + 0.5) * DEG_360);
     return {x, y};

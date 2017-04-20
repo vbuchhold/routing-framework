@@ -54,10 +54,10 @@ class AllOrNothingAssignment {
       stats.lastChecksum += dist;
 
       // Keep track of the max and avg change in the OD-distances between the last two iterations.
-      const double change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
+      const float change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
       stats.lastDistances[i] = dist;
       stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, change);
-      stats.avgChangeInDistances += std::max(0.0, change);
+      stats.avgChangeInDistances += std::max(0.0f, change);
 
       // Assign the OD-flow to each edge on the computed path.
       for (const auto e : shortestPathAlgo.getPackedEdgePath(odPairs[i].destination)) {
