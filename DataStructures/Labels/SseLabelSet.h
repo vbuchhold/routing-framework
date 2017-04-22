@@ -34,14 +34,6 @@ struct SseLabelSet {
     // Constructs an uninitialized mask.
     LabelMask() = default;
 
-    // Constructs a mask that marks only the i-th component.
-    explicit LabelMask(const int i) {
-      assert(i >= 0); assert(i < K);
-      for (int j = 0; j < K / 4; ++j)
-        isMarked[j] = _mm_setzero_si128();
-      isMarked[i / 4] = mm_insert_epi32(isMarked[i / 4], -1, i % 4);
-    }
-
     // Constructs a mask with all k components set to val. Converting constructor.
     LabelMask(const bool val) {
       for (int i = 0; i < K / 4; ++i)
@@ -122,11 +114,11 @@ struct SseLabelSet {
       return Reference(values[i / 4], i % 4);
     }
 
-    // Returns the packed sum of this label plus rhs.
-    DistanceLabel operator+(const DistanceLabel& rhs) const {
+    // Returns the packed sum of lhs and rhs.
+    friend DistanceLabel operator+(const DistanceLabel& lhs, const DistanceLabel& rhs) {
       DistanceLabel sum;
       for (int i = 0; i < K / 4; ++i)
-        sum.values[i] = _mm_add_epi32(values[i], rhs.values[i]);
+        sum.values[i] = _mm_add_epi32(lhs.values[i], rhs.values[i]);
       return sum;
     }
 

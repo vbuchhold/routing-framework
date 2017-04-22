@@ -116,8 +116,8 @@ class Dijkstra {
     for (int i = 0; i < K; ++i) {
       const int s = sources[i];
       distanceLabels[s][i] = 0;
-      parent.setVertex(s, INVALID_VERTEX, LabelMask(i));
-      parent.setEdge(s, INVALID_EDGE, LabelMask(i));
+      parent.setVertex(s, INVALID_VERTEX, true);
+      parent.setEdge(s, INVALID_EDGE, true);
       if (!queue.contains(s))
         queue.insert(s, 0);
     }
