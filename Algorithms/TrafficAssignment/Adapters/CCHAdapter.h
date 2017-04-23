@@ -6,8 +6,8 @@
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
+#include "Algorithms/CCH/EliminationTreeQuery.h"
 #include "Algorithms/CH/CHConversion.h"
-#include "Algorithms/CH/CHQuery.h"
 #include "Algorithms/CH/ContractionHierarchy.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
@@ -31,7 +31,7 @@ class CCHAdapter {
   using InputGraph = InputGraphT;
 
   // Constructs an adapter for CCHs.
-  CCHAdapter(const InputGraph& graph) : inputGraph(graph), chSearch(perfectCH) {
+  CCHAdapter(const InputGraph& graph) : inputGraph(graph), chSearch(perfectCH, eliminationTree) {
     assert(graph.numEdges() > 0); assert(graph.isDefrag());
   }
 
@@ -64,6 +64,8 @@ class CCHAdapter {
 
     // Build the metric-independent CCH.
     cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
+    eliminationTree.assign(cch.elimination_tree_parent.begin(), cch.elimination_tree_parent.end());
+    eliminationTree.back() = INVALID_VERTEX;
     const int* const weights = &inputGraph.template get<WeightT>(0);
     currentMetric = {cch, reinterpret_cast<const unsigned int*>(weights)};
   }
@@ -110,10 +112,11 @@ class CCHAdapter {
  private:
   using CCH = RoutingKit::CustomizableContractionHierarchy;
   using CCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
-  using CHQuery = StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>, false>;
+  using CHQuery = EliminationTreeQuery<CH, BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>>;
 
   const InputGraph& inputGraph;     // The input graph.
   CCH cch;                          // The metric-independent CCH.
+  std::vector<int> eliminationTree; // eliminationTree[v] is the parent of v in the tree.
   CCHMetric currentMetric;          // The current metric for the CCH.
   CH perfectCH;                     // The CH resulting from perfectly customizing the CCH.
   CHQuery chSearch;                 // A CH search on the perfect CH.
