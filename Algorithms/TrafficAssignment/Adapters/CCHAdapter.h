@@ -52,9 +52,15 @@ class CCHAdapter {
     }
 
     // Compute a nested dissection order for the input graph.
-    std::vector<unsigned int> order;
-    order = RoutingKit::compute_nested_node_dissection_order_using_inertial_flow(
-        inputGraph.numVertices(), tails, heads, lats, lngs);
+    const RoutingKit::GraphFragment graph =
+        RoutingKit::make_graph_fragment(inputGraph.numVertices(), tails, heads);
+
+    auto computeSeparator = [&lats, &lngs](const RoutingKit::GraphFragment& fragment) {
+      const RoutingKit::BitVector cut = inertial_flow(fragment, 30, lats, lngs).is_node_on_side;
+      return derive_separator_from_cut(fragment, cut);
+    };
+
+    std::vector<unsigned int> order = compute_nested_node_dissection_order(graph, computeSeparator);
 
     // Build the metric-independent CCH.
     cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
