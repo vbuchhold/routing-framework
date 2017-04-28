@@ -170,7 +170,7 @@ class FrankWolfeAssignment {
         std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
         std::cout << std::flush;
       }
-    } while (substats.avgChangeInDistances > 1e-5);
+    } while (substats.maxChangeInDistances > 1e-3);
 
     if (verbose) {
       std::cout << "Total:\n";
