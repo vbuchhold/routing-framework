@@ -77,8 +77,8 @@ class ContractionHierarchy {
     upwardGraph.readFrom(in);
     downwardGraph.readFrom(in);
     order.readFrom(in);
-    read(in, numOrigEdges);
-    read(in, constituentEdges);
+    io::read(in, numOrigEdges);
+    io::read(in, constituentEdges);
     ranks = order.getInversePermutation();
   }
 
@@ -87,8 +87,8 @@ class ContractionHierarchy {
     upwardGraph.writeTo(out);
     downwardGraph.writeTo(out);
     order.writeTo(out);
-    write(out, numOrigEdges);
-    write(out, constituentEdges);
+    io::write(out, numOrigEdges);
+    io::write(out, constituentEdges);
   }
 
  private:

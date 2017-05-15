@@ -16,6 +16,7 @@
 #include "DataStructures/Utilities/Permutation.h"
 #include "Tools/Simd/AlignVector.h"
 #include "Tools/BinaryIO.h"
+#include "Tools/ContainerHelpers.h"
 #include "Tools/TemplateProgramming.h"
 #include "Tools/Workarounds.h"
 
@@ -118,10 +119,18 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     RUN_FORALL(setAttribute<EdgeAttributes>(std::forward<SourceT>(src), edgeHeads.size()));
   }
 
-  // Returns true if this graph type has the specified attribute.
+  // Returns true if the graph has the specified attribute.
   template <typename Attr>
   static constexpr bool has() {
     return std::is_base_of<Attr, Graph>::value;
+  }
+
+  // Returns true if the graph has an attribute with the specified name.
+  static bool hasAttribute(const std::string& name) {
+    bool hasAttribute = false;
+    RUN_IF(VertexAttributes::NAME == name, hasAttribute = true);
+    RUN_IF(EdgeAttributes::NAME == name, hasAttribute = true);
+    return hasAttribute;
   }
 
   // Returns a vector with the names of all attributes of the graph.
@@ -595,43 +604,101 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   template <typename ExporterT = DefaultExporter>
   void exportTo(const std::string& /*filename*/, ExporterT /*ex*/ = ExporterT()) const {}
 
-  // Reads a graph from a binary file.
+  // Reads a graph from a binary file. Attributes that are present in the file, but not associated
+  // with the graph are ignored. Attributes that are associated with the graph, but not present in
+  // the file are defaulted.
   void readFrom(std::ifstream& in) {
+    clear();
+
     int numVertices;
-    read(in, numVertices);
-    read(in, edgeCount);
+    io::read(in, numVertices);
+    io::read(in, edgeCount);
     assert(numVertices >= 0);
     assert(edgeCount >= 0);
     outEdges.resize(numVertices + !dynamic);
 
-    // Read the out-edge ranges.
+    // Read the out-edge ranges and edge heads.
     outEdges[0].first() = 0;
     for (int v = 1; v < numVertices; ++v) {
-      read(in, outEdges[v].first());
+      io::read(in, outEdges[v].first());
       outEdges[v - dynamic].last() = outEdges[v].first();
     }
     outEdges.back().last() = edgeCount;
+    io::read(in, edgeHeads);
 
-    // Read the vertex and edge attributes.
-    read(in, edgeHeads);
-    RUN_FORALL(read(in, VertexAttributes::values));
-    RUN_FORALL(read(in, EdgeAttributes::values));
+    // Fill the values of the vertex attributes.
+    int numVertexAttrs;
+    io::read(in, numVertexAttrs);
+    for (int i = 0; i < numVertexAttrs; ++i) {
+      std::string name;
+      int size;
+      io::read(in, name);
+      io::read(in, size);
+      if (hasAttribute(name))
+        // Read the attribute's values into the corresponding vertex array.
+        RUN_IF(VertexAttributes::NAME == name, io::read(in, VertexAttributes::values));
+      else
+        // Skip the attribute's values, since the attribute is not associated with the graph.
+        in.seekg(size, std::ios::cur);
+    }
+    RUN_FORALL(VertexAttributes::values.resize(numVertices, use(VertexAttributes::DEFAULT_VALUE)));
+
+    // Fill the values of the edge attributes.
+    int numEdgeAttrs;
+    io::read(in, numEdgeAttrs);
+    for (int i = 0; i < numEdgeAttrs; ++i) {
+      std::string name;
+      int size;
+      io::read(in, name);
+      io::read(in, size);
+      if (hasAttribute(name))
+        // Read the attribute's values into the corresponding edge array.
+        RUN_IF(EdgeAttributes::NAME == name, io::read(in, EdgeAttributes::values));
+      else
+        // Skip the attribute's values, since the attribute is not associated with the graph.
+        in.seekg(size, std::ios::cur);
+    }
+    RUN_FORALL(EdgeAttributes::values.resize(edgeCount, use(EdgeAttributes::DEFAULT_VALUE)));
+
     assert(validate());
   }
 
-  // Writes a graph to a binary file.
+  // Writes a graph to a binary file. The second parameter is a list of attributes that should not
+  // be written to the file.
   // CAUTION: THE GRAPH HAS TO BE DEFRAGMENTED.
-  void writeTo(std::ofstream& out) const {
+  void writeTo(std::ofstream& out, const std::vector<std::string>& attrsToIgnore = {}) const {
     assert(validate()); assert(isDefrag());
-    write(out, numVertices());
-    write(out, edgeCount);
+    io::write(out, numVertices());
+    io::write(out, numEdges());
 
+    // Write the out-edge ranges and edge heads.
     for (int v = 1; v < numVertices(); ++v)
-      write(out, outEdges[v].first());
+      io::write(out, outEdges[v].first());
+    io::write(out, edgeHeads);
 
-    write(out, edgeHeads);
-    RUN_FORALL(write(out, VertexAttributes::values));
-    RUN_FORALL(write(out, EdgeAttributes::values));
+    // Write the vertex attributes.
+    int numVertexAttrs = 0;
+    RUN_IF(
+        !contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(VertexAttributes::NAME)),
+        ++numVertexAttrs);
+    io::write(out, numVertexAttrs);
+    RUN_IF(!contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(VertexAttributes::NAME)), (
+      io::write(out, VertexAttributes::NAME),
+      io::write(out, io::size(VertexAttributes::values)),
+      io::write(out, VertexAttributes::values)
+    ));
+
+    // Write the edge attributes.
+    int numEdgeAttrs = 0;
+    RUN_IF(
+        !contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(EdgeAttributes::NAME)),
+        ++numEdgeAttrs);
+    io::write(out, numEdgeAttrs);
+    RUN_IF(!contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(EdgeAttributes::NAME)), (
+      io::write(out, EdgeAttributes::NAME),
+      io::write(out, io::size(EdgeAttributes::values)),
+      io::write(out, EdgeAttributes::values)
+    ));
   }
 
   // Checks if the graph is consistent.
