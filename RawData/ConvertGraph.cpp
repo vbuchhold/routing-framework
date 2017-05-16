@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "Algorithms/GraphTraversal/StronglyConnectedComponents.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
@@ -14,6 +16,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/ContainerHelpers.h"
 
 // A graph data structure encompassing all vertex and edge attributes available for output.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
@@ -27,9 +30,9 @@ void printUsage() {
       "This program converts a graph from a source file format to a destination format,\n"
       "possibly extracting the largest strongly connected component of the input graph.\n"
       "  -s <fmt>          source file format\n"
-      "                      possible values: default dimacs visum xatf\n"
+      "                      possible values: binary default dimacs visum xatf\n"
       "  -d <fmt>          destination file format\n"
-      "                      possible values: default dimacs\n"
+      "                      possible values: binary default dimacs\n"
       "  -c                compress the output file(s), if available\n"
       "  -scc              extract the largest strongly connected component\n"
       "  -a <attrs>        blank-separated list of vertex/edge attributes to be output\n"
@@ -49,21 +52,29 @@ void printErrorMessage(const std::string& invokedName, const std::string& msg) {
 // Imports a graph according to the input file format specified on the command line and returns it.
 GraphT importGraph(const CommandLineParser& clp) {
   const std::string fmt = clp.getValue<std::string>("s");
+  const std::string infile = clp.getValue<std::string>("i");
 
-  // Choose the appropriate importer.
-  if (fmt == "xatf")
-    return GraphT(clp.getValue<std::string>("i"), XatfImporter());
-  else
-    throw std::invalid_argument("invalid input file format -- '" + fmt + "'");
+  // Pick the appropriate import procedure.
+  if (fmt == "binary") {
+    std::ifstream in(infile + ".gr.bin", std::ios::binary);
+    if (in.good())
+      return GraphT(in);
+    else
+      throw std::invalid_argument("file not found -- '" + infile + ".gr.bin'");
+  } else if (fmt == "xatf") {
+    return GraphT(infile, XatfImporter());
+  } else {
+    throw std::invalid_argument("unrecognized input file format -- '" + fmt + "'");
+  }
 }
 
 // Executes a graph export using the specified exporter.
 template <typename ExporterT>
 void doExport(const CommandLineParser& clp, const GraphT& graph, ExporterT ex) {
   // Output only those attributes specified on the command line.
-  std::vector<std::string> attrsToBeOutput = clp.getValues<std::string>("a");
+  std::vector<std::string> attrsToOutput = clp.getValues<std::string>("a");
   for (const auto& attr : GraphT::getAttributeNames())
-    if (std::find(attrsToBeOutput.begin(), attrsToBeOutput.end(), attr) == attrsToBeOutput.end())
+    if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
       ex.ignoreAttribute(attr);
   graph.exportTo(clp.getValue<std::string>("o"), ex);
 }
@@ -73,11 +84,26 @@ void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
   const std::string fmt = clp.getValue<std::string>("d");
   const bool compress = clp.isSet("c");
 
-  // Choose the appropriate exporter.
-  if (fmt == "default")
+  // Pick the appropriate export procedure.
+  if (fmt == "binary") {
+    const std::string outfile = clp.getValue<std::string>("o");
+    std::ofstream out(outfile + ".gr.bin", std::ios::binary);
+    if (out.good()) {
+      // Output only those attributes specified on the command line.
+      std::vector<std::string> attrsToIgnore;
+      std::vector<std::string> attrsToOutput = clp.getValues<std::string>("a");
+      for (const auto& attr : GraphT::getAttributeNames())
+        if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
+          attrsToIgnore.push_back(attr);
+      graph.writeTo(out, attrsToIgnore);
+    } else {
+      throw std::invalid_argument("file cannot be opened -- '" + outfile + ".gr.bin'");
+    }
+  } else if (fmt == "default") {
     doExport(clp, graph, DefaultExporter(compress));
-  else
-    throw std::invalid_argument("invalid output file format -- '" + fmt + "'");
+  } else {
+    throw std::invalid_argument("unrecognized output file format -- '" + fmt + "'");
+  }
 }
 
 int main(int argc, char* argv[]) {
