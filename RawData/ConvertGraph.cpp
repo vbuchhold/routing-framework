@@ -57,10 +57,9 @@ GraphT importGraph(const CommandLineParser& clp) {
   // Pick the appropriate import procedure.
   if (fmt == "binary") {
     std::ifstream in(infile + ".gr.bin", std::ios::binary);
-    if (in.good())
-      return GraphT(in);
-    else
+    if (!in.good())
       throw std::invalid_argument("file not found -- '" + infile + ".gr.bin'");
+    return GraphT(in);
   } else if (fmt == "xatf") {
     return GraphT(infile, XatfImporter());
   } else {
@@ -88,17 +87,15 @@ void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
   if (fmt == "binary") {
     const std::string outfile = clp.getValue<std::string>("o");
     std::ofstream out(outfile + ".gr.bin", std::ios::binary);
-    if (out.good()) {
-      // Output only those attributes specified on the command line.
-      std::vector<std::string> attrsToIgnore;
-      std::vector<std::string> attrsToOutput = clp.getValues<std::string>("a");
-      for (const auto& attr : GraphT::getAttributeNames())
-        if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
-          attrsToIgnore.push_back(attr);
-      graph.writeTo(out, attrsToIgnore);
-    } else {
+    if (!out.good())
       throw std::invalid_argument("file cannot be opened -- '" + outfile + ".gr.bin'");
-    }
+    // Output only those attributes specified on the command line.
+    std::vector<std::string> attrsToIgnore;
+    std::vector<std::string> attrsToOutput = clp.getValues<std::string>("a");
+    for (const auto& attr : GraphT::getAttributeNames())
+      if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
+        attrsToIgnore.push_back(attr);
+    graph.writeTo(out, attrsToIgnore);
   } else if (fmt == "default") {
     doExport(clp, graph, DefaultExporter(compress));
   } else {
