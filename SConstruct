@@ -1,7 +1,7 @@
 import os
 
 # Directories containing .cpp source files.
-srcDirs = ['RawData']
+srcDirs = ['Launchers', 'RawData']
 
 # Common compiler options.
 cflags = '-std=c99'
@@ -67,4 +67,3 @@ DefaultEnvironment(
 for dir in srcDirs:
   targets = SConscript(dirs=dir, variant_dir='Build/' + variant + '/' + dir, duplicate=0)
   Alias(dir.split('/')[-1], targets)
-

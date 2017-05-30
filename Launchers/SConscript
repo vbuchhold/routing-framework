@@ -1,0 +1,5 @@
+p1 = Program(source=['AssignTraffic.cpp'], LIBS=['routingkit'])
+
+Alias('AssignTraffic', p1)
+
+Return('p1')

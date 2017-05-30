@@ -1,8 +1,7 @@
-p1 = Program(source=['ConvertGraph.cpp'], LIBS=['boost_iostreams', 'numa', 'routingkit'])
+p1 = Program(source=['ConvertGraph.cpp'])
 p2 = Program(source=['GenerateODPairs.cpp'])
 
 Alias('ConvertGraph', p1)
 Alias('GenerateODPairs', p2)
 
 Return('p1', 'p2')
-

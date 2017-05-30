@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -26,14 +27,17 @@ template <
     template <typename, typename> class ShortestPathAlgoT, typename InputGraphT>
 class FrankWolfeAssignment {
  public:
+  using InputGraph = InputGraphT;
+
   // Constructs an assignment procedure based on the Frank-Wolfe method.
   FrankWolfeAssignment(InputGraphT& graph, const std::vector<OriginDestination>& odPairs,
-                       const bool verbose = true)
+                       std::ofstream& csv, const bool verbose = true)
       : allOrNothingAssignment(graph, odPairs, verbose),
         inputGraph(graph),
         trafficFlows(graph.numEdges()),
         travelCostFunction(graph),
         objFunction(travelCostFunction),
+        csv(csv),
         verbose(verbose) {
     stats.totalRunningTime = allOrNothingAssignment.stats.totalRoutingTime;
   }
@@ -80,6 +84,13 @@ class FrankWolfeAssignment {
     stats.lastRunningTime = timer.elapsed();
     stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
     stats.finishIteration();
+
+    if (csv.is_open()) {
+      csv << substats.numIterations << "," << substats.lastCustomizationTime << ",";
+      csv << substats.lastQueryTime << "," << stats.lastLineSearchTime << ",";
+      csv << stats.lastRunningTime << ",nan,nan," << stats.totalTravelCost << ",";
+      csv << substats.lastChecksum << std::endl;
+    }
 
     if (verbose) {
       std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
@@ -162,6 +173,14 @@ class FrankWolfeAssignment {
       stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
       stats.finishIteration();
 
+      if (csv.is_open()) {
+        csv << substats.numIterations << "," << substats.lastCustomizationTime << ",";
+        csv << substats.lastQueryTime << "," << stats.lastLineSearchTime << ",";
+        csv << stats.lastRunningTime << "," << substats.avgChangeInDistances << ",";
+        csv << substats.maxChangeInDistances << "," << stats.totalTravelCost << ",";
+        csv << substats.lastChecksum << std::endl;
+      }
+
       if (verbose) {
         std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
         std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
@@ -203,6 +222,7 @@ class FrankWolfeAssignment {
   AlignVector<float> trafficFlows;       // The traffic flows on the edges.
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
+  std::ofstream& csv;                    // The output CSV file containing statistics.
   const bool verbose;                    // Should informative messages be displayed?
 };
 
