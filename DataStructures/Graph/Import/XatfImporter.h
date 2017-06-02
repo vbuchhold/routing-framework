@@ -167,7 +167,7 @@ class XatfImporter {
 
   // Travel times (of ferries) are stored as integers in units of TRAVEL_TIME_PRECISION seconds.
   static constexpr int TRAVEL_TIME_PRECISION = 60;
-  static constexpr int TRAVEL_TIME_FACTOR = TRAVEL_TIME_PRECISION * TravelTimeAttribute::PRECISION;
+  static constexpr int TRAVEL_TIME_FACTOR = TRAVEL_TIME_PRECISION * 10;
 
   // Speed limits in km/h for the XATF road categories.
   static constexpr const int (&SPEED_LIMITS)[] = {

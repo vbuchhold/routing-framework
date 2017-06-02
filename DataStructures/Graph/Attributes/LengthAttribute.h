@@ -8,8 +8,8 @@
 // An attribute associating a physical length with each edge of a graph.
 class LengthAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr Type DEFAULT_VALUE = INFTY;    // The attribute's default value.
-  static constexpr const char* NAME   = "length"; // The attribute's unique name.
+  static constexpr Type DEFAULT_VALUE = INFTY;  // The attribute's default value.
+  static constexpr const char* NAME = "length"; // The attribute's unique name.
 
   // Returns the length in meters of edge e.
   const Type& length(const int e) const {

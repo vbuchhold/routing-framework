@@ -8,10 +8,10 @@
 // An attribute associating a LatLng with each vertex of a graph.
 class LatLngAttribute : public AbstractAttribute<LatLng> {
  public:
-  static constexpr const Type& DEFAULT_VALUE = Type();    // The attribute's default value.
-  static constexpr const char* NAME          = "lat_lng"; // The attribute's unique name.
+  static constexpr const Type& DEFAULT_VALUE = Type(); // The attribute's default value.
+  static constexpr const char* NAME = "lat_lng";       // The attribute's unique name.
 
-  // Returns a const reference to the LatLng of vertex v.
+  // Returns the LatLng of vertex v.
   const Type& latLng(const int v) const {
     assert(v >= 0); assert(v < values.size());
     return values[v];

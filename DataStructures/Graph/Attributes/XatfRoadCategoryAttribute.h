@@ -27,7 +27,7 @@ enum class XatfRoadCategory {
 class XatfRoadCategoryAttribute : public AbstractAttribute<XatfRoadCategory> {
  public:
   static constexpr Type DEFAULT_VALUE = XatfRoadCategory::UNUSED; // The attribute's default value.
-  static constexpr const char* NAME   = "xatf_road_category";     // The attribute's unique name.
+  static constexpr const char* NAME = "xatf_road_category";       // The attribute's unique name.
 
   // Returns the XATF road category of edge e.
   const Type& xatfRoadCategory(const int e) const {

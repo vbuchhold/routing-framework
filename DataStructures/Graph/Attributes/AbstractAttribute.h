@@ -1,10 +1,8 @@
 #pragma once
 
-#include <vector>
-
 #include "Tools/Simd/AlignVector.h"
 
-// The common base class for all attributes. It associates with each vertex/edge a value of type T.
+// The common base class for all attributes. It associates a value of type T with each vertex/edge.
 template <typename T>
 class AbstractAttribute {
   // Workaround for the GNU compiler. Should not be necessary (and is not for Clang).
@@ -17,7 +15,7 @@ class AbstractAttribute {
   static constexpr Type DEFAULT_VALUE = Type(); // The attribute's default value.
 
  protected:
-  // Ensures that the attribute can hold num values without requiring reallocation.
+  // Ensures that the attribute can hold at least num values without requiring reallocation.
   void reserve(const int num) {
     values.reserve(num);
   }
