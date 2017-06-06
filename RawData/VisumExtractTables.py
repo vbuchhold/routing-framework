@@ -9,7 +9,8 @@ def parseCommandLine():
     description='This program reads a Visum NET file and stores its tables as single CSV files.')
   ap.add_argument('-o', '--output-directory', default='.',
                   help='place the output CSV files in DIR', metavar='DIR')
-  ap.add_argument('infile', type=open, help='the Visum network file (file extension: .net)')
+  ap.add_argument('infile', type=argparse.FileType(encoding='latin-1'),
+                  help='the Visum network file (file extension: .net)')
   args = ap.parse_args()
   return args
 
