@@ -12,7 +12,8 @@
 
 // This class provides coordinate conversion between a primary coordinate system and the World
 // Geodetic System 1984 (WGS84). Since the class uses the proj.4 library, the primary coordinate
-// system has to be specified as a proj.4 string. For more details, see: www.proj4.org
+// system has to be specified as a proj.4 string (or as an EPSG code).
+// For more details, see: www.proj4.org
 class CoordinateConversion {
  public:
   // proj.4 strings for some widely used coordinate systems.
@@ -24,6 +25,14 @@ class CoordinateConversion {
   // Constructs a conversion between WGS84 and the coordinate system specified as a proj.4 string.
   CoordinateConversion(const std::string& primaryCrs)
       : wgs84Crs(pj_init_plus(WGS84)), otherCrs(pj_init_plus(primaryCrs.c_str())) {
+    assert(wgs84Crs);
+    assert(otherCrs);
+  }
+
+  // Constructs a conversion between WGS84 and the coordinate system specified as an EPSG code.
+  CoordinateConversion(const int primaryCrs)
+      : wgs84Crs(pj_init_plus(WGS84)),
+        otherCrs(pj_init_plus(("+init=epsg:" + std::to_string(primaryCrs)).c_str())) {
     assert(wgs84Crs);
     assert(otherCrs);
   }
