@@ -4,3 +4,6 @@
 [submodule "External/RoutingKit"]
 	path = External/RoutingKit
 	url = https://github.com/RoutingKit/RoutingKit.git
+[submodule "External/fast-cpp-csv-parser"]
+	path = External/fast-cpp-csv-parser
+	url = https://github.com/ben-strasser/fast-cpp-csv-parser.git

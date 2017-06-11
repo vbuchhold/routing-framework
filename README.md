@@ -21,6 +21,7 @@ type the following commands at the top-level directory of the framework:
 ```
 $ git submodule update --init
 $ cd External
+$ cd fast-cpp-csv-parser && sudo cp *.h /usr/local/include && cd ..
 $ cd nanoflann && sudo cp -r include /usr/local && cd ..
 $ cd RoutingKit && make && sudo cp -r include lib /usr/local && cd ..
 $ cd vectorclass && sudo mkdir /usr/local/include/vectorclass && sudo cp *.h special/* $_ && cd ..
@@ -66,4 +67,3 @@ To import the framework as a SCons project into Eclipse, follow these steps:
 3. Choose the top-level directory of the framework.
 4. Choose the menu `Project`, `Properties`, `C/C++ Build`, `Settings`, `Binary Parsers`.
 5. Enable `Elf Parser`.
-
