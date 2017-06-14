@@ -58,7 +58,9 @@ class VisumImporter {
 
     // Read the maximum speed of the selected system for each of the 100 edge types.
     CsvDialect<2> edgeTypeFile(filename + "/STRECKENTYP.csv");
-    edgeTypeFile.read_header(io::ignore_extra_column, "NR", "VMAX-IVSYS(" + transportSystem + ")");
+    std::string upperCaseTS = transportSystem;
+    toUpperCase(upperCaseTS);
+    edgeTypeFile.read_header(io::ignore_extra_column, "NR", "VMAX-IVSYS(" + upperCaseTS + ")");
     int i = 0;
     int id;
     char* maxSpeedField;

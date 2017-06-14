@@ -49,3 +49,17 @@ inline void substr(char*& string, const int beginIdx, const int endIdx) {
   string[endIdx] = '\0';
   string += beginIdx;
 }
+
+// Converts all of the characters in the specified string to lower case.
+template <typename StringT>
+inline void toLowerCase(StringT& string) {
+  for (int i = 0; string[i] != '\0'; ++i)
+    string[i] += 'A' <= string[i] && string[i] <= 'Z' ? 'a' - 'A' : 0;
+}
+
+// Converts all of the characters in the specified string to upper case.
+template <typename StringT>
+inline void toUpperCase(StringT& string) {
+  for (int i = 0; string[i] != '\0'; ++i)
+    string[i] -= 'a' <= string[i] && string[i] <= 'z' ? 'a' - 'A' : 0;
+}
