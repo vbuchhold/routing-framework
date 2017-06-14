@@ -94,7 +94,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // Constructs a graph from a file. Different importers support different file formats.
   template <typename ImporterT = XatfImporter>
   explicit Graph(const std::string& filename, ImporterT im = ImporterT()) : edgeCount(0) {
-    importFrom(filename, im);
+    importFrom(filename, std::move(im));
   }
 
   // Constructs a graph from a binary file.
@@ -528,7 +528,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     assert(im.numEdges() >= 0);
     reserve(im.numVertices(), im.numEdges());
 
-    // Read the vertices, one after another. The vertices do not have to be in any particular order.
+    // Read the vertices, one after another. The vertices don't have to be in any particular order.
     int vertexCount = 0;
     while (im.nextVertex()) {
       assert(im.vertexId() >= 0);
@@ -536,8 +536,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
       // Ensure that the vertex arrays can accommodate the vertex we just read.
       if (im.vertexId() >= numVertices()) {
-        OutEdgeRange range;
-        range.first() = -1;
+        OutEdgeRange range = {-1};
         outEdges.resize(im.vertexId() + 1 + !dynamic, range);
         RUN_FORALL(VertexAttributes::values.resize(im.vertexId() + 1));
       }
@@ -552,7 +551,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     assert(numVertices() == vertexCount);
     assert(im.numVertices() == 0 || numVertices() == im.numVertices());
 
-    // Read the edges, one after another. The edges do not have to be in any particular order.
+    // Read the edges, one after another. The edges don't have to be in any particular order.
     std::vector<int> edgeTails;
     edgeTails.reserve(im.numEdges());
     bool edgesSorted = true; // Indicates if the edges are already sorted by tail ID.

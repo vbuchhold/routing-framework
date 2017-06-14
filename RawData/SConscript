@@ -1,4 +1,4 @@
-p1 = Program(source=['ConvertGraph.cpp'], LIBS=['proj'])
+p1 = Program(source=['ConvertGraph.cpp'], LIBS=['proj', 'pthread'])
 p2 = Program(source=['GenerateODPairs.cpp'])
 
 Alias('ConvertGraph', p1)

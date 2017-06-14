@@ -37,6 +37,10 @@ class CoordinateConversion {
     assert(otherCrs);
   }
 
+  // Copy constructor.
+  CoordinateConversion(const CoordinateConversion& conv)
+      : CoordinateConversion(pj_get_def(conv.otherCrs, 0)) {}
+
   // Releases all resources.
   ~CoordinateConversion() {
     pj_free(wgs84Crs);
