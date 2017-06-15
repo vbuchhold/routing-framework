@@ -91,12 +91,12 @@ class Permutation {
 
   // Reads a permutation from a binary file.
   void readFrom(std::ifstream& in) {
-    io::read(in, permutation);
+    bio::read(in, permutation);
   }
 
   // Write a permutation to a binary file.
   void writeTo(std::ofstream& out) const {
-    io::write(out, permutation);
+    bio::write(out, permutation);
   }
 
  private:

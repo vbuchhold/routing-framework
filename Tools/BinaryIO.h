@@ -8,7 +8,7 @@
 
 #include <boost/dynamic_bitset.hpp>
 
-namespace io {
+namespace bio {
 
 // Returns the number of bytes the specified self-contained object occupies on disk.
 template <typename T>

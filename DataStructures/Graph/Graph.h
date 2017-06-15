@@ -610,8 +610,8 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     clear();
 
     int numVertices;
-    io::read(in, numVertices);
-    io::read(in, edgeCount);
+    bio::read(in, numVertices);
+    bio::read(in, edgeCount);
     assert(numVertices >= 0);
     assert(edgeCount >= 0);
     outEdges.resize(numVertices + !dynamic);
@@ -619,23 +619,23 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     // Read the out-edge ranges and edge heads.
     outEdges[0].first() = 0;
     for (int v = 1; v < numVertices; ++v) {
-      io::read(in, outEdges[v].first());
+      bio::read(in, outEdges[v].first());
       outEdges[v - dynamic].last() = outEdges[v].first();
     }
     outEdges.back().last() = edgeCount;
-    io::read(in, edgeHeads);
+    bio::read(in, edgeHeads);
 
     // Fill the values of the vertex attributes.
     int numVertexAttrs;
-    io::read(in, numVertexAttrs);
+    bio::read(in, numVertexAttrs);
     for (int i = 0; i < numVertexAttrs; ++i) {
       std::string name;
       int size;
-      io::read(in, name);
-      io::read(in, size);
+      bio::read(in, name);
+      bio::read(in, size);
       if (hasAttribute(name))
         // Read the attribute's values into the corresponding vertex array.
-        RUN_IF(VertexAttributes::NAME == name, io::read(in, VertexAttributes::values));
+        RUN_IF(VertexAttributes::NAME == name, bio::read(in, VertexAttributes::values));
       else
         // Skip the attribute's values, since the attribute is not associated with the graph.
         in.seekg(size, std::ios::cur);
@@ -644,15 +644,15 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
     // Fill the values of the edge attributes.
     int numEdgeAttrs;
-    io::read(in, numEdgeAttrs);
+    bio::read(in, numEdgeAttrs);
     for (int i = 0; i < numEdgeAttrs; ++i) {
       std::string name;
       int size;
-      io::read(in, name);
-      io::read(in, size);
+      bio::read(in, name);
+      bio::read(in, size);
       if (hasAttribute(name))
         // Read the attribute's values into the corresponding edge array.
-        RUN_IF(EdgeAttributes::NAME == name, io::read(in, EdgeAttributes::values));
+        RUN_IF(EdgeAttributes::NAME == name, bio::read(in, EdgeAttributes::values));
       else
         // Skip the attribute's values, since the attribute is not associated with the graph.
         in.seekg(size, std::ios::cur);
@@ -667,24 +667,24 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // CAUTION: THE GRAPH HAS TO BE DEFRAGMENTED.
   void writeTo(std::ofstream& out, const std::vector<std::string>& attrsToIgnore = {}) const {
     assert(validate()); assert(isDefrag());
-    io::write(out, numVertices());
-    io::write(out, numEdges());
+    bio::write(out, numVertices());
+    bio::write(out, numEdges());
 
     // Write the out-edge ranges and edge heads.
     for (int v = 1; v < numVertices(); ++v)
-      io::write(out, outEdges[v].first());
-    io::write(out, edgeHeads);
+      bio::write(out, outEdges[v].first());
+    bio::write(out, edgeHeads);
 
     // Write the vertex attributes.
     int numVertexAttrs = 0;
     RUN_IF(
         !contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(VertexAttributes::NAME)),
         ++numVertexAttrs);
-    io::write(out, numVertexAttrs);
+    bio::write(out, numVertexAttrs);
     RUN_IF(!contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(VertexAttributes::NAME)), (
-      io::write(out, VertexAttributes::NAME),
-      io::write(out, io::size(VertexAttributes::values)),
-      io::write(out, VertexAttributes::values)
+      bio::write(out, VertexAttributes::NAME),
+      bio::write(out, bio::size(VertexAttributes::values)),
+      bio::write(out, VertexAttributes::values)
     ));
 
     // Write the edge attributes.
@@ -692,11 +692,11 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     RUN_IF(
         !contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(EdgeAttributes::NAME)),
         ++numEdgeAttrs);
-    io::write(out, numEdgeAttrs);
+    bio::write(out, numEdgeAttrs);
     RUN_IF(!contains(attrsToIgnore.begin(), attrsToIgnore.end(), use(EdgeAttributes::NAME)), (
-      io::write(out, EdgeAttributes::NAME),
-      io::write(out, io::size(EdgeAttributes::values)),
-      io::write(out, EdgeAttributes::values)
+      bio::write(out, EdgeAttributes::NAME),
+      bio::write(out, bio::size(EdgeAttributes::values)),
+      bio::write(out, EdgeAttributes::values)
     ));
   }
 
