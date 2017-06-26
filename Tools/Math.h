@@ -24,3 +24,9 @@ inline constexpr void minmax(const T a, const T b, T& min, T& max) {
     max = b;
   }
 }
+
+// Returns 0, 1, or -1 as the specified value is equal to, greater than, or less than zero.
+template <typename T>
+inline int signum(const T val) {
+  return (0 < val) - (val < 0);
+}

@@ -9,11 +9,30 @@
 // A point on a two-dimensional plane.
 class Point {
  public:
-  // Constructs a point.
+  // Constructs a point at the origin.
   Point() : x(0), y(0) {}
 
-  // Constructs a point with the specified coordinates.
+  // Constructs a point at the specified location.
   Point(const int x, const int y) : x(x), y(y) {}
+
+  // Some useful arithmetic operators.
+  friend Point operator+(const Point& lhs, const Point& rhs) {
+    return {lhs.x + rhs.x, lhs.y + rhs.y};
+  }
+
+  friend Point operator-(const Point& lhs, const Point& rhs) {
+    return {lhs.x - rhs.x, lhs.y - rhs.y};
+  }
+
+  friend int64_t operator*(const Point& lhs, const Point& rhs) {
+    return lhs.x * rhs.x + lhs.y * rhs.y;
+  }
+
+  // Writes a character representation to the specified output stream.
+  friend std::ostream& operator<<(std::ostream& os, const Point& p) {
+    os << "(" << p.x << ", " << p.y << ")";
+    return os;
+  }
 
   // Returns the x-coordinate.
   int getX() const {
@@ -26,47 +45,32 @@ class Point {
   }
 
   // Takes the coordinate-wise minimum of this and the specified point.
-  void min(const Point& other) {
-    x = std::min(x, other.x);
-    y = std::min(y, other.y);
+  void min(const Point& p) {
+    x = std::min(x, p.x);
+    y = std::min(y, p.y);
   }
 
   // Takes the coordinate-wise maximum of this and the specified point.
-  void max(const Point& other) {
-    x = std::max(x, other.x);
-    y = std::max(y, other.y);
+  void max(const Point& p) {
+    x = std::max(x, p.x);
+    y = std::max(y, p.y);
   }
 
   // Returns the Manhattan distance to the specified point.
-  int getManhattanDistanceTo(const Point& other) const {
-    return std::abs(x - other.x) + std::abs(y - other.y);
+  int getManhattanDistanceTo(const Point& p) const {
+    return std::abs(x - p.x) + std::abs(y - p.y);
   }
 
   // Returns the Euclidean distance to the specified point.
-  float getEuclideanDistanceTo(const Point& other) const {
-    return std::sqrt(getSquaredEuclideanDistanceTo(other));
+  float getEuclideanDistanceTo(const Point& p) const {
+    return std::sqrt(getSquaredEuclideanDistanceTo(p));
   }
 
   // Returns the squared Euclidean distance to the specified point.
-  int64_t getSquaredEuclideanDistanceTo(const Point& other) const {
-    int64_t deltaX = x - other.x;
-    int64_t deltaY = y - other.y;
+  int64_t getSquaredEuclideanDistanceTo(const Point& p) const {
+    int64_t deltaX = x - p.x;
+    int64_t deltaY = y - p.y;
     return deltaX * deltaX + deltaY * deltaY;
-  }
-
-  // Some useful arithmetic operators.
-  friend Point operator+(const Point& lhs, const Point& rhs) {
-    return {lhs.getX() + rhs.getX(), lhs.getY() + rhs.getY()};
-  }
-
-  friend Point operator-(const Point& lhs, const Point& rhs) {
-    return {lhs.getX() - rhs.getX(), lhs.getY() - rhs.getY()};
-  }
-
-  // Write a textual representation to the specified output stream.
-  friend std::ostream& operator<<(std::ostream& os, const Point& point) {
-    os << "(" << point.getX() << ", " << point.getY() << ")";
-    return os;
   }
 
  private:
