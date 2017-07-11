@@ -10,6 +10,19 @@
 // A polygon defines a two-dimensional region enclosed by a single closed polygonal chain.
 class Polygon {
  public:
+  // Iterators referring to vertices of this polygon.
+  using VertexIterator = std::vector<Point>::iterator;
+  using ConstVertexIterator = std::vector<Point>::const_iterator;
+
+  // Constructs an empty polygon.
+  Polygon() = default;
+
+  // Constructs a polygon with vertices from the specified sequence.
+  template <typename VertexIteratorT>
+  Polygon(VertexIteratorT first, VertexIteratorT last) {
+    addVertices(first, last);
+  }
+
   // Writes a character representation to the specified output stream.
   friend std::ostream& operator<<(std::ostream& os, const Polygon& polygon) {
     os << "(";
@@ -22,6 +35,12 @@ class Polygon {
     return os;
   }
 
+  // Returns the vertex with the specified index.
+  const Point& operator[](const int idx) const {
+    assert(idx >= 0); assert(idx < size());
+    return vertices[idx];
+  }
+
   // Returns true if this polygon is of size 0.
   bool empty() const {
     return vertices.empty();
@@ -30,6 +49,28 @@ class Polygon {
   // Returns the number of vertices.
   int size() const {
     return vertices.size();
+  }
+
+  // Returns the vertex with the lowest index.
+  const Point& front() const {
+    assert(!empty());
+    return vertices.front();
+  }
+
+  // Returns the vertex with the highest index.
+  const Point& back() const {
+    assert(!empty());
+    return vertices.back();
+  }
+
+  // Returns an iterator referring to the first vertex of this polygon.
+  ConstVertexIterator begin() const {
+    return vertices.begin();
+  }
+
+  // Returns an iterator which is the past-the-end value.
+  ConstVertexIterator end() const {
+    return vertices.end();
   }
 
   // Appends the specified vertex to this polygon.
@@ -41,6 +82,12 @@ class Polygon {
   template <typename VertexIteratorT>
   void addVertices(VertexIteratorT first, VertexIteratorT last) {
     vertices.insert(vertices.end(), first, last);
+  }
+
+  // Removes the vertex with the highest index from this polygon.
+  void removeBack() {
+    assert(!empty());
+    vertices.pop_back();
   }
 
   // Returns the index of a lowest of the leftmost vertices.
@@ -69,10 +116,10 @@ class Polygon {
   }
 
   // Returns true if this polygon is simple, i.e., its boundary does not intersect itself.
-  // Precondition: The polygon must not be empty.
   // Note: The implementation takes quadratic time, whereas the problem can be solved in O(nlog⁡n).
   bool simple() const {
-    assert(!empty());
+    if (size() < 3)
+      return false;
     // Test each pair of edges. Edges that are consecutive must not form an angle of zero degrees.
     // Non-consecutive edges must not intersect.
     for (int i = size() - 1, j = 0; j < size() - 1; i = j++) {

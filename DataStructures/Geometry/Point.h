@@ -34,6 +34,16 @@ class Point {
     return os;
   }
 
+  // Returns true if lhs and rhs coincide.
+  friend bool operator==(const Point& lhs, const Point& rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y;
+  }
+
+  // Returns true if lhs and rhs do not coincide.
+  friend bool operator!=(const Point& lhs, const Point& rhs) {
+    return !(lhs == rhs);
+  }
+
   // Returns the x-coordinate.
   int getX() const {
     return x;
