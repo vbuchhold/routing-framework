@@ -10,7 +10,7 @@
 class Point {
  public:
   // Constructs a point at the origin.
-  Point() : x(0), y(0) {}
+  constexpr Point() : x(0), y(0) {}
 
   // Constructs a point at the specified location.
   Point(const int x, const int y) : x(x), y(y) {}
@@ -51,6 +51,16 @@ class Point {
 
   // Returns the y-coordinate.
   int getY() const {
+    return y;
+  }
+
+  // Returns a reference to the x-coordinate.
+  int& getX() {
+    return x;
+  }
+
+  // Returns a reference to the y-coordinate.
+  int& getY() {
     return y;
   }
 

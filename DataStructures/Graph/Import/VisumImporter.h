@@ -11,6 +11,7 @@
 
 #include "DataStructures/Geometry/CoordinateConversion.h"
 #include "DataStructures/Geometry/LatLng.h"
+#include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
@@ -86,14 +87,14 @@ class VisumImporter {
 
   // Reads the next vertex from disk. Returns false if there are no more vertices.
   bool nextVertex() {
-    int easting, northing;
-    if (!vertexFile.read_row(currentVertex.id, easting, northing))
+    if (!vertexFile.read_row(currentVertex.id,
+        currentVertex.coordinate.getX(), currentVertex.coordinate.getY()))
       return false;
 
     assert(origToNewIds.find(currentVertex.id) == origToNewIds.end());
     origToNewIds[currentVertex.id] = nextVertexId;
     currentVertex.id = nextVertexId++;
-    currentVertex.latLng = conversion.convert(Point(easting, northing));
+    currentVertex.latLng = conversion.convert(currentVertex.coordinate);
     return true;
   }
 
@@ -177,6 +178,7 @@ class VisumImporter {
   // A vertex record in Visum network file format.
   struct VertexRecord {
     int id;
+    Point coordinate;
     LatLng latLng;
   };
 
@@ -205,6 +207,12 @@ class VisumImporter {
   VertexRecord currentVertex; // The vertex record read by the last call of nextVertex.
   EdgeRecord currentEdge;     // The edge record read by the last call of nextEdge.
 };
+
+// Returns the value of the coordinate attribute for the current vertex.
+template <>
+inline CoordinateAttribute::Type VisumImporter::getValue<CoordinateAttribute>() const {
+  return currentVertex.coordinate;
+}
 
 // Returns the value of the LatLng attribute for the current vertex.
 template <>
