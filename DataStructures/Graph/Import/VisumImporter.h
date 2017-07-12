@@ -13,6 +13,7 @@
 #include "DataStructures/Geometry/LatLng.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
+#include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
