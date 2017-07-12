@@ -37,10 +37,10 @@ std::vector<OriginDestination> importODPairsFrom(std::ifstream& in) {
         // Read an OD-pair line.
         std::istringstream line(lineStr);
         int o, d;
-        line >> lineType >> o >> d >> std::ws;
+        line >> lineType >> o >> d;
+        assert(line);
         assert(o >= 0);
         assert(d >= 0);
-        assert(line); assert(line.eof());
         pairs.emplace_back(o, d);
         break;
       }
