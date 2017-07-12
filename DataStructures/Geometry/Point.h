@@ -25,7 +25,7 @@ class Point {
   }
 
   friend int64_t operator*(const Point& lhs, const Point& rhs) {
-    return lhs.x * rhs.x + lhs.y * rhs.y;
+    return static_cast<int64_t>(lhs.x) * rhs.x + static_cast<int64_t>(lhs.y) * rhs.y;
   }
 
   // Writes a character representation to the specified output stream.
