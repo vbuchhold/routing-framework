@@ -5,6 +5,8 @@
 #include <map>
 #include <string>
 
+#include "Tools/LexicalCast.h"
+
 // A simple tool for obtaining command line options.
 class CommandLineParser {
  public:
