@@ -1,7 +1,9 @@
 p1 = Program(source=['ConvertGraph.cpp'], LIBS=['proj', 'pthread'])
 p2 = Program(source=['GenerateODPairs.cpp'])
+p3 = Program(source=['ParseMobiTopp.cpp'], LIBS=['pthread'])
 
 Alias('ConvertGraph', p1)
 Alias('GenerateODPairs', p2)
+Alias('ParseMobiTopp', p3)
 
-Return('p1', 'p2')
+Return('p1', 'p2', 'p3')

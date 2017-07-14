@@ -5,6 +5,7 @@
 
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Polygon.h"
+#include "DataStructures/Geometry/Rectangle.h"
 
 namespace visum {
 
@@ -20,6 +21,16 @@ class Surface {
       if (face->contains(p))
         return face->orientation() > 0;
     return false;
+  }
+
+  // Returns the bounding box containing all vertices of this polygon.
+  Rectangle boundingBox() const {
+    if (faces.size() == 0)
+      return Rectangle();
+    Rectangle box(faces[0].begin(), faces[0].end());
+    for (int i = 1; i < faces.size(); ++i)
+      box.extend(faces[i].begin(), faces[i].end());
+    return box;
   }
 
   // Appends a face to this surface.

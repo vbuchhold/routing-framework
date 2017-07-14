@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -41,7 +42,7 @@ inline void splitPolygon(const Polygon& p, Polygon& p1, Polygon& p2) {
 }
 
 // Returns all zone polygons (and their IDs) from the specified Visum network file.
-inline std::unordered_map<int, Surface> readZonePolygonsFrom(const std::string& filename) {
+inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) {
   // Read all vertices from the Visum network file.
   std::unordered_map<int, Point> vertex;
   {
@@ -208,15 +209,18 @@ inline std::unordered_map<int, Surface> readZonePolygonsFrom(const std::string& 
   }
 
   // Read all zones from the Visum network file.
-  std::unordered_map<int, Surface> zone;
+  std::map<int, Surface> zone;
   {
     int id, surfaceId;
+    int prevId = INVALID_ID;
+    unused(prevId);
     CsvDialect<2> zoneFile(filename + "/BEZIRK.csv");
     zoneFile.read_header(io::ignore_extra_column, "NR", "FLAECHEID");
     while (zoneFile.read_row(id, surfaceId)) {
-      assert(zone.find(id) == zone.end());
+      assert(id > prevId);
       assert(surface.find(surfaceId) != surface.end());
       zone[id] = surface[surfaceId];
+      prevId = id;
     }
   }
   return zone;
