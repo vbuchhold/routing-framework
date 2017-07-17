@@ -19,7 +19,6 @@
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h"
-#include "Tools/Constants.h"
 #include "Tools/LexicalCast.h"
 #include "Tools/StringHelpers.h"
 
@@ -128,26 +127,28 @@ class VisumImporter {
           open = permittedSystems[i] == transportSystem[j++];
         }
       open &= transportSystem[j] == '\0';
-    } while (!open);
+      if (!open)
+        continue;
+
+      assert(edgeType >= 0); assert(edgeType < 100);
+      assert(currentEdge.numLanes >= 0);
+      assert(currentEdge.capacity >= 0);
+
+      assert(endsWith(speedField, "km/h"));
+      substr(speedField, 0, std::strlen(speedField) - 4);
+      currentEdge.freeFlowSpeed = std::min(lexicalCast<int>(speedField), maxSpeed[edgeType]);
+      assert(currentEdge.freeFlowSpeed >= 0);
+    } while (!open || currentEdge.capacity == 0 || currentEdge.freeFlowSpeed == 0);
 
     assert(origToNewIds.find(currentEdge.edgeTail) != origToNewIds.end());
     assert(origToNewIds.find(currentEdge.edgeHead) != origToNewIds.end());
     currentEdge.edgeTail = origToNewIds.at(currentEdge.edgeTail);
     currentEdge.edgeHead = origToNewIds.at(currentEdge.edgeHead);
 
-    assert(edgeType >= 0); assert(edgeType < 100);
-    assert(currentEdge.numLanes >= 0);
-    assert(currentEdge.capacity >= 0);
-
     assert(endsWith(lengthField, "km"));
     substr(lengthField, 0, std::strlen(lengthField) - 2);
     currentEdge.length = std::round(lexicalCast<float>(lengthField) * 1000);
     assert(currentEdge.length >= 0);
-
-    assert(endsWith(speedField, "km/h"));
-    substr(speedField, 0, std::strlen(speedField) - 4);
-    currentEdge.freeFlowSpeed = std::min(lexicalCast<int>(speedField), maxSpeed[edgeType]);
-    assert(currentEdge.freeFlowSpeed >= 0);
     return true;
   }
 
@@ -248,8 +249,5 @@ inline NumLanesAttribute::Type VisumImporter::getValue<NumLanesAttribute>() cons
 // Returns the value of the travel time attribute for the current edge.
 template <>
 inline TravelTimeAttribute::Type VisumImporter::getValue<TravelTimeAttribute>() const {
-  if (currentEdge.freeFlowSpeed > 0)
-    return std::round(36.0 * currentEdge.length / currentEdge.freeFlowSpeed);
-  else
-    return INFTY;
+  return std::round(36.0 * currentEdge.length / currentEdge.freeFlowSpeed);
 }
