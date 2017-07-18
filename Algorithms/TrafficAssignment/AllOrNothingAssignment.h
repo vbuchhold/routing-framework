@@ -42,7 +42,8 @@ class AllOrNothingAssignment {
   // Assigns all OD-flows to their currently shortest paths.
   void run() {
     Timer timer;
-    if (verbose) std::cout << "Iteration " << ++stats.numIterations << ": " << std::flush;
+    ++stats.numIterations;
+    if (verbose) std::cout << "Iteration " << stats.numIterations << ": " << std::flush;
     shortestPathAlgo.customize();
     stats.lastCustomizationTime = timer.elapsed();
 
