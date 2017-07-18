@@ -30,7 +30,7 @@ class FrankWolfeAssignment {
   using InputGraph = InputGraphT;
 
   // Constructs an assignment procedure based on the Frank-Wolfe method.
-  FrankWolfeAssignment(InputGraphT& graph, const std::vector<OriginDestination>& odPairs,
+  FrankWolfeAssignment(InputGraphT& graph, const std::vector<ClusteredOriginDestination>& odPairs,
                        std::ofstream& csv, const bool verbose = true)
       : allOrNothingAssignment(graph, odPairs, verbose),
         inputGraph(graph),

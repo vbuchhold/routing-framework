@@ -24,7 +24,8 @@ class AllOrNothingAssignment {
 
  public:
   // Constructs an all-or-nothing assignment instance.
-  AllOrNothingAssignment(const InputGraph& graph, const std::vector<OriginDestination>& odPairs,
+  AllOrNothingAssignment(const InputGraph& graph,
+                         const std::vector<ClusteredOriginDestination>& odPairs,
                          const bool verbose = true)
       : stats(odPairs.size()),
         shortestPathAlgo(graph),
@@ -100,9 +101,11 @@ class AllOrNothingAssignment {
   AllOrNothingAssignmentStats stats; // Statistics about the execution.
 
  private:
-  ShortestPathAlgoT shortestPathAlgo;            // Algo computing shortest paths between OD-pairs.
-  const InputGraph& inputGraph;                  // The input graph.
-  const std::vector<OriginDestination>& odPairs; // The OD-pairs to be assigned onto the graph.
-  AlignVector<int> trafficFlows;                 // The traffic flows on the edges.
-  const bool verbose;                            // Should informative messages be displayed?
+  using ODPairs = std::vector<ClusteredOriginDestination>;
+
+  ShortestPathAlgoT shortestPathAlgo; // Algo computing shortest paths between OD-pairs.
+  const InputGraph& inputGraph;       // The input graph.
+  const ODPairs& odPairs;             // The OD-pairs to be assigned onto the graph.
+  AlignVector<int> trafficFlows;      // The traffic flows on the edges.
+  const bool verbose;                 // Should informative messages be displayed?
 };

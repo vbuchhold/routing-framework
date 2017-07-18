@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <stdexcept>
 #include <string>
 
@@ -22,6 +24,7 @@
 #include "DataStructures/Graph/Attributes/TravelCostAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 
 void printUsage() {
@@ -34,9 +37,12 @@ void printUsage() {
       "  -p <hrs>          the period of analysis in hours (default: 1)\n"
       "  -f <func>         the travel cost function\n"
       "                      possible values:\n"
-      "                        bpr (default) davidson modified_davidson inverse\n"
+      "                        bpr davidson modified_davidson (default) inverse\n"
       "  -a <algo>         the shortest-path algorithm\n"
       "                      possible values: dijkstra (default) bidijkstra ch cch\n"
+      "  -ord <order>      the order of the OD-pairs\n"
+      "                      possible values: random input (default) sorted\n"
+      "  -s <seed>         start the random number generator with <seed>\n"
       "  -i <file>         the input graph in binary format\n"
       "  -od <file>        the OD-pairs to be assigned\n"
       "  -o <file>         the output CSV file without file extension\n"
@@ -49,6 +55,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string infile = clp.getValue<std::string>("i");
   const std::string odfile = clp.getValue<std::string>("od");
   const std::string csvfile = clp.getValue<std::string>("o");
+  const std::string ord = clp.getValue<std::string>("ord", "input");
   const float period = clp.getValue<float>("p", 1);
 
   std::ifstream in(infile, std::ios::binary);
@@ -66,8 +73,17 @@ void assignTraffic(const CommandLineParser& clp) {
   std::ifstream od(odfile);
   if (!od.good())
     throw std::invalid_argument("file not found -- '" + odfile + "'");
-  const std::vector<OriginDestination> odPairs = importODPairsFrom(od);
+  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(od);
   od.close();
+
+  if (ord == "random") {
+    std::default_random_engine rand(clp.getValue<int>("s", 19900325));
+    std::shuffle(odPairs.begin(), odPairs.end(), rand);
+  } else if (ord == "sorted") {
+    std::sort(odPairs.begin(), odPairs.end());
+  } else if (ord != "input") {
+    throw std::invalid_argument("invalid order -- '" + ord + "'");
+  }
 
   std::ofstream csv;
   if (!csvfile.empty()) {
@@ -129,7 +145,7 @@ void chooseShortestPathAlgo(const CommandLineParser& clp) {
 // Picks the travel cost function according to the command line options.
 template <template <typename> class ObjFunctionT>
 void chooseTravelCostFunction(const CommandLineParser& clp) {
-  const std::string func = clp.getValue<std::string>("f", "bpr");
+  const std::string func = clp.getValue<std::string>("f", "modified_davidson");
   if (func == "bpr")
     chooseShortestPathAlgo<ObjFunctionT, BprFunction>(clp);
   else if (func == "davidson")
