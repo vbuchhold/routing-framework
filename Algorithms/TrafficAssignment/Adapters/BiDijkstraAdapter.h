@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <vector>
 
@@ -8,7 +9,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
-#include "DataStructures/Utilities/OriginDestination.h"
+#include "DataStructures/Labels/SimdLabelSet.h"
 #include "Tools/Constants.h"
 
 namespace trafficassignment {
@@ -17,13 +18,24 @@ namespace trafficassignment {
 template <typename InputGraphT, typename WeightT>
 class BiDijkstraAdapter {
  public:
+  // The label sets used by the standard and centralized bidirectional search.
+  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
+#if TA_LOG_K < 2 || defined(TA_NO_SIMD_SEARCH)
+  using CentralizedLabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+#else
+  using CentralizedLabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+#endif
   using InputGraph = InputGraphT;
 
-  // Constructs an adapter for Dijkstra's algorithm.
+  // The number of simultaneous shortest-path computations.
+  static constexpr int K = CentralizedLabelSet::K;
+
+  // Constructs an adapter for bidirectional search.
   BiDijkstraAdapter(const InputGraph& graph)
       : inputGraph(graph),
         reverseGraph(graph.getReverseGraph()),
-        biDijkstra(graph, reverseGraph) {
+        search(graph, reverseGraph),
+        centralizedSearch(graph, reverseGraph) {
       assert(graph.isDefrag());
   }
 
@@ -39,19 +51,34 @@ class BiDijkstraAdapter {
     }
   }
 
-  // Computes the shortest path between the specified OD-pair.
-  void query(const OriginDestination& od) {
-    biDijkstra.run(od.origin, od.destination);
+  // Computes the shortest path from s to t.
+  void query(const int s, const int t) {
+    search.run(s, t);
   }
 
-  // Returns the length of the shortest path computed last.
+  // Computes shortest paths from each source to its target simultaneously.
+  void query(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+    centralizedSearch.run(sources, targets);
+  }
+
+  // Returns the length of the shortest path.
   int getDistance(const int /*dst*/) {
-    return biDijkstra.getDistance();
+    return search.getDistance();
   }
 
-  // Returns the edges on the (packed) shortest path computed last.
+  // Returns the length of the i-th centralized shortest path.
+  int getDistance(const int /*dst*/, const int i) {
+    return centralizedSearch.getDistance(i);
+  }
+
+  // Returns the edges on the (packed) shortest path.
   std::vector<int> getPackedEdgePath(const int /*dst*/) {
-    return biDijkstra.getEdgePath();
+    return search.getEdgePath();
+  }
+
+  // Return the edges on the i-th (packed) centralized shortest path.
+  std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
+    return centralizedSearch.getEdgePath(i);
   }
 
   // Returns the first constituent edge of shortcut s.
@@ -72,12 +99,13 @@ class BiDijkstraAdapter {
   }
 
  private:
-  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
-  using Dijkstra = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+  using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+  using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
 
-  const InputGraph& inputGraph;     // The input graph.
-  InputGraph reverseGraph;          // The reverse graph.
-  BiDijkstra<Dijkstra> biDijkstra;  // The bidirectional search.
+  const InputGraph& inputGraph;                    // The input graph.
+  InputGraph reverseGraph;                         // The reverse graph.
+  BiDijkstra<Search> search;                       // Bidirectional search computing a single path.
+  BiDijkstra<CentralizedSearch> centralizedSearch; // Bidirectional search computing multiple paths.
 };
 
 }

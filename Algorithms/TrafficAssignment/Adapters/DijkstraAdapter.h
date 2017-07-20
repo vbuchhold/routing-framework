@@ -1,12 +1,13 @@
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <vector>
 
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
-#include "DataStructures/Utilities/OriginDestination.h"
+#include "DataStructures/Labels/SimdLabelSet.h"
 #include "Tools/Constants.h"
 
 namespace trafficassignment {
@@ -15,10 +16,20 @@ namespace trafficassignment {
 template <typename InputGraphT, typename WeightT>
 class DijkstraAdapter {
  public:
+  // The label sets used by the standard and centralized Dijkstra search.
+  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
+#if TA_LOG_K < 2 || defined(TA_NO_SIMD_SEARCH)
+  using CentralizedLabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+#else
+  using CentralizedLabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+#endif
   using InputGraph = InputGraphT;
 
+  // The number of simultaneous shortest-path computations.
+  static constexpr int K = CentralizedLabelSet::K;
+
   // Constructs an adapter for Dijkstra's algorithm.
-  DijkstraAdapter(const InputGraph& graph) : dijkstra(graph) {}
+  DijkstraAdapter(const InputGraph& graph) : search(graph), centralizedSearch(graph) {}
 
   // Invoked before the first iteration.
   void preprocess() { /* do nothing */ }
@@ -26,19 +37,34 @@ class DijkstraAdapter {
   // Invoked before each iteration.
   void customize() { /* do nothing */ }
 
-  // Computes the shortest path between the specified OD-pair.
-  void query(const OriginDestination& od) {
-    dijkstra.run(od.origin, od.destination);
+  // Computes the shortest path from s to t.
+  void query(const int s, const int t) {
+    search.run(s, t);
   }
 
-  // Returns the length of the shortest path computed last.
+  // Computes shortest paths from each source to its target simultaneously.
+  void query(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+    centralizedSearch.run(sources, targets);
+  }
+
+  // Returns the length of the shortest path.
   int getDistance(const int dst) {
-    return dijkstra.getDistance(dst);
+    return search.getDistance(dst);
   }
 
-  // Returns the edges on the (packed) shortest path computed last.
+  // Returns the length of the i-th centralized shortest path.
+  int getDistance(const int dst, const int i) {
+    return centralizedSearch.getDistance(dst, i);
+  }
+
+  // Returns the edges on the (packed) shortest path.
   std::vector<int> getPackedEdgePath(const int dst) {
-    return dijkstra.getReverseEdgePath(dst);
+    return search.getReverseEdgePath(dst);
+  }
+
+  // Return the edges on the i-th (packed) centralized shortest path.
+  std::vector<int> getPackedEdgePath(const int dst, const int i) {
+    return centralizedSearch.getReverseEdgePath(dst, i);
   }
 
   // Returns the first constituent edge of shortcut s.
@@ -59,9 +85,11 @@ class DijkstraAdapter {
   }
 
  private:
-  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
+  using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+  using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
 
-  StandardDijkstra<InputGraph, WeightT, LabelSet> dijkstra; // The Dijkstra search.
+  Search search;                       // Dijkstra search computing a single path.
+  CentralizedSearch centralizedSearch; // Dijkstra search computing multiple paths.
 };
 
 }

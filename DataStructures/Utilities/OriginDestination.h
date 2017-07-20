@@ -43,6 +43,11 @@ struct ClusteredOriginDestination : public OriginDestination {
     return OriginDestination::operator<(rhs);
   }
 
+  // Returns true if the OD-pair has the same origin and destination zone as the specified one.
+  bool hasSameZones(const ClusteredOriginDestination& other) const {
+    return originZone == other.originZone && destinationZone == other.destinationZone;
+  }
+
   int originZone;
   int destinationZone;
 };

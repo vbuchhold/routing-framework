@@ -13,3 +13,8 @@ constexpr int INVALID_EDGE = -1;
 
 // The earth's mean radius in meters.
 constexpr int EARTH_RADIUS = 6371000;
+
+// The maximum number of shortest paths computed simultaneously during traffic assignment.
+#ifndef TA_LOG_K
+# define TA_LOG_K 3
+#endif
