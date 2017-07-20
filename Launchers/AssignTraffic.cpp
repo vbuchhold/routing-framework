@@ -66,7 +66,7 @@ void assignTraffic(const CommandLineParser& clp) {
 
   int id = 0;
   FORALL_EDGES(graph, e) {
-    graph.capacity(e) = std::round(period * graph.capacity(e));
+    graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0f);
     graph.edgeId(e) = id++;
   }
 

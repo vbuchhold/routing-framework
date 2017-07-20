@@ -294,7 +294,7 @@ inline CapacityAttribute::Type XatfImporter::getValue<CapacityAttribute>() const
   assert(currentEdge.xatfRoadCategory != XatfRoadCategory::UNUSED);
   const int cat = static_cast<int>(currentEdge.xatfRoadCategory);
   if (currentEdge.xatfRoadCategory == XatfRoadCategory::FERRY)
-    return 1;
+    return 0;
   else
     return std::round(9000.0 *
         NUM_LANES[cat] * FREE_FLOW_SPEED[cat] / (5 * FREE_FLOW_SPEED[cat] + 9 * VEHICLE_LENGTH));
