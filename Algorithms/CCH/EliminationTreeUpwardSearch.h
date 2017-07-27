@@ -56,7 +56,11 @@ class EliminationTreeUpwardSearch {
     const int u = getNextVertex();
     assert(u >= 0); assert(u < searchGraph.numVertices());
     DistanceLabel& distToU = distanceLabels[u];
+#ifdef NO_FAST_ELIMINATION_TREE_QUERY
+    if (distToU < INFTY)
+#else
     if (distToU < tentativeDistances)
+#endif
       FORALL_INCIDENT_EDGES(searchGraph, u, e) {
         const int v = searchGraph.edgeHead(e);
         DistanceLabel& distToV = distanceLabels[v];
