@@ -1,5 +1,7 @@
 p1 = Program(source=['AssignTraffic.cpp'], LIBS=['routingkit'])
+p2 = Program(source=['RunP2PAlgo.cpp'], LIBS=['routingkit'])
 
 Alias('AssignTraffic', p1)
+Alias('RunP2PAlgo', p2)
 
-Return('p1')
+Return('p1', 'p2')
