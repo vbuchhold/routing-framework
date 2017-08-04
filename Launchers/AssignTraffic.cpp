@@ -35,6 +35,7 @@ void printUsage() {
       "  -so               find the system optimum (default: user equilibrium)\n"
       "  -v                display informative messages\n"
       "  -p <hrs>          the period of analysis in hours (default: 1)\n"
+      "  -n <num>          the number of iterations (0 means use stopping criterion)\n"
       "  -f <func>         the travel cost function\n"
       "                      possible values:\n"
       "                        bpr davidson modified_davidson (default) inverse\n"
@@ -108,7 +109,7 @@ void assignTraffic(const CommandLineParser& clp) {
     csv << std::flush;
   }
 
-  assign.run();
+  assign.run(clp.getValue<int>("n"));
 }
 
 // Picks the shortest-path algorithm according to the command line options.

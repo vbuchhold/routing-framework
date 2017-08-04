@@ -43,7 +43,8 @@ class FrankWolfeAssignment {
   }
 
   // Assigns all OD-flows onto the input graph.
-  void run() {
+  void run(const int numIterations = 0) {
+    assert(numIterations >= 0);
     const AllOrNothingAssignmentStats& substats = allOrNothingAssignment.stats;
 
     // Initialization.
@@ -189,7 +190,8 @@ class FrankWolfeAssignment {
         std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
         std::cout << std::flush;
       }
-    } while (substats.avgChangeInDistances > 1e-2);
+    } while ((numIterations > 0 || substats.avgChangeInDistances > 1e-2) &&
+        (numIterations == 0 || substats.numIterations != numIterations));
 
     if (verbose) {
       std::cout << "Total:\n";
