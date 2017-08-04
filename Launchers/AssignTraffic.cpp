@@ -93,7 +93,7 @@ void assignTraffic(const CommandLineParser& clp) {
     csv << "# Input graph: " << infile << "\n";
     csv << "# OD-pairs: " << odfile << "\n";
     csv << "# Objective: " << (clp.isSet("so") ? "SO" : "UE") << "\n";
-    csv << "# Function: " << clp.getValue<std::string>("f", "bpr") << "\n";
+    csv << "# Function: " << clp.getValue<std::string>("f", "modified_davidson") << "\n";
     csv << "# Shortest-path algo: " << clp.getValue<std::string>("a", "dijkstra") << "\n";
     csv << "# Period of analysis: " << period << "h\n";
     csv << std::flush;
