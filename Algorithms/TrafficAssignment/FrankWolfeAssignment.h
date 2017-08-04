@@ -50,10 +50,10 @@ class FrankWolfeAssignment {
     Timer timer;
 #ifdef TA_NO_SIMD_LINE_SEARCH
     FORALL_EDGES(inputGraph, e)
-      inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, 0));
+      inputGraph.travelCost(e) = objFunction.getEdgeWeight(e, 0);
 #else
     FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
-      const Vec4i weight = round_to_int(objFunction.getEdgeWeights(e, 0));
+      const Vec4i weight = truncate_to_int(objFunction.getEdgeWeights(e, 0));
       if (inputGraph.numEdges() - e >= Vec4d::size())
         weight.store(&inputGraph.travelCost(e));
       else
@@ -106,11 +106,11 @@ class FrankWolfeAssignment {
       // Update travel costs.
 #ifdef TA_NO_SIMD_LINE_SEARCH
       FORALL_EDGES(inputGraph, e)
-        inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, trafficFlows[e]));
+        inputGraph.travelCost(e) = objFunction.getEdgeWeight(e, trafficFlows[e]);
 #else
       FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
         const Vec4d flow = Vec4d().load(&trafficFlows[e]);
-        const Vec4i weight = round_to_int(objFunction.getEdgeWeights(e, flow));
+        const Vec4i weight = truncate_to_int(objFunction.getEdgeWeights(e, flow));
         if (inputGraph.numEdges() - e >= Vec4d::size())
           weight.store(&inputGraph.travelCost(e));
         else
