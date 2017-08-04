@@ -21,7 +21,7 @@ struct FrankWolfeAssignmentStats {
     totalRunningTime += lastRunningTime;
   }
 
-  float totalTravelCost; // The total travel cost resulting from the current edge flows.
+  double totalTravelCost; // The total travel cost resulting from the current edge flows.
 
   int lastLineSearchTime; // The time spent on the line search in the last iteration.
   int lastRunningTime;    // The running time for the last iteration.

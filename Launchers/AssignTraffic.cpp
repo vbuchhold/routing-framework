@@ -56,7 +56,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string odfile = clp.getValue<std::string>("od");
   const std::string csvfile = clp.getValue<std::string>("o");
   const std::string ord = clp.getValue<std::string>("ord", "input");
-  const float period = clp.getValue<float>("p", 1);
+  const double period = clp.getValue<double>("p", 1);
 
   std::ifstream in(infile, std::ios::binary);
   if (!in.good())
@@ -66,7 +66,7 @@ void assignTraffic(const CommandLineParser& clp) {
 
   int id = 0;
   FORALL_EDGES(graph, e) {
-    graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0f);
+    graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0);
     graph.edgeId(e) = id++;
   }
 

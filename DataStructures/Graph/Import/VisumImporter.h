@@ -147,7 +147,7 @@ class VisumImporter {
 
     assert(endsWith(lengthField, "km"));
     substr(lengthField, 0, std::strlen(lengthField) - 2);
-    currentEdge.length = std::round(lexicalCast<float>(lengthField) * 1000);
+    currentEdge.length = std::round(lexicalCast<double>(lengthField) * 1000);
     assert(currentEdge.length >= 0);
     return true;
   }

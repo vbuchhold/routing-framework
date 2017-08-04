@@ -117,10 +117,10 @@ class AllOrNothingAssignment {
   // Processes the result of the shortest-path computation for the i-th OD-pair.
   void processResult(const int i, const int dist, const std::vector<int>& path) {
     // Maintain the avg and max change in the OD-distances between the last two iterations.
-    const float change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
+    const double change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
     stats.lastChecksum += dist;
     stats.lastDistances[i] = dist;
-    stats.avgChangeInDistances += std::max(0.0f, change);
+    stats.avgChangeInDistances += std::max(0.0, change);
     stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, change);
 
     // Assign the OD-flow to each edge on the computed path.

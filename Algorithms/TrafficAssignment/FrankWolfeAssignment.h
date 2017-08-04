@@ -52,9 +52,9 @@ class FrankWolfeAssignment {
     FORALL_EDGES(inputGraph, e)
       inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, 0));
 #else
-    FORALL_EDGES_SIMD(inputGraph, e, Vec8f::size()) {
-      const Vec8i weight = round_to_int(objFunction.getEdgeWeights(e, 0));
-      if (inputGraph.numEdges() - e >= Vec8f::size())
+    FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
+      const Vec4i weight = round_to_int(objFunction.getEdgeWeights(e, 0));
+      if (inputGraph.numEdges() - e >= Vec4d::size())
         weight.store(&inputGraph.travelCost(e));
       else
         weight.store_partial(inputGraph.numEdges() - e, &inputGraph.travelCost(e));
@@ -67,11 +67,11 @@ class FrankWolfeAssignment {
       stats.totalTravelCost += trafficFlows[e] * travelCostFunction(e, trafficFlows[e]);
     }
 #else
-    Vec8f totalCost = 0;
-    FORALL_EDGES_SIMD(inputGraph, e, Vec8f::size()) {
-      const Vec8f flow = to_float(Vec8i().load(&allOrNothingAssignment.trafficFlowOn(e)));
-      Vec8f cost = flow * travelCostFunction(e, flow);
-      if (inputGraph.numEdges() - e >= Vec8f::size()) {
+    Vec4d totalCost = 0;
+    FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
+      const Vec4d flow = to_double(Vec4i().load(&allOrNothingAssignment.trafficFlowOn(e)));
+      Vec4d cost = flow * travelCostFunction(e, flow);
+      if (inputGraph.numEdges() - e >= Vec4d::size()) {
         flow.store(&trafficFlows[e]);
       } else {
         flow.store_partial(inputGraph.numEdges() - e, &trafficFlows[e]);
@@ -108,10 +108,10 @@ class FrankWolfeAssignment {
       FORALL_EDGES(inputGraph, e)
         inputGraph.travelCost(e) = std::round(objFunction.getEdgeWeight(e, trafficFlows[e]));
 #else
-      FORALL_EDGES_SIMD(inputGraph, e, Vec8f::size()) {
-        const Vec8f flow = Vec8f().load(&trafficFlows[e]);
-        const Vec8i weight = round_to_int(objFunction.getEdgeWeights(e, flow));
-        if (inputGraph.numEdges() - e >= Vec8f::size())
+      FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
+        const Vec4d flow = Vec4d().load(&trafficFlows[e]);
+        const Vec4i weight = round_to_int(objFunction.getEdgeWeights(e, flow));
+        if (inputGraph.numEdges() - e >= Vec4d::size())
           weight.store(&inputGraph.travelCost(e));
         else
           weight.store_partial(inputGraph.numEdges() - e, &inputGraph.travelCost(e));
@@ -122,22 +122,22 @@ class FrankWolfeAssignment {
       allOrNothingAssignment.run();
 
       // Line search.
-      const float alpha = bisectionMethod([this](const float alpha) {
+      const double alpha = bisectionMethod([this](const double alpha) {
 #ifdef TA_NO_SIMD_LINE_SEARCH
-        float sum = 0;
+        double sum = 0;
         FORALL_EDGES(inputGraph, e) {
-          const float direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
+          const double direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
           sum += direction * objFunction.getEdgeWeight(e, trafficFlows[e] + alpha * direction);
         }
         return sum;
 #else
-        Vec8f sum = 0;
-        FORALL_EDGES_SIMD(inputGraph, e, Vec8f::size()) {
-          const Vec8f oldFlow = Vec8f().load(&trafficFlows[e]);
-          const Vec8f newFlow = to_float(Vec8i().load(&allOrNothingAssignment.trafficFlowOn(e)));
-          const Vec8f direction = newFlow - oldFlow;
-          Vec8f tmp = direction * objFunction.getEdgeWeights(e, oldFlow + alpha * direction);
-          if (inputGraph.numEdges() - e < Vec8f::size())
+        Vec4d sum = 0;
+        FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
+          const Vec4d oldFlow = Vec4d().load(&trafficFlows[e]);
+          const Vec4d newFlow = to_double(Vec4i().load(&allOrNothingAssignment.trafficFlowOn(e)));
+          const Vec4d direction = newFlow - oldFlow;
+          Vec4d tmp = direction * objFunction.getEdgeWeights(e, oldFlow + alpha * direction);
+          if (inputGraph.numEdges() - e < Vec4d::size())
             tmp.cutoff(inputGraph.numEdges() - e);
           sum += tmp;
         }
@@ -148,18 +148,18 @@ class FrankWolfeAssignment {
       // Move along the descent direction.
 #ifdef TA_NO_SIMD_LINE_SEARCH
       FORALL_EDGES(inputGraph, e) {
-        const float direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
+        const double direction = allOrNothingAssignment.trafficFlowOn(e) - trafficFlows[e];
         trafficFlows[e] = trafficFlows[e] + alpha * direction;
         stats.totalTravelCost += trafficFlows[e] * travelCostFunction(e, trafficFlows[e]);
       }
 #else
-      Vec8f totalCost = 0;
-      FORALL_EDGES_SIMD(inputGraph, e, Vec8f::size()) {
-        const Vec8f oldFlow = Vec8f().load(&trafficFlows[e]);
-        const Vec8f auxFlow = to_float(Vec8i().load(&allOrNothingAssignment.trafficFlowOn(e)));
-        const Vec8f newFlow = oldFlow + alpha * (auxFlow - oldFlow);
-        Vec8f cost = newFlow * travelCostFunction(e, newFlow);
-        if (inputGraph.numEdges() - e >= Vec8f::size()) {
+      Vec4d totalCost = 0;
+      FORALL_EDGES_SIMD(inputGraph, e, Vec4d::size()) {
+        const Vec4d oldFlow = Vec4d().load(&trafficFlows[e]);
+        const Vec4d auxFlow = to_double(Vec4i().load(&allOrNothingAssignment.trafficFlowOn(e)));
+        const Vec4d newFlow = oldFlow + alpha * (auxFlow - oldFlow);
+        Vec4d cost = newFlow * travelCostFunction(e, newFlow);
+        if (inputGraph.numEdges() - e >= Vec4d::size()) {
           newFlow.store(&trafficFlows[e]);
         } else {
           newFlow.store_partial(inputGraph.numEdges() - e, &trafficFlows[e]);
@@ -205,7 +205,7 @@ class FrankWolfeAssignment {
   }
 
   // Returns the traffic flow on edge e.
-  const float& trafficFlowOn(const int e) const {
+  const double& trafficFlowOn(const int e) const {
     assert(e >= 0); assert(e < inputGraph.numEdges());
     return trafficFlows[e];
   }
@@ -219,7 +219,7 @@ class FrankWolfeAssignment {
 
   AllOrNothing allOrNothingAssignment;   // The all-or-nothing assignment algo used as a subroutine.
   InputGraphT& inputGraph;               // The input graph.
-  AlignVector<float> trafficFlows;       // The traffic flows on the edges.
+  AlignVector<double> trafficFlows;      // The traffic flows on the edges.
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
   std::ofstream& csv;                    // The output CSV file containing statistics.

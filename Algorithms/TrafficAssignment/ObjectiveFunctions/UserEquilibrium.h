@@ -13,12 +13,12 @@ class UserEquilibrium {
   UserEquilibrium(TravelCostFunctionT function) : travelCostFunction(function) {}
 
   // Returns the weight of edge e, given the flow x on e.
-  float getEdgeWeight(const int e, const float x) const {
+  double getEdgeWeight(const int e, const double x) const {
     return travelCostFunction(e, x);
   }
 
-  // Returns the weights of eight consecutive edges starting at e, given the flows x on them.
-  Vec8f getEdgeWeights(const int e, const Vec8f& x) const {
+  // Returns the weights of four consecutive edges starting at e, given the flows x on them.
+  Vec4d getEdgeWeights(const int e, const Vec4d& x) const {
     return travelCostFunction(e, x);
   }
 

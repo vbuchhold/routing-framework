@@ -16,29 +16,29 @@ class InverseFunction {
   InverseFunction(const GraphT& graph) : graph(graph) {}
 
   // Returns the travel cost on edge e, given the flow x on e.
-  float operator()(const int e, const float x) const {
+  double operator()(const int e, const double x) const {
     assert(x >= 0);
-    return 1.0f * graph.length(e) * (155 / (x + 1) + 0.85f) + 0.0f * graph.travelTime(e);
+    return 1.0 * graph.length(e) * (155 / (x + 1) + 0.85) + 0.0 * graph.travelTime(e);
   }
 
   // Returns the derivative of e's travel cost function at x.
-  float derivative(const int e, const float x) const {
+  double derivative(const int e, const double x) const {
     assert(x >= 0);
-    const float tmp = x + 1;
-    return 1.0f * graph.length(e) * -155 / (tmp * tmp);
+    const double tmp = x + 1;
+    return 1.0 * graph.length(e) * -155 / (tmp * tmp);
   }
 
-  // Returns the travel costs on eight consecutive edges starting at e, given the flows x on them.
-  Vec8f operator()(const int e, const Vec8f& x) const {
-    Vec8f length = to_float(Vec8i().load(&graph.length(e)));
-    Vec8f time = to_float(Vec8i().load(&graph.travelTime(e)));
-    return 1.0f * length * (155 / (x + 1) + 0.85f) + 0.0f * time;
+  // Returns the travel costs on four consecutive edges starting at e, given the flows x on them.
+  Vec4d operator()(const int e, const Vec4d& x) const {
+    Vec4d length = to_double(Vec4i().load(&graph.length(e)));
+    Vec4d time = to_double(Vec4i().load(&graph.travelTime(e)));
+    return 1.0 * length * (155 / (x + 1) + 0.85) + 0.0 * time;
   }
 
   // Returns the derivative of e's travel cost function at x.
-  Vec8f derivative(const int e, const Vec8f& x) const {
-    Vec8f length = to_float(Vec8i().load(&graph.length(e)));
-    return 1.0f * length * -155 / pow_const(x + 1, 2);
+  Vec4d derivative(const int e, const Vec4d& x) const {
+    Vec4d length = to_double(Vec4i().load(&graph.length(e)));
+    return 1.0 * length * -155 / pow_const(x + 1, 2);
   }
 
  private:

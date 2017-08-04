@@ -13,8 +13,8 @@ class ModifiedDavidsonFunction {
   ModifiedDavidsonFunction(const GraphT& graph) : graph(graph), davidson(graph) {}
 
   // Returns the travel time on edge e, given the flow x on e.
-  float operator()(const int e, const float x) const {
-    const float operatingPt = 0.95f * graph.capacity(e); // The point at which we linearize.
+  double operator()(const int e, const double x) const {
+    const double operatingPt = 0.95 * graph.capacity(e); // The point at which we linearize.
     if (x <= operatingPt)
       return davidson(e, x);
     else
@@ -22,24 +22,24 @@ class ModifiedDavidsonFunction {
   }
 
   // Returns the derivative of e's travel cost function at x.
-  float derivative(const int e, const float x) const {
-    const float operatingPt = 0.95f * graph.capacity(e); // The point at which we linearize.
+  double derivative(const int e, const double x) const {
+    const double operatingPt = 0.95 * graph.capacity(e); // The point at which we linearize.
     if (x <= operatingPt)
       return davidson.derivative(e, x);
     else
       return davidson.derivative(e, operatingPt);
   }
 
-  // Returns the travel times on eight consecutive edges starting at e, given the flows x on them.
-  Vec8f operator()(const int e, const Vec8f& x) const {
-    Vec8f operatingPt = 0.95f * to_float(Vec8i().load(&graph.capacity(e)));
+  // Returns the travel times on four consecutive edges starting at e, given the flows x on them.
+  Vec4d operator()(const int e, const Vec4d& x) const {
+    Vec4d operatingPt = 0.95 * to_double(Vec4i().load(&graph.capacity(e)));
     return davidson(e, min(x, operatingPt)) +
         davidson.derivative(e, operatingPt) * (max(x, operatingPt) - operatingPt);
   }
 
   // Returns the derivative of e's travel cost function at x.
-  Vec8f derivative(const int e, const Vec8f& x) const {
-    Vec8f operatingPt = 0.95f * to_float(Vec8i().load(&graph.capacity(e)));
+  Vec4d derivative(const int e, const Vec4d& x) const {
+    Vec4d operatingPt = 0.95 * to_double(Vec4i().load(&graph.capacity(e)));
     return davidson.derivative(e, min(x, operatingPt));
   }
 

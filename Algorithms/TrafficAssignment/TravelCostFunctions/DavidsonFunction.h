@@ -12,30 +12,30 @@ class DavidsonFunction {
   DavidsonFunction(const GraphT& graph) : graph(graph) {}
 
   // Returns the travel time on edge e, given the flow x on e.
-  float operator()(const int e, const float x) const {
+  double operator()(const int e, const double x) const {
     assert(x >= 0); assert(x < graph.capacity(e));
-    return graph.travelTime(e) * (1 + 0.01f * x / (graph.capacity(e) - x));
+    return graph.travelTime(e) * (1 + 0.01 * x / (graph.capacity(e) - x));
   }
 
   // Returns the derivative of e's travel cost function at x.
-  float derivative(const int e, const float x) const {
+  double derivative(const int e, const double x) const {
     assert(x >= 0); assert(x < graph.capacity(e));
-    const float tmp = graph.capacity(e) - x;
-    return graph.travelTime(e) * 0.01f * graph.capacity(e) / (tmp * tmp);
+    const double tmp = graph.capacity(e) - x;
+    return graph.travelTime(e) * 0.01 * graph.capacity(e) / (tmp * tmp);
   }
 
-  // Returns the travel times on eight consecutive edges starting at e, given the flows x on them.
-  Vec8f operator()(const int e, const Vec8f& x) const {
-    Vec8f time = to_float(Vec8i().load(&graph.travelTime(e)));
-    Vec8f capacity = to_float(Vec8i().load(&graph.capacity(e)));
-    return time * (1 + 0.01f * x / (capacity - x));
+  // Returns the travel times on four consecutive edges starting at e, given the flows x on them.
+  Vec4d operator()(const int e, const Vec4d& x) const {
+    Vec4d time = to_double(Vec4i().load(&graph.travelTime(e)));
+    Vec4d capacity = to_double(Vec4i().load(&graph.capacity(e)));
+    return time * (1 + 0.01 * x / (capacity - x));
   }
 
   // Returns the derivative of e's travel cost function at x.
-  Vec8f derivative(const int e, const Vec8f& x) const {
-    Vec8f time = to_float(Vec8i().load(&graph.travelTime(e)));
-    Vec8f capacity = to_float(Vec8i().load(&graph.capacity(e)));
-    return time * 0.01f * capacity / pow_const(capacity - x, 2);
+  Vec4d derivative(const int e, const Vec4d& x) const {
+    Vec4d time = to_double(Vec4i().load(&graph.travelTime(e)));
+    Vec4d capacity = to_double(Vec4i().load(&graph.capacity(e)));
+    return time * 0.01 * capacity / pow_const(capacity - x, 2);
   }
 
  private:
