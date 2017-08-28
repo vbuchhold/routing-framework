@@ -35,7 +35,7 @@
 void printUsage() {
   std::cout <<
       "Usage: RunP2PAlgo -a CH -g <file> [-ord <file>] -o <file>\n"
-      "       RunP2PAlgo -a CCH [-i <imbalance>] -g <file> -o <file>\n"
+      "       RunP2PAlgo -a CCH [-b <balance>] -g <file> -o <file>\n"
       "       RunP2PAlgo -a Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a Bi-Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a CH [-s] -ch <file> -od <file> -o <file>\n"
@@ -46,7 +46,7 @@ void printUsage() {
       "  -l                use physical length as metric (default: travel time)\n"
       "  -s                do not use the stall-on-demand technique\n"
       "  -a <algo>         algorithm to be run\n"
-      "  -i <imbalance>    maximum imbalance in % for nested dissection (default: 30)\n"
+      "  -b <balance>      balance parameter in % for nested dissection (default: 30)"
       "  -g <file>         input graph in binary format\n"
       "  -ord <file>       order in which vertices are contracted\n"
       "  -ch <file>        metric-dependent CH\n"
