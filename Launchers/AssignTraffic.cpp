@@ -71,12 +71,7 @@ void assignTraffic(const CommandLineParser& clp) {
     graph.edgeId(e) = id++;
   }
 
-  std::ifstream od(odfile);
-  if (!od.good())
-    throw std::invalid_argument("file not found -- '" + odfile + "'");
-  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(od);
-  od.close();
-
+  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(odfile);
   if (ord == "random") {
     std::default_random_engine rand(clp.getValue<int>("s", 19900325));
     std::shuffle(odPairs.begin(), odPairs.end(), rand);

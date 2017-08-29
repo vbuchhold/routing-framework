@@ -25,7 +25,7 @@
 void printUsage() {
   std::cout <<
       "Usage: ParseMobiTopp -g <file> -v <file> -o <file>\n"
-      "       ParseMobiTopp [-s <seed>] [-m <mode>] -vs <file> -od <file> -o <file>\n"
+      "       ParseMobiTopp [-s <seed>] -g <file> -vs <file> -od <file> -o <file>\n"
       "This program extracts all OD-pairs between traffic zones from a given mobiTopp\n"
       "file that lie in a selected analysis period and translates the zone IDs into\n"
       "vertex IDs in the corresponding graph.\n"
@@ -96,6 +96,7 @@ inline void extractODPairs(const CommandLineParser& clp) {
   const std::string selectedMode = clp.getValue<std::string>("m", "MIV");
   const std::string earliestDay = clp.getValue<std::string>("ed");
   const std::string latestDay = clp.getValue<std::string>("ld");
+  const std::string graphFile = clp.getValue<std::string>("g");
   const std::string vertexSetFile = clp.getValue<std::string>("vs");
   const std::string odFile = clp.getValue<std::string>("od");
   const std::string outfile = clp.getValue<std::string>("o");
@@ -132,10 +133,12 @@ inline void extractODPairs(const CommandLineParser& clp) {
   std::cout << " done." << std::endl;
 
   std::cout << "Computing the OD-pairs..." << std::flush;
-  std::ofstream out(outfile + ".od");
+  std::ofstream out(outfile + ".csv");
   if (!out.good())
-    throw std::invalid_argument("file cannot be opened -- '" + outfile + ".od'");
-  out << "p od " << numZones << std::endl;
+    throw std::invalid_argument("file cannot be opened -- '" + outfile + ".csv'");
+  out << "# Input graph: " << graphFile << std::endl;
+  out << "# Methodology: mobiTopp" << std::endl;
+  out << "origin,destination,origin_zone,destination_zone,departure" << std::endl;
 
   std::default_random_engine rand(seed);
   int householdId, personId, travelTime, activity, durOfActivity;
@@ -161,15 +164,15 @@ inline void extractODPairs(const CommandLineParser& clp) {
     if (destinationZone[0] != 'Z')
       throw std::domain_error("invalid zone ID -- '" + std::string(destinationZone) + "'");
 
-    int originZoneId = origToSeqZoneIds[lexicalCast<int>(++originZone)];
-    int destinationZoneId = origToSeqZoneIds[lexicalCast<int>(++destinationZone)];
-    if (originZoneId-- == 0)
+    int oZoneId = origToSeqZoneIds[lexicalCast<int>(++originZone)];
+    int dZoneId = origToSeqZoneIds[lexicalCast<int>(++destinationZone)];
+    if (oZoneId-- == 0)
       throw std::domain_error("zone not found -- '" + std::string(originZone) + "'");
-    if (destinationZoneId-- == 0)
+    if (dZoneId-- == 0)
       throw std::domain_error("zone not found -- '" + std::string(destinationZone) + "'");
 
-    const std::vector<int>& originVertexSet = zoneVertexSets[originZoneId];
-    const std::vector<int>& destinationVertexSet = zoneVertexSets[destinationZoneId];
+    const std::vector<int>& originVertexSet = zoneVertexSets[oZoneId];
+    const std::vector<int>& destinationVertexSet = zoneVertexSets[dZoneId];
     if (originVertexSet.size() == 0 || destinationVertexSet.size() == 0)
       continue;
 
@@ -177,7 +180,7 @@ inline void extractODPairs(const CommandLineParser& clp) {
     std::uniform_int_distribution<> destinationDist(0, destinationVertexSet.size() - 1);
     const int o = originVertexSet[originDist(rand)];
     const int d = destinationVertexSet[destinationDist(rand)];
-    out << "q " << o << " " << d << " " << originZoneId << " " << destinationZoneId << std::endl;
+    out << o << ',' << d << ',' << oZoneId << ',' << dZoneId << ',' << departure << std::endl;
   }
   std::cout << " done." << std::endl;
 }
@@ -189,7 +192,7 @@ int main(int argc, char* argv[]) {
       printUsage();
     else if (clp.isSet("g") && clp.isSet("v") && clp.isSet("o"))
       computeVertexSets(clp);
-    else if (clp.isSet("vs") && clp.isSet("od") && clp.isSet("o"))
+    else if (clp.isSet("g") && clp.isSet("vs") && clp.isSet("od") && clp.isSet("o"))
       extractODPairs(clp);
     else
       throw std::invalid_argument("invalid options");

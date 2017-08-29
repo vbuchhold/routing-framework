@@ -1,12 +1,10 @@
 #pragma once
 
 #include <cassert>
-#include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
 
-#include "Tools/Constants.h"
+#include <csv.h>
 
 // An origin-destination (OD) pair, representing a travel demand or a query.
 struct OriginDestination {
@@ -53,78 +51,40 @@ struct ClusteredOriginDestination : public OriginDestination {
 };
 
 // Reads the specified file into a vector of OD-pairs.
-std::vector<OriginDestination> importODPairsFrom(std::ifstream& in) {
+std::vector<OriginDestination> importODPairsFrom(const std::string& infile) {
   std::vector<OriginDestination> pairs;
-  char lineType;
-  std::string lineStr;
-  // Read the file line by line.
-  while (getline(in, lineStr)) {
-    assert(!lineStr.empty());
-    switch (lineStr[0]) {
-      case 'c':
-      case 'p':
-      case 'r':
-      case 'd': {
-        // Skip all non-OD-pair lines (e.g., comment lines).
-        break;
-      }
-      case 'q': {
-        // Read an OD-pair line.
-        std::istringstream line(lineStr);
-        int o, d;
-        line >> lineType >> o >> d;
-        assert(line);
-        assert(o >= 0);
-        assert(d >= 0);
-        pairs.emplace_back(o, d);
-        break;
-      }
-      default: {
-        assert(false);
-      }
-    }
+  int origin, destination;
+  using TrimPolicy = io::trim_chars<>;
+  using QuotePolicy = io::no_quote_escape<','>;
+  using OverflowPolicy = io::throw_on_overflow;
+  using CommentPolicy = io::single_line_comment<'#'>;
+  io::CSVReader<2, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy> in(infile);
+  in.read_header(io::ignore_extra_column, "origin", "destination");
+  while (in.read_row(origin, destination)) {
+    assert(origin >= 0);
+    assert(destination >= 0);
+    pairs.emplace_back(origin, destination);
   }
-  assert(in.eof());
   return pairs;
 }
 
 // Reads the specified file into a vector of clustered OD-pairs.
-std::vector<ClusteredOriginDestination> importClusteredODPairsFrom(std::ifstream& in) {
+std::vector<ClusteredOriginDestination> importClusteredODPairsFrom(const std::string& infile) {
   std::vector<ClusteredOriginDestination> pairs;
-  char lineType;
-  std::string lineStr;
-  // Read the file line by line.
-  while (getline(in, lineStr)) {
-    assert(!lineStr.empty());
-    switch (lineStr[0]) {
-      case 'c':
-      case 'p':
-      case 'r':
-      case 'd': {
-        // Skip all non-OD-pair lines (e.g., comment lines).
-        break;
-      }
-      case 'q': {
-        // Read an OD-pair line.
-        std::istringstream line(lineStr);
-        int o, d, oZone = INVALID_ID, dZone = INVALID_ID;
-        line >> lineType >> o >> d >> std::ws;
-        if (!line.eof()) {
-          line >> oZone >> dZone >> std::ws;
-          assert(oZone >= 0);
-          assert(dZone >= 0);
-        }
-        assert(o >= 0);
-        assert(d >= 0);
-        assert(line); assert(line.eof());
-        pairs.emplace_back(o, d, oZone, dZone);
-        break;
-      }
-      default: {
-        assert(false);
-      }
-    }
+  int origin, destination, originZone, destinationZone;
+  using TrimPolicy = io::trim_chars<>;
+  using QuotePolicy = io::no_quote_escape<','>;
+  using OverflowPolicy = io::throw_on_overflow;
+  using CommentPolicy = io::single_line_comment<'#'>;
+  io::CSVReader<4, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy> in(infile);
+  const io::ignore_column ignore = io::ignore_extra_column;
+  in.read_header(ignore, "origin", "destination", "origin_zone", "destination_zone");
+  while (in.read_row(origin, destination, originZone, destinationZone)) {
+    assert(origin >= 0);
+    assert(destination >= 0);
+    assert(originZone >= 0);
+    assert(destinationZone >= 0);
+    pairs.emplace_back(origin, destination, originZone, destinationZone);
   }
-  assert(in.eof());
   return pairs;
 }

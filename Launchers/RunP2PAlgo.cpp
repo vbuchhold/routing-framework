@@ -3,11 +3,11 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <csv.h>
 #include <routingkit/contraction_hierarchy.h>
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
@@ -26,7 +26,6 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
-#include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/Constants.h"
@@ -89,55 +88,28 @@ inline void writeRecordLine(std::ofstream& out, Dij& algo, const int dst, const 
 
 // Runs the queries in the specified OD-file using the specified P2P algorithm.
 template <typename AlgoT, typename T>
-inline void runQueries(AlgoT& algo, std::ifstream& odFile, std::ofstream& outfile, T translate) {
-  // Read the OD-file.
-  bool rankLineFound = false;
-  std::string lineString;
-  std::vector<int> ranks;
-  while ((odFile.peek() == 'c' || odFile.peek() == 'p' || odFile.peek() == 'r') && !rankLineFound) {
-    getline(odFile, lineString);
-    if (lineString[0] == 'r') {
-      rankLineFound = true;
-      std::istringstream line(lineString.substr(1));
-      int rank;
-      while (line >> rank) {
-        if (rank < 0)
-          throw std::logic_error("corrupt OD-file");
-        ranks.push_back(1 << rank);
-      }
-    }
-  }
-  std::vector<OriginDestination> odPairs = importODPairsFrom(odFile);
-
-  int numODPairsPerRank = odPairs.size();
-  if (rankLineFound) {
-    if (ranks.size() > 0)
-      numODPairsPerRank /= ranks.size();
-    if (ranks.size() * numODPairsPerRank < odPairs.size())
-      throw std::logic_error("corrupt OD-file");
-  } else {
-    ranks.emplace_back();
-  }
-
-  // The algorithm may have reordered the vertices, so we must translate the origin/destination ID.
-  for (auto& odPair : odPairs) {
-    odPair.origin = translate(odPair.origin);
-    odPair.destination = translate(odPair.destination);
-  }
-
-  // Run the queries.
+inline void runQueries(AlgoT& algo, const std::string& od, std::ofstream& outfile, T translate) {
   Timer timer;
-  if (rankLineFound) outfile << "dijkstra_rank,";
+  int origin, destination, rank;
+  using TrimPolicy = io::trim_chars<>;
+  using QuotePolicy = io::no_quote_escape<','>;
+  using OverflowPolicy = io::throw_on_overflow;
+  using CommentPolicy = io::single_line_comment<'#'>;
+  io::CSVReader<3, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy> odFile(od);
+  const io::ignore_column ignore = io::ignore_extra_column | io::ignore_missing_column;
+  odFile.read_header(ignore, "origin", "destination", "dijkstra_rank");
+  const bool hasRanks = odFile.has_column("dijkstra_rank");
+  if (hasRanks) outfile << "dijkstra_rank,";
   writeHeaderLine(outfile, algo);
-  for (int i = 0, j = 0; i < ranks.size(); ++i)
-    for (int last = j + numODPairsPerRank; j < last; ++j) {
-      assert(j < odPairs.size());
-      timer.restart();
-      algo.run(odPairs[j].origin, odPairs[j].destination);
-      const int elapsed = timer.elapsed<std::chrono::microseconds>();
-      if (rankLineFound) outfile << ranks[i] << ',';
-      writeRecordLine(outfile, algo, odPairs[j].destination, elapsed);
-    }
+  while (odFile.read_row(origin, destination, rank)) {
+    origin = translate(origin);
+    destination = translate(destination);
+    timer.restart();
+    algo.run(origin, destination);
+    const int elapsed = timer.elapsed<std::chrono::microseconds>();
+    if (hasRanks) outfile << rank << ',';
+    writeRecordLine(outfile, algo, destination, elapsed);
+  }
 }
 
 // Invoked when the user wants to run the query phase of a P2P algorithm.
@@ -150,11 +122,6 @@ inline void runQueries(const CommandLineParser& clp) {
   const std::string chFilename = clp.getValue<std::string>("ch");
   const std::string odFilename = clp.getValue<std::string>("od");
   const std::string outfilename = clp.getValue<std::string>("o");
-
-  // Open the OD-file.
-  std::ifstream odFile(odFilename);
-  if (!odFile.good())
-    throw std::invalid_argument("file not found -- '" + odFilename + "'");
 
   // Open the output CSV file.
   std::ofstream outfile(outfilename + ".csv");
@@ -177,7 +144,7 @@ inline void runQueries(const CommandLineParser& clp) {
     outfile << "# OD-pairs: " << odFilename << '\n';
 
     Dij algo(graph);
-    runQueries(algo, odFile, outfile, [](const int v) { return v; });
+    runQueries(algo, odFilename, outfile, [](const int v) { return v; });
   } else if (algorithmName == "Bi-Dij") {
     // Run the query phase of bidirectional search.
     std::ifstream graphFile(graphFilename, std::ios::binary);
@@ -195,7 +162,7 @@ inline void runQueries(const CommandLineParser& clp) {
 
     InputGraph reverse = graph.getReverseGraph();
     BiDij algo(graph, reverse);
-    runQueries(algo, odFile, outfile, [](const int v) { return v; });
+    runQueries(algo, odFilename, outfile, [](const int v) { return v; });
   } else if (algorithmName == "CH") {
     // Run the query phase of CH.
     std::ifstream chFile(chFilename, std::ios::binary);
@@ -209,10 +176,10 @@ inline void runQueries(const CommandLineParser& clp) {
 
     if (noStalling) {
       CHSearch<false> algo(ch);
-      runQueries(algo, odFile, outfile, [&ch](const int v) { return ch.rank(v); });
+      runQueries(algo, odFilename, outfile, [&](const int v) { return ch.rank(v); });
     } else {
       CHSearch<true> algo(ch);
-      runQueries(algo, odFile, outfile, [&ch](const int v) { return ch.rank(v); });
+      runQueries(algo, odFilename, outfile, [&](const int v) { return ch.rank(v); });
     }
   } else if (algorithmName == "CCH-Dij") {
     // Run the Dijkstra-based query phase of CCH.
@@ -252,10 +219,10 @@ inline void runQueries(const CommandLineParser& clp) {
 
     if (noStalling) {
       CHSearch<false> algo(perfectCH);
-      runQueries(algo, odFile, outfile, [&perfectCH](const int v) { return perfectCH.rank(v); });
+      runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
     } else {
       CHSearch<true> algo(perfectCH);
-      runQueries(algo, odFile, outfile, [&perfectCH](const int v) { return perfectCH.rank(v); });
+      runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
     }
   } else if (algorithmName == "CCH-tree") {
     // Run the elimination-tree-based query phase of CCH.
@@ -296,7 +263,7 @@ inline void runQueries(const CommandLineParser& clp) {
     outfile << "# OD-pairs: " << odFilename << '\n';
 
     CCHTree algo(perfectCH, tree);
-    runQueries(algo, odFile, outfile, [&perfectCH](const int v) { return perfectCH.rank(v); });
+    runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
   } else {
     throw std::invalid_argument("invalid P2P algorithm -- '" + algorithmName + "'");
   }

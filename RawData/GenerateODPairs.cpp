@@ -6,7 +6,8 @@
 #include <stdexcept>
 #include <string>
 
-#include "DataStructures/Graph/Attributes/TravelCostAttribute.h"
+#include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Experiments/ODPairGenerator.h"
@@ -36,11 +37,6 @@ void printUsage() {
 void printErrorMessage(const std::string& invokedName, const std::string& msg) {
   std::cerr << invokedName << ": " << msg << std::endl;
   std::cerr << "Try '" << invokedName <<" -help' for more information." << std::endl;
-}
-
-// Writes the specified OD-pair to the output file.
-void output(std::ofstream& out, const OriginDestination& pair) {
-  out << "q " << pair.origin << " " << pair.destination << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -78,20 +74,19 @@ int main(int argc, char* argv[]) {
       FORALL_EDGES(graph, e)
         graph.travelTime(e) = graph.length(e);
 
-    std::ofstream out(outfile + ".od");
+    std::ofstream out(outfile + ".csv");
     if (!out.good())
-      throw std::invalid_argument("file cannot be opened -- '" + outfile + ".od'");
-    out << "p od " << numPairs << std::endl;
+      throw std::invalid_argument("file cannot be opened -- '" + outfile + ".csv'");
+    out << "# Input graph: " << infile << std::endl;
+    out << "# Methodology: ";
 
     ProgressBar bar;
     bar.setPercentageOutputInterval(25);
 
     if (clp.isSet("r")) {
       // Choose the destination by Dijkstra rank.
-      out << "r";
-      for (const auto rank : clp.getValues<int>("r"))
-        out << " " << rank;
-      out << std::endl;
+      out << "Dijkstra rank" << std::endl;
+      out << "origin,destination,dijkstra_rank" << std::endl;
 
       std::cout << "The destinations are chosen by Dijkstra rank." << std::endl;
       std::cout << "Cost function: ";
@@ -100,7 +95,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Generating " << numPairs << " OD-pairs (2^" << rank << "): " << std::flush;
         bar.init(numPairs);
         for (int i = 0; i < numPairs; ++i) {
-          output(out, gen.getRandomODPairChosenByDijkstraRank(1 << rank));
+          const OriginDestination pair = gen.getRandomODPairChosenByDijkstraRank(1 << rank);
+          out << pair.origin << ',' << pair.destination << ',' << (1 << rank) << std::endl;
           ++bar;
         }
         std::cout << "done." << std::endl;
@@ -111,8 +107,9 @@ int main(int argc, char* argv[]) {
       const bool isGeo = clp.isSet("geo");
       std::geometric_distribution<> dist(1.0 / distance);
 
-      out << "d " << distance << " ";
-      out << (isGeo ? "geometrically-distributed" : "exact") << std::endl;
+      out << (isGeo ? "geometrically distributed" : "equidistant");
+      out << " (" << distance << ")" << std::endl;
+      out << "origin,destination,dijkstra_rank" << std::endl;
 
       if (isGeo) {
         std::cout << "The origin-destination distance is geometrically distributed." << std::endl;
@@ -126,16 +123,22 @@ int main(int argc, char* argv[]) {
       std::cout << "Generating " << numPairs << " OD-pairs: " << std::flush;
       bar.init(numPairs);
       for (int i = 0; i < numPairs; ++i) {
-        output(out, gen.getRandomODPairChosenByDistance(isGeo ? dist(rand) : distance));
+        const int actualDistance = isGeo ? dist(rand) : distance;
+        const OriginDestination pair = gen.getRandomODPairChosenByDistance(actualDistance);
+        out << pair.origin << ',' << pair.destination << std::endl;
         ++bar;
       }
       std::cout << "done." << std::endl;
     } else {
       // Choose the destination uniformly at random.
+      out << "random" << std::endl;
+      out << "origin,destination,dijkstra_rank" << std::endl;
+
       std::cout << "Generating " << numPairs << " OD-pairs: " << std::flush;
       bar.init(numPairs);
       for (int i = 0; i < numPairs; ++i) {
-        output(out, gen.getRandomODPair());
+        const OriginDestination pair = gen.getRandomODPair();
+        out << pair.origin << ',' << pair.destination << std::endl;
         ++bar;
       }
       std::cout << "done." << std::endl;

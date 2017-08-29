@@ -51,6 +51,20 @@ class ODPairGenerator {
     return {o, d};
   }
 
+  // Returns the Dijkstra rank for the specified destination with respect to the given origin.
+  int getDijkstraRankFor(const OriginDestination& od) {
+    assert(od.origin >= 0); assert(od.origin <= dist.b());
+    assert(od.destination >= 0); assert(od.destination <= dist.b());
+    int rank = 0;
+    dijkstra.init({od.origin});
+    while (dijkstra.settleNextVertex() != od.destination) {
+      if (dijkstra.queue.empty())
+        assert(false);
+      ++rank;
+    }
+    return rank;
+  }
+
  private:
   using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
   using Dijkstra = StandardDijkstra<GraphT, WeightT, LabelSet>;

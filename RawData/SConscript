@@ -1,9 +1,11 @@
-p1 = Program(source=['ConvertGraph.cpp'], LIBS=['proj', 'pthread'])
-p2 = Program(source=['GenerateODPairs.cpp'])
-p3 = Program(source=['ParseMobiTopp.cpp'], LIBS=['pthread'])
+p1 = Program(source=['ComputeDijkstraRanks.cpp'], LIBS=['pthread'])
+p2 = Program(source=['ConvertGraph.cpp'], LIBS=['proj', 'pthread'])
+p3 = Program(source=['GenerateODPairs.cpp'], LIBS=['pthread'])
+p4 = Program(source=['ParseMobiTopp.cpp'], LIBS=['pthread'])
 
-Alias('ConvertGraph', p1)
-Alias('GenerateODPairs', p2)
-Alias('ParseMobiTopp', p3)
+Alias('ComputeDijkstraRanks', p1)
+Alias('ConvertGraph', p2)
+Alias('GenerateODPairs', p3)
+Alias('ParseMobiTopp', p4)
 
-Return('p1', 'p2', 'p3')
+Return('p1', 'p2', 'p3', 'p4')
