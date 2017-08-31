@@ -7,7 +7,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/ParentLabelContainer.h"
 #include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
-#include "DataStructures/Queues/Heap.h"
+#include "DataStructures/Queues/AddressableKHeap.h"
 #include "Tools/Constants.h"
 
 namespace dijkstra {
@@ -165,4 +165,4 @@ class Dijkstra {
 // An alias template for a standard Dijkstra search.
 template <typename GraphT, typename WeightT, typename LabelSetT>
 using StandardDijkstra =
-    Dijkstra<GraphT, WeightT, StampedDistanceLabelContainer, LabelSetT, QuadHeap>;
+    Dijkstra<GraphT, WeightT, StampedDistanceLabelContainer, LabelSetT, AddressableQuadheap>;

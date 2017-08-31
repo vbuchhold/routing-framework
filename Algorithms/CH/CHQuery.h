@@ -7,7 +7,7 @@
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
-#include "DataStructures/Queues/Heap.h"
+#include "DataStructures/Queues/AddressableKHeap.h"
 
 // Implementation of a CH query. Depending on the used label set, it keeps track of parent vertices
 // and/or edges, and computes multiple shortest paths simultaneously, possibly using SSE or AVX
@@ -125,4 +125,4 @@ class CHQuery {
 // An alias template for a standard CH search.
 template <typename CH, typename LabelSetT, bool useStallOnDemand = true>
 using StandardCHQuery = CHQuery<
-    CH, StampedDistanceLabelContainer, LabelSetT, QuadHeap, useStallOnDemand>;
+    CH, StampedDistanceLabelContainer, LabelSetT, AddressableQuadheap, useStallOnDemand>;
