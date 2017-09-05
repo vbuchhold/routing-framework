@@ -45,7 +45,7 @@ void printUsage() {
       "  -l                use physical length as metric (default: travel time)\n"
       "  -s                do not use the stall-on-demand technique\n"
       "  -a <algo>         algorithm to be run\n"
-      "  -b <balance>      balance parameter in % for nested dissection (default: 30)"
+      "  -b <balance>      balance parameter in % for nested dissection (default: 30)\n"
       "  -g <file>         input graph in binary format\n"
       "  -ord <file>       order in which vertices are contracted\n"
       "  -ch <file>        metric-dependent CH\n"
