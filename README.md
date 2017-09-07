@@ -1,5 +1,10 @@
 # Routing Framework
 
+This repository contains the C++14 source code used in the following publications/submissions:
+
+* V. Buchhold, P. Sanders, D. Wagner. Faster Traffic Assignment in Road Networks.  
+  Submitted to the 20th Meeting on Algorithm Engineering and Experiments (ALENEX'18).
+
 ## Prerequisites
 
 You need to have some tools and libraries installed. On Debian and its derivatives (such as Ubuntu)
@@ -34,6 +39,28 @@ Once you installed the packages, simply type `scons` at the top-level directory 
 ```
 $ scons
 ```
+
+## Experiments in *Faster Traffic Assignment in Road Networks*
+
+To get the version of the source code used in the publication, check out the `ALENEX18` tag:
+
+```
+$ git checkout ALENEX18
+```
+
+To run the experiments presented in the publication, enter the following commands at the top-level
+directory of the framework:
+
+```
+$ cd Publications/FastTA/ALENEX18
+$ ./PrepareP2P <path-to-xatf-data> ~
+$ ./PrepareTA <path-to-visum-data> <path-to-mobitopp-data> ~
+$ ./ConductP2P ~
+$ ./ConductTA ~
+```
+
+*Note: This repository contains the full source code used in the publication. However,
+unfortunately the data used in the experiments is proprietary and not publicly available.*
 
 ## SCons Integration for Eclipse
 
