@@ -1,7 +1,7 @@
-p1 = Program(source=['ComputeDijkstraRanks.cpp'], LIBS=['pthread'])
-p2 = Program(source=['ConvertGraph.cpp'], LIBS=['proj', 'pthread'])
-p3 = Program(source=['GenerateODPairs.cpp'], LIBS=['pthread'])
-p4 = Program(source=['ParseMobiTopp.cpp'], LIBS=['pthread'])
+p1 = Program(source=['ComputeDijkstraRanks.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
+p2 = Program(source=['ConvertGraph.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj'])
+p3 = Program(source=['GenerateODPairs.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
+p4 = Program(source=['ParseMobiTopp.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 
 Alias('ComputeDijkstraRanks', p1)
 Alias('ConvertGraph', p2)
