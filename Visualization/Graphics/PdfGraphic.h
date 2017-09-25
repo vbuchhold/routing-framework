@@ -42,6 +42,11 @@ class PdfGraphic : public Graphic {
     setUserSpace(userSpace);
   }
 
+  // Converts a value measured in points to an equivalent value measured in device-space units.
+  virtual double toDeviceSpaceUnits(const double pt) const override {
+    return pt;
+  }
+
   // Outputs the current page and inserts a new blank page.
   // Note: This member function does not create a new cairo drawing context.
   virtual void newPage() override {

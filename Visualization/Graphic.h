@@ -68,6 +68,9 @@ class Graphic {
     return cairoContext;
   }
 
+  // Converts a value measured in points to an equivalent value measured in device-space units.
+  virtual double toDeviceSpaceUnits(const double pt) const = 0;
+
   // Outputs the current page and inserts a new blank page.
   // Note: This member function may or may not create a new cairo drawing context.
   virtual void newPage() = 0;

@@ -55,11 +55,11 @@ class PrimitiveDrawer {
           currentColor.normalizedBlue(), currentColor.normalizedAlpha());
   }
 
-  // Sets the line width (in points or pixels) to be used for drawing.
+  // Sets the line width (in points) to be used for drawing.
   void setLineWidth(const double width) {
     currentLineWidth = width;
     if (currentGraphic != nullptr && currentGraphic->getCairoContext() != nullptr) {
-      double x = currentLineWidth, y = 0;
+      double x = currentGraphic->toDeviceSpaceUnits(currentLineWidth), y = 0;
       cairo_device_to_user_distance(currentGraphic->getCairoContext(), &x, &y);
       cairo_set_line_width(currentGraphic->getCairoContext(), x);
     }

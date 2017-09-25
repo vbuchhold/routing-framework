@@ -1,0 +1,5 @@
+p1 = Program(source=['DrawStuttgart.cpp'], LIBS=['cairo'])
+
+Alias('DrawStuttgart', p1)
+
+Return('p1')
