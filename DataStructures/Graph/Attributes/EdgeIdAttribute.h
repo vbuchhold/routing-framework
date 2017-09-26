@@ -8,8 +8,8 @@
 // An attribute associating an ID with each edge of a graph.
 class EdgeIdAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr Type DEFAULT_VALUE = INVALID_EDGE; // The attribute's default value.
-  static constexpr const char* NAME = "edge_id";      // The attribute's unique name.
+  static constexpr Type DEFAULT_VALUE = INVALID_ID; // The attribute's default value.
+  static constexpr const char* NAME = "edge_id";    // The attribute's unique name.
 
   // Returns the ID of edge e.
   const Type& edgeId(const int e) const {

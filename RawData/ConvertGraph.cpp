@@ -14,6 +14,7 @@
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
+#include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h"
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Graph.h"
@@ -23,7 +24,7 @@
 #include "Tools/ContainerHelpers.h"
 
 // A graph data structure encompassing all vertex and edge attributes available for output.
-using VertexAttributes = VertexAttrs<CoordinateAttribute, LatLngAttribute>;
+using VertexAttributes = VertexAttrs<CoordinateAttribute, LatLngAttribute, VertexIdAttribute>;
 using EdgeAttributes = EdgeAttrs<
     CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
     NumLanesAttribute, TravelTimeAttribute, XatfRoadCategoryAttribute>;
@@ -44,8 +45,9 @@ void printUsage() {
       "  -cs <epsg-code>   input coordinate system (Visum only)\n"
       "  -ap <hours>       analysis period, capacity is in vehicles/AP (Visum only)\n"
       "  -a <attrs>        blank-separated list of vertex/edge attributes to be output\n"
-      "                      possible values: capacity coordinate free_flow_speed\n"
-      "                        lat_lng length num_lanes travel_time xatf_road_category\n"
+      "                      possible values:\n"
+      "                        capacity coordinate free_flow_speed lat_lng length\n"
+      "                        num_lanes travel_time vertex_id xatf_road_category\n"
       "  -i <file>         input file(s) without file extension\n"
       "  -o <file>         output file(s) without file extension\n"
       "  -help             display this help and exit\n";

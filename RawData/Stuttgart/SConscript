@@ -1,4 +1,4 @@
-p1 = Program(source=['DrawStuttgart.cpp'], LIBS=['cairo'])
+p1 = Program(source=['DrawStuttgart.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['cairo'])
 
 Alias('DrawStuttgart', p1)
 

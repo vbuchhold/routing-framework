@@ -92,15 +92,14 @@ class VisumImporter {
       return false;
 
     assert(origToNewIds.find(currentVertex.id) == origToNewIds.end());
-    origToNewIds[currentVertex.id] = nextVertexId;
-    currentVertex.id = nextVertexId++;
+    origToNewIds[currentVertex.id] = nextVertexId++;
     currentVertex.latLng = conversion.convert(currentVertex.coordinate);
     return true;
   }
 
   // Returns the ID of the current vertex. Vertices must have sequential IDs from 0 to n − 1.
   int vertexId() const {
-    return currentVertex.id;
+    return nextVertexId - 1;
   }
 
   // Reads the next edge from disk. Returns false if there are no more edges.
@@ -250,4 +249,10 @@ inline NumLanesAttribute::Type VisumImporter::getValue<NumLanesAttribute>() cons
 template <>
 inline TravelTimeAttribute::Type VisumImporter::getValue<TravelTimeAttribute>() const {
   return std::round(36.0 * currentEdge.length / currentEdge.freeFlowSpeed);
+}
+
+// Returns the value of the vertex ID attribute for the current vertex.
+template <>
+inline VertexIdAttribute::Type VisumImporter::getValue<VertexIdAttribute>() const {
+  return currentVertex.id;
 }
