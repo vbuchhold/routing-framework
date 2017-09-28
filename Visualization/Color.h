@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -97,7 +98,7 @@ constexpr Color KIT_LILAC = Color(160, 0, 120);
 constexpr Color KIT_CYANBLUE = Color(80, 170, 230);
 
 // Some predefined color schemes.
-constexpr Color YL_OR_RD_9CLASS[] = {
-  Color(0xffffcc), Color(0xffeda0), Color(0xfed976),
-  Color(0xfeb24c), Color(0xfd8d3c), Color(0xfc4e2a),
-  Color(0xe31a1c), Color(0xbd0026), Color(0x800026) };
+constexpr std::array<Color, 9> REDS_9CLASS = {
+  Color(0xfff5f0), Color(0xfee0d2), Color(0xfcbba1),
+  Color(0xfc9272), Color(0xfb6a4a), Color(0xef3b2c),
+  Color(0xcb181d), Color(0xa50f15), Color(0x67000d) };

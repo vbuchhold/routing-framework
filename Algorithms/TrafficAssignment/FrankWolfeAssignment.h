@@ -16,6 +16,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/FrankWolfeAssignmentStats.h"
 #include "Tools/Simd/AlignVector.h"
+#include "Tools/BinaryIO.h"
 #include "Tools/Timer.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
@@ -31,13 +32,14 @@ class FrankWolfeAssignment {
 
   // Constructs an assignment procedure based on the Frank-Wolfe method.
   FrankWolfeAssignment(InputGraphT& graph, const std::vector<ClusteredOriginDestination>& odPairs,
-                       std::ofstream& csv, const bool verbose = true)
+                       std::ofstream& csv, std::ofstream& patternFile, const bool verbose = true)
       : allOrNothingAssignment(graph, odPairs, verbose),
         inputGraph(graph),
         trafficFlows(graph.numEdges()),
         travelCostFunction(graph),
         objFunction(travelCostFunction),
         csv(csv),
+        patternFile(patternFile),
         verbose(verbose) {
     stats.totalRunningTime = allOrNothingAssignment.stats.totalRoutingTime;
   }
@@ -92,6 +94,9 @@ class FrankWolfeAssignment {
       csv << stats.lastRunningTime << ",nan,nan," << stats.totalTravelCost << ",";
       csv << substats.lastChecksum << std::endl;
     }
+
+    if (patternFile.is_open())
+      bio::write(patternFile, trafficFlows);
 
     if (verbose) {
       std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
@@ -182,6 +187,9 @@ class FrankWolfeAssignment {
         csv << substats.lastChecksum << std::endl;
       }
 
+      if (patternFile.is_open())
+        bio::write(patternFile, trafficFlows);
+
       if (verbose) {
         std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
         std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
@@ -225,6 +233,7 @@ class FrankWolfeAssignment {
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
   std::ofstream& csv;                    // The output CSV file containing statistics.
+  std::ofstream& patternFile;            // The output file containing the flow patterns.
   const bool verbose;                    // Should informative messages be displayed?
 };
 

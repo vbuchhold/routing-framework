@@ -26,6 +26,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/BinaryIO.h"
 
 void printUsage() {
   std::cout <<
@@ -47,6 +48,7 @@ void printUsage() {
       "  -i <file>         the input graph in binary format\n"
       "  -od <file>        the OD-pairs to be assigned\n"
       "  -o <file>         the output CSV file without file extension\n"
+      "  -fp <file>        output the flow pattern after each iteration in <file>\n"
       "  -help             display this help and exit\n";
 }
 
@@ -56,6 +58,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string infile = clp.getValue<std::string>("i");
   const std::string odfile = clp.getValue<std::string>("od");
   const std::string csvfile = clp.getValue<std::string>("o");
+  const std::string outfile = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
   const double period = clp.getValue<double>("p", 1);
 
@@ -95,7 +98,15 @@ void assignTraffic(const CommandLineParser& clp) {
     csv << std::flush;
   }
 
-  FrankWolfeAssignmentT assign(graph, odPairs, csv, clp.isSet("v"));
+  std::ofstream patternFile;
+  if (!outfile.empty()) {
+    patternFile.open(outfile + ".fp.bin", std::ios::binary);
+    if (!patternFile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + outfile + ".fp.bin'");
+    bio::write(patternFile, period);
+  }
+
+  FrankWolfeAssignmentT assign(graph, odPairs, csv, patternFile, clp.isSet("v"));
 
   if (csv.is_open()) {
     csv << "# Preprocessing time: " << assign.stats.totalRunningTime << "ms\n";
