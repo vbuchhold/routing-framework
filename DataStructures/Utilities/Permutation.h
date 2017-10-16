@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <fstream>
 #include <random>
 #include <utility>
 #include <vector>
