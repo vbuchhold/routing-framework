@@ -1,10 +1,22 @@
 Change log for vectorclass.zip
 ------------------------------
 
-Projected future version (2018?):
+Projected future version, 2018:
   * use mask registers for boolean vectors of all sizes with AVX512VL
   * use C++14
   * replace long template argument lists by constant arrays
+  
+2017-07-27 version 1.30
+  * fixed bug in permute8f for a particular combination of indexes  
+  
+2017-05-10 version 1.29
+  * Reversed Apple Clang patch in version 1.28 because the problem has reoccurred in
+    later versions of Clang
+  
+2017-05-02 version 1.28
+  * Fixed problem with Apple Clang version 6.2 in vectorf128.h
+  * Fixed return type for Vec8sb operator > (Vec8us, Vec8us)  
+  * cpuid function modified in instrset_detect.cpp
   
 2017-02-19 version 1.27
   * fixed problem with scatter functions in MS Visual Studio  
