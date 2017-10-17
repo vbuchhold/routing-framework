@@ -42,3 +42,9 @@ inline int mostSignificantOneBit(T x) {
   return idx;
 #endif
 }
+
+// Returns the index of the most significant differing bit, or -1 if x and y are the same.
+template <typename T>
+inline int mostSignificantDifferingBit(const T x, const T y) {
+  return mostSignificantOneBit(x ^ y);
+}
