@@ -74,7 +74,8 @@ class RecursiveBisection {
           }
         } else {
           // Bisect the connected component.
-          const auto cut = inertial_flow(comp, balance, lats, lngs);
+          auto cut = inertial_flow(comp, balance, lats, lngs);
+          RoutingKit::pick_smaller_side(cut);
           for (int v = 0; v < comp.node_count(); ++v) {
             for (int j = 0; j < msb + 1; ++j)
               tree.setSide(comp.global_node_id[v], level + 1 + j, getBit(i, j));

@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "DataStructures/Graph/Graph.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/Bitwise.h"
 #include "Tools/Constants.h"
@@ -67,6 +68,34 @@ class SeparatorTree {
     for (int i = 0; i < numVertices; ++i)
       assert(partition[i] != INVALID_ID);
     return partition;
+  }
+
+  // Returns a contraction order for the specified graph.
+  template <typename GraphT>
+  std::vector<int> readOffContractionOrder(const GraphT& graph) const {
+    assert(graph.numVertices() == packedSideIds.size());
+    // Compute for each vertex the level on which it is contained in a separator.
+    std::vector<uint64_t> mask(graph.numVertices());
+    FORALL_VERTICES(graph, u) {
+      uint64_t isSeparatorVertexOnLevel = 0;
+      FORALL_INCIDENT_EDGES(graph, u, e)
+        isSeparatorVertexOnLevel |= ~packedSideIds[u] & packedSideIds[graph.edgeHead(e)];
+      const int msb = mostSignificantOneBit(isSeparatorVertexOnLevel);
+      mask[u] = msb == 63 ? 0 : uint64_t(-1) << (msb + 1);
+    }
+
+    std::vector<int> ord(graph.numVertices());
+    FORALL_VERTICES(graph, u)
+      ord[u] = u;
+
+    // Compute the contraction order.
+    std::sort(ord.begin(), ord.end(), [&mask, this](const auto u, const auto v) {
+      const auto minMask = std::min(mask[u], mask[v]);
+      return (packedSideIds[u] & minMask) < (packedSideIds[v] & minMask) ||
+          ((packedSideIds[u] & minMask) == (packedSideIds[v] & minMask) &&
+          (mask[u] > mask[v] || (mask[u] == mask[v] && u < v)));
+    });
+    return ord;
   }
 
   // Read a separator tree from a binary file.
