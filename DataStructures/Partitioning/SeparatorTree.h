@@ -76,10 +76,13 @@ class SeparatorTree {
     assert(graph.numVertices() == packedSideIds.size());
     // Compute for each vertex the level on which it is contained in a separator.
     std::vector<uint64_t> mask(graph.numVertices());
+    const auto reverseGraph = graph.getReverseGraph();
     FORALL_VERTICES(graph, u) {
       uint64_t isSeparatorVertexOnLevel = 0;
       FORALL_INCIDENT_EDGES(graph, u, e)
         isSeparatorVertexOnLevel |= ~packedSideIds[u] & packedSideIds[graph.edgeHead(e)];
+      FORALL_INCIDENT_EDGES(reverseGraph, u, e)
+        isSeparatorVertexOnLevel |= ~packedSideIds[u] & packedSideIds[reverseGraph.edgeHead(e)];
       const int msb = mostSignificantOneBit(isSeparatorVertexOnLevel);
       mask[u] = msb == 63 ? 0 : uint64_t(-1) << (msb + 1);
     }
