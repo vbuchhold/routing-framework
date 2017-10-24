@@ -113,7 +113,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string csvfile = clp.getValue<std::string>("o");
   const std::string outfile = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
-  const int maxHeight = clp.getValue<int>("U");
+  const int maxHeight = clp.getValue<int>("U", 32);
   const double period = clp.getValue<double>("p", 1);
 
   std::ifstream in(infile, std::ios::binary);
