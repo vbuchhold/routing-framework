@@ -6,6 +6,8 @@
 
 #include <csv.h>
 
+#include "Tools/Constants.h"
+
 // An origin-destination (OD) pair, representing a travel demand or a query.
 struct OriginDestination {
   // Constructs an OD-pair from o to d.
@@ -71,19 +73,17 @@ std::vector<OriginDestination> importODPairsFrom(const std::string& infile) {
 // Reads the specified file into a vector of clustered OD-pairs.
 std::vector<ClusteredOriginDestination> importClusteredODPairsFrom(const std::string& infile) {
   std::vector<ClusteredOriginDestination> pairs;
-  int origin, destination, originZone, destinationZone;
+  int origin, destination, originZone = INVALID_ID, destinationZone = INVALID_ID;
   using TrimPolicy = io::trim_chars<>;
   using QuotePolicy = io::no_quote_escape<','>;
   using OverflowPolicy = io::throw_on_overflow;
   using CommentPolicy = io::single_line_comment<'#'>;
   io::CSVReader<4, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy> in(infile);
-  const io::ignore_column ignore = io::ignore_extra_column;
+  const io::ignore_column ignore = io::ignore_extra_column | io::ignore_missing_column;
   in.read_header(ignore, "origin", "destination", "origin_zone", "destination_zone");
   while (in.read_row(origin, destination, originZone, destinationZone)) {
     assert(origin >= 0);
     assert(destination >= 0);
-    assert(originZone >= 0);
-    assert(destinationZone >= 0);
     pairs.emplace_back(origin, destination, originZone, destinationZone);
   }
   return pairs;
