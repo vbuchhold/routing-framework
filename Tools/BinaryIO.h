@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include <boost/dynamic_bitset.hpp>
@@ -28,8 +29,19 @@ inline int size(const char* const str) {
 
 // Returns the number of bytes the specified vector of self-contained objects occupies on disk.
 template <typename T, typename AllocT>
-inline int size(const std::vector<T, AllocT>& vec) {
+inline std::enable_if_t<std::is_trivially_copyable<T>::value, int>
+size(const std::vector<T, AllocT>& vec) {
   return sizeof(int) + vec.size() * sizeof(T);
+}
+
+// Returns the number of bytes the specified vector occupies on disk.
+template <typename T, typename AllocT>
+inline std::enable_if_t<!std::is_trivially_copyable<T>::value, int>
+size(const std::vector<T, AllocT>& vec) {
+  int s = sizeof(int);
+  for (const auto& elem : vec)
+    s += size(elem);
+  return s;
 }
 
 // Returns the number of bytes the specified bit-vector occupies on disk.
@@ -53,11 +65,24 @@ inline void read(std::ifstream& in, std::string& str) {
 
 // Reads a vector of self-contained objects from a binary file.
 template <typename T, typename AllocT>
-inline void read(std::ifstream& in, std::vector<T, AllocT>& vec) {
+inline std::enable_if_t<std::is_trivially_copyable<T>::value>
+read(std::ifstream& in, std::vector<T, AllocT>& vec) {
   int size;
   read(in, size);
   vec.resize(size);
   in.read(reinterpret_cast<char*>(vec.data()), size * sizeof(T));
+  assert(in.good());
+}
+
+// Reads a vector of objects from a binary file.
+template <typename T, typename AllocT>
+inline std::enable_if_t<!std::is_trivially_copyable<T>::value>
+read(std::ifstream& in, std::vector<T, AllocT>& vec) {
+  int size;
+  read(in, size);
+  vec.resize(size);
+  for (auto& elem : vec)
+    read(in, elem);
   assert(in.good());
 }
 
@@ -93,18 +118,27 @@ inline void write(std::ofstream& out, const char* const str) {
 
 // Writes a vector of self-contained objects to a binary file.
 template <typename T, typename AllocT>
-inline void write(std::ofstream& out, const std::vector<T, AllocT>& vec) {
-  const int size = vec.size();
-  write(out, size);
-  out.write(reinterpret_cast<const char*>(vec.data()), size * sizeof(T));
+inline std::enable_if_t<std::is_trivially_copyable<T>::value>
+write(std::ofstream& out, const std::vector<T, AllocT>& vec) {
+  write(out, static_cast<int>(vec.size()));
+  out.write(reinterpret_cast<const char*>(vec.data()), vec.size() * sizeof(T));
+  assert(out.good());
+}
+
+// Writes a vector of objects to a binary file.
+template <typename T, typename AllocT>
+inline std::enable_if_t<!std::is_trivially_copyable<T>::value>
+write(std::ofstream& out, const std::vector<T, AllocT>& vec) {
+  write(out, static_cast<int>(vec.size()));
+  for (const auto& elem : vec)
+    write(out, elem);
   assert(out.good());
 }
 
 // Writes a bit-vector to a binary file.
 template <typename BlockT, typename AllocT>
 inline void write(std::ofstream& out, const boost::dynamic_bitset<BlockT, AllocT>& vec) {
-  const int size = vec.size();
-  write(out, size);
+  write(out, static_cast<int>(vec.size()));
   std::vector<BlockT> blocks(vec.num_blocks());
   boost::to_block_range(vec, blocks.begin());
   write(out, blocks);

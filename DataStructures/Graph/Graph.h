@@ -401,14 +401,14 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     for (int i = 0, u = bitmask.find_first(); i != nextId; ++i, u = bitmask.find_next(u)) {
       // Copy the current vertex belonging to the subgraph.
       const int first = edgeCount; // The index of the first edge out of u.
-      RUN_FORALL(VertexAttributes::values[i] = VertexAttributes::values[u]);
+      RUN_FORALL(VertexAttributes::values[i] = std::move(VertexAttributes::values[u]));
 
       // Copy the edges out of u going to vertices belonging to the subgraph.
       for (int e = firstEdge(u); e != lastEdge(u); ++e) {
         const int v = origToNewIds[edgeHeads[e]];
         if (v != -1) {
           edgeHeads[edgeCount] = v;
-          RUN_FORALL(EdgeAttributes::values[edgeCount] = EdgeAttributes::values[e]);
+          RUN_FORALL(EdgeAttributes::values[edgeCount] = std::move(EdgeAttributes::values[e]));
           ++edgeCount;
         }
       }
