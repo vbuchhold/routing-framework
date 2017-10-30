@@ -8,8 +8,10 @@
 // An attribute associating an ID with each vertex of a graph.
 class VertexIdAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr Type DEFAULT_VALUE = INVALID_ID; // The attribute's default value.
-  static constexpr const char* NAME = "vertex_id";  // The attribute's unique name.
+  // Returns the attribute's default value.
+  static Type defaultValue() {
+    return INVALID_ID;
+  }
 
   // Returns the ID of vertex v.
   const Type& vertexId(const int v) const {
@@ -22,4 +24,7 @@ class VertexIdAttribute : public AbstractAttribute<int> {
     assert(v >= 0); assert(v < values.size());
     return values[v];
   }
+
+ protected:
+  static constexpr const char* NAME = "vertex_id"; // The attribute's unique name.
 };

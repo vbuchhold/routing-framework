@@ -10,7 +10,7 @@
 class Point {
  public:
   // Constructs a point at the origin.
-  constexpr Point() : x(0), y(0) {}
+  Point() : x(0), y(0) {}
 
   // Constructs a point at the specified location.
   Point(const int x, const int y) : x(x), y(y) {}

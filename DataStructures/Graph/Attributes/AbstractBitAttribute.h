@@ -4,14 +4,13 @@
 
 // The common base class for all bit attributes. It associates a single bit with each vertex/edge.
 class AbstractBitAttribute {
-  // Workaround for the GNU compiler. Should not be necessary (and is not for Clang).
-  template <typename VertexAttributes,typename EdgeAttributes, bool dynamic>
-  friend class Graph;
-
  public:
   using Type = bool; // The attribute's underlying type.
 
-  static constexpr Type DEFAULT_VALUE = false; // The attribute's default value.
+  // Returns the attribute's default value.
+  static Type defaultValue() {
+    return Type();
+  }
 
  protected:
   // Ensures that the attribute can hold at least num values without requiring reallocation.

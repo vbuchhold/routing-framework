@@ -219,7 +219,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     range.first() = edgeHeads.size();
     range.last() = range.first();
     outEdges.push_back(range);
-    RUN_FORALL(VertexAttributes::values.push_back(use(VertexAttributes::DEFAULT_VALUE)));
+    RUN_FORALL(VertexAttributes::values.push_back(use(VertexAttributes::defaultValue())));
     return numVertices() - 1;
   }
 
@@ -239,7 +239,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     range.last() = range.first();
     outEdges.insert(outEdges.end(), num, range);
     const int size = numVertices();
-    RUN_FORALL(VertexAttributes::values.resize(size, use(VertexAttributes::DEFAULT_VALUE)));
+    RUN_FORALL(VertexAttributes::values.resize(size, use(VertexAttributes::defaultValue())));
   }
 
   // Inserts an edge from the last inserted vertex to v. Returns the index of the inserted edge.
@@ -250,7 +250,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     assert(v >= 0);
     ++outEdges.back().last();
     edgeHeads.push_back(v);
-    RUN_FORALL(EdgeAttributes::values.push_back(use(EdgeAttributes::DEFAULT_VALUE)));
+    RUN_FORALL(EdgeAttributes::values.push_back(EdgeAttributes::defaultValue()));
     ++edgeCount;
     return numEdges() - 1;
   }
@@ -640,7 +640,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
         // Skip the attribute's values, since the attribute is not associated with the graph.
         in.seekg(size, std::ios::cur);
     }
-    RUN_FORALL(VertexAttributes::values.resize(numVertices, use(VertexAttributes::DEFAULT_VALUE)));
+    RUN_FORALL(VertexAttributes::values.resize(numVertices, VertexAttributes::defaultValue()));
 
     // Fill the values of the edge attributes.
     int numEdgeAttrs;
@@ -657,7 +657,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
         // Skip the attribute's values, since the attribute is not associated with the graph.
         in.seekg(size, std::ios::cur);
     }
-    RUN_FORALL(EdgeAttributes::values.resize(edgeCount, use(EdgeAttributes::DEFAULT_VALUE)));
+    RUN_FORALL(EdgeAttributes::values.resize(edgeCount, EdgeAttributes::defaultValue()));
 
     assert(validate());
   }
@@ -797,7 +797,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
       typename Attr, typename SourceT,
       typename = std::enable_if_t<!std::is_base_of<Attr, SourceT>::value>>
   void setAttribute(const SourceT& /*src*/, const int size) {
-    Attr::values.resize(size, use(Attr::DEFAULT_VALUE));
+    Attr::values.resize(size, Attr::defaultValue());
   }
 
   // Reorders the edges according to the specified permutation.

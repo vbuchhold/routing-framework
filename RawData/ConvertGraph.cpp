@@ -13,6 +13,9 @@
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
+#include "DataStructures/Graph/Attributes/OsmRoadCategoryAttribute.h"
+#include "DataStructures/Graph/Attributes/RoadGeometryAttribute.h"
+#include "DataStructures/Graph/Attributes/SpeedLimitAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h"
@@ -26,8 +29,8 @@
 // A graph data structure encompassing all vertex and edge attributes available for output.
 using VertexAttributes = VertexAttrs<CoordinateAttribute, LatLngAttribute, VertexIdAttribute>;
 using EdgeAttributes = EdgeAttrs<
-    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
-    NumLanesAttribute, TravelTimeAttribute, XatfRoadCategoryAttribute>;
+    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute, NumLanesAttribute,
+    OsmRoadCategoryAttribute, SpeedLimitAttribute, TravelTimeAttribute, XatfRoadCategoryAttribute>;
 using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
 
 void printUsage() {
@@ -47,7 +50,8 @@ void printUsage() {
       "  -a <attrs>        blank-separated list of vertex/edge attributes to be output\n"
       "                      possible values:\n"
       "                        capacity coordinate free_flow_speed lat_lng length\n"
-      "                        num_lanes travel_time vertex_id xatf_road_category\n"
+      "                        num_lanes osm_road_category road_geometry speed_limit\n"
+      "                        travel_time vertex_id xatf_road_category\n"
       "  -i <file>         input file(s) without file extension\n"
       "  -o <file>         output file(s) without file extension\n"
       "  -help             display this help and exit\n";

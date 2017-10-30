@@ -119,7 +119,7 @@ class XatfImporter {
   // default value if the attribute is not part of the file format.
   template <typename Attr>
   typename Attr::Type getValue() const {
-    return Attr::DEFAULT_VALUE;
+    return Attr::defaultValue();
   }
 
   // Closes the input file(s).

@@ -7,8 +7,6 @@
 // An attribute associating a free-flow speed (the speed at zero flow) with each edge of a graph.
 class FreeFlowSpeedAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr const char* NAME = "free_flow_speed"; // The attribute's unique name.
-
   // Returns the free-flow speed in km/h on edge e.
   const Type& freeFlowSpeed(const int e) const {
     assert(e >= 0); assert(e < values.size());
@@ -20,4 +18,7 @@ class FreeFlowSpeedAttribute : public AbstractAttribute<int> {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }
+
+ protected:
+  static constexpr const char* NAME = "free_flow_speed"; // The attribute's unique name.
 };

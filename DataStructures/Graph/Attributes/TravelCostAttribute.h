@@ -8,8 +8,10 @@
 // An attribute associating a travel cost with each edge of a graph.
 class TravelCostAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr Type DEFAULT_VALUE = INFTY;       // The attribute's default value.
-  static constexpr const char* NAME = "travel_cost"; // The attribute's unique name.
+  // Returns the attribute's default value.
+  static Type defaultValue() {
+    return INFTY;
+  }
 
   // Returns the travel cost on edge e.
   const Type& travelCost(const int e) const {
@@ -22,4 +24,7 @@ class TravelCostAttribute : public AbstractAttribute<int> {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }
+
+ protected:
+  static constexpr const char* NAME = "travel_cost"; // The attribute's unique name.
 };

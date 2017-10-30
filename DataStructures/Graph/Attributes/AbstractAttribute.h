@@ -5,14 +5,13 @@
 // The common base class for all attributes. It associates a value of type T with each vertex/edge.
 template <typename T>
 class AbstractAttribute {
-  // Workaround for the GNU compiler. Should not be necessary (and is not for Clang).
-  template <typename VertexAttributes,typename EdgeAttributes, bool dynamic>
-  friend class Graph;
-
  public:
   using Type = T; // The attribute's underlying type.
 
-  static constexpr Type DEFAULT_VALUE = Type(); // The attribute's default value.
+  // Returns the attribute's default value.
+  static Type defaultValue() {
+    return Type();
+  }
 
  protected:
   // Ensures that the attribute can hold at least num values without requiring reallocation.

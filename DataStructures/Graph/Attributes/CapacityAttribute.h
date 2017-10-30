@@ -7,8 +7,6 @@
 // An attribute associating a capacity with each edge of a graph.
 class CapacityAttribute : public AbstractAttribute<int> {
  public:
-  static constexpr const char* NAME = "capacity"; // The attribute's unique name.
-
   // Returns the capacity in vehicles/h of edge e.
   const Type& capacity(const int e) const {
     assert(e >= 0); assert(e < values.size());
@@ -20,4 +18,7 @@ class CapacityAttribute : public AbstractAttribute<int> {
     assert(e >= 0); assert(e < values.size());
     return values[e];
   }
+
+ protected:
+  static constexpr const char* NAME = "capacity"; // The attribute's unique name.
 };

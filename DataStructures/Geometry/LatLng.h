@@ -20,7 +20,7 @@ class LatLng {
   static constexpr int DEG_360 = 360 * PRECISION;
 
   // Constructs an uninitialized LatLng.
-  constexpr LatLng() : lat(INFTY), lng(INFTY) {}
+  LatLng() : lat(INFTY), lng(INFTY) {}
 
   // Constructs a LatLng. Coordinates are specified in 1/PRECISION degrees. If wrap is set to true,
   // latitude is automatically clamped to the range [-90 deg, 90 deg] and longitude is

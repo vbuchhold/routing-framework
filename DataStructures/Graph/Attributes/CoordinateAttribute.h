@@ -8,9 +8,6 @@
 // An attribute associating a coordinate with each vertex of a graph.
 class CoordinateAttribute : public AbstractAttribute<Point> {
  public:
-  static constexpr const Type& DEFAULT_VALUE = Type(); // The attribute's default value.
-  static constexpr const char* NAME = "coordinate";    // The attribute's unique name.
-
   // Returns the coordinate of vertex v.
   const Type& coordinate(const int v) const {
     assert(v >= 0); assert(v < values.size());
@@ -22,4 +19,7 @@ class CoordinateAttribute : public AbstractAttribute<Point> {
     assert(v >= 0); assert(v < values.size());
     return values[v];
   }
+
+ protected:
+  static constexpr const char* NAME = "coordinate"; // The attribute's unique name.
 };
