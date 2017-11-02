@@ -239,6 +239,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     range.last() = range.first();
     outEdges.insert(outEdges.end(), num, range);
     const int size = numVertices();
+    unused(size);
     RUN_FORALL(VertexAttributes::values.resize(size, use(VertexAttributes::defaultValue())));
   }
 
@@ -273,9 +274,54 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
 
   // Inserts an edge from u to v. Returns the index of the newly inserted edge. Note that this
   // operation is not supported by static graphs.
-  int insertEdge(const int /*u*/, const int /*v*/) {
+  int insertEdge(const int u, const int v) {
     static_assert(dynamic, "Graph::insertEdge is not supported by static graphs.");
-    return 0;
+    assert(u >= 0); assert(u < outEdges.size());
+    ++edgeCount;
+
+    // Check if there is room to the right of the last edge out of u.
+    int idx = outEdges[u].last();
+    if (idx < edgeHeads.size() && !isValidEdge(idx)) {
+      ++outEdges[u].last();
+      edgeHeads[idx] = v;
+      RUN_FORALL(EdgeAttributes::values[idx] = EdgeAttributes::defaultValue());
+      return idx;
+    }
+
+    // Check if there is room to the left of the first edge out of u.
+    idx = outEdges[u].first() - 1;
+    if (idx >= 0 && !isValidEdge(idx)) {
+      --outEdges[u].first();
+      edgeHeads[idx] = v;
+      RUN_FORALL(EdgeAttributes::values[idx] = EdgeAttributes::defaultValue());
+      return idx;
+    }
+
+    // Check if the last edge out of u is at the end of the edge array.
+    idx = outEdges[u].last();
+    if (idx == edgeHeads.size()) {
+      ++outEdges[u].last();
+      edgeHeads.push_back(v);
+      RUN_FORALL(EdgeAttributes::values.push_back(EdgeAttributes::defaultValue()));
+      return idx;
+    }
+
+    // Move the edges incident on u to the end of the edge array.
+    const int oldFirst = outEdges[u].first();
+    const int newFirst = edgeHeads.size();
+    const int deg = outEdges[u].last() - outEdges[u].first();
+    const int size = edgeHeads.size() + deg + 1;
+    edgeHeads.resize(size);
+    RUN_FORALL(EdgeAttributes::values.resize(size, EdgeAttributes::defaultValue()));
+    for (int i = 0; i != deg; ++i) {
+      edgeHeads[newFirst + i] = edgeHeads[oldFirst + i];
+      edgeHeads[oldFirst + i] = INVALID_EDGE;
+      RUN_FORALL(EdgeAttributes::values[newFirst + i] = EdgeAttributes::values[oldFirst + i]);
+    }
+    edgeHeads.back() = v;
+    outEdges[u].first() = newFirst;
+    outEdges[u].last() = edgeHeads.size();
+    return maxEdgeIndex();
   }
 
   // Inserts an edge with the specified attributes from u to v. Returns the index of the newly
