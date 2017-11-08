@@ -23,6 +23,17 @@ inline const char* cStr(const char* string) { return string; }
 
 }
 
+// Returns true if the specified character is white space.
+inline bool isWhitespace(const char c) {
+  return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
+}
+
+// Returns true if the specified strings represent the same sequence of characters.
+template <typename StringT1, typename StringT2>
+inline bool stringEq(const StringT1& string1, const StringT2& string2) {
+  return !std::strcmp(str::cStr(string1), str::cStr(string2));
+}
+
 // Tests if the specified string starts with the specified prefix.
 template <typename StringT1, typename StringT2>
 inline bool startsWith(const StringT1& string, const StringT2& prefix) {
@@ -62,4 +73,28 @@ template <typename StringT>
 inline void toUpperCase(StringT& string) {
   for (int i = 0; string[i] != '\0'; ++i)
     string[i] -= 'a' <= string[i] && string[i] <= 'z' ? 'a' - 'A' : 0;
+}
+
+// Removes any leading and trailing whitespace from the specified string.
+inline void trim(std::string& string) {
+  // Remove any trailing whitespace.
+  string.erase(std::find_if_not(string.rbegin(), string.rend(), [](const char c) {
+    return isWhitespace(c);
+  }).base(), string.end());
+  // Remove any leading whitespace.
+  string.erase(string.begin(), std::find_if_not(string.begin(), string.end(), [](const char c) {
+    return isWhitespace(c);
+  }));
+}
+
+// Removes any leading and trailing whitespace from the specified C-style string.
+inline void trim(char*& string) {
+  // Remove any leading whitespace.
+  while (isWhitespace(*string))
+    ++string;
+  // Remove any trailing whitespace.
+  char* end = string + std::strlen(string) - 1;
+  while (end >= string && isWhitespace(*end))
+    --end;
+  *(end + 1) = '\0';
 }
