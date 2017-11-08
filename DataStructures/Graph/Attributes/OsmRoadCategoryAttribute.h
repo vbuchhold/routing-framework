@@ -17,25 +17,32 @@ enum class OsmRoadCategory {
   MOTORWAY_LINK,
   TRUNK_LINK,
   PRIMARY_LINK,
+  SECONDARY_LINK,
+  TERTIARY_LINK,
   LIVING_STREET,
   ROAD,
 };
 
 // Make EnumParser usable with OsmRoadCategory.
 template <>
-EnumParser<OsmRoadCategory>::EnumParser()
-    : nameToEnum({{"motorway", OsmRoadCategory::MOTORWAY},
-                  {"trunk", OsmRoadCategory::TRUNK},
-                  {"primary", OsmRoadCategory::PRIMARY},
-                  {"secondary", OsmRoadCategory::SECONDARY},
-                  {"tertiary", OsmRoadCategory::TERTIARY},
-                  {"unclassified", OsmRoadCategory::UNCLASSIFIED},
-                  {"residential", OsmRoadCategory::RESIDENTIAL},
-                  {"motorway_link", OsmRoadCategory::MOTORWAY_LINK},
-                  {"trunk_link", OsmRoadCategory::TRUNK_LINK},
-                  {"primary_link", OsmRoadCategory::PRIMARY_LINK},
-                  {"living_street", OsmRoadCategory::LIVING_STREET},
-                  {"road", OsmRoadCategory::ROAD}}) {}
+void EnumParser<OsmRoadCategory>::initNameToEnumMap() {
+  nameToEnum = {
+    {"motorway",       OsmRoadCategory::MOTORWAY},
+    {"trunk",          OsmRoadCategory::TRUNK},
+    {"primary",        OsmRoadCategory::PRIMARY},
+    {"secondary",      OsmRoadCategory::SECONDARY},
+    {"tertiary",       OsmRoadCategory::TERTIARY},
+    {"unclassified",   OsmRoadCategory::UNCLASSIFIED},
+    {"residential",    OsmRoadCategory::RESIDENTIAL},
+    {"motorway_link",  OsmRoadCategory::MOTORWAY_LINK},
+    {"trunk_link",     OsmRoadCategory::TRUNK_LINK},
+    {"primary_link",   OsmRoadCategory::PRIMARY_LINK},
+    {"secondary_link", OsmRoadCategory::SECONDARY_LINK},
+    {"tertiary_link",  OsmRoadCategory::TERTIARY_LINK},
+    {"living_street",  OsmRoadCategory::LIVING_STREET},
+    {"road",           OsmRoadCategory::ROAD}
+  };
+}
 
 // An attribute associating an OSM road category with each edge of a graph.
 class OsmRoadCategoryAttribute : public AbstractAttribute<OsmRoadCategory> {
