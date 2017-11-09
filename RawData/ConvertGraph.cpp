@@ -21,6 +21,7 @@
 #include "DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h"
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Graph/Import/OsmImporter.h"
 #include "DataStructures/Graph/Import/VisumImporter.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "Tools/CommandLine/CommandLineParser.h"
@@ -29,8 +30,9 @@
 // A graph data structure encompassing all vertex and edge attributes available for output.
 using VertexAttributes = VertexAttrs<CoordinateAttribute, LatLngAttribute, VertexIdAttribute>;
 using EdgeAttributes = EdgeAttrs<
-    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute, NumLanesAttribute,
-    OsmRoadCategoryAttribute, SpeedLimitAttribute, TravelTimeAttribute, XatfRoadCategoryAttribute>;
+    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
+    NumLanesAttribute, OsmRoadCategoryAttribute, RoadGeometryAttribute, SpeedLimitAttribute,
+    TravelTimeAttribute, XatfRoadCategoryAttribute>;
 using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
 
 void printUsage() {
@@ -39,7 +41,7 @@ void printUsage() {
       "This program converts a graph from a source file format to a destination format,\n"
       "possibly extracting the largest strongly connected component of the input graph.\n"
       "  -s <fmt>          source file format\n"
-      "                      possible values: binary default dimacs visum xatf\n"
+      "                      possible values: binary default dimacs osm visum xatf\n"
       "  -d <fmt>          destination file format\n"
       "                      possible values: binary default dimacs\n"
       "  -c                compress the output file(s), if available\n"
@@ -74,6 +76,8 @@ GraphT importGraph(const CommandLineParser& clp) {
     if (!in.good())
       throw std::invalid_argument("file not found -- '" + infile + ".gr.bin'");
     return GraphT(in);
+  } else if (fmt == "osm") {
+    return GraphT(infile, OsmImporter());
   } else if (fmt == "visum") {
     const std::string sys = clp.getValue<std::string>("ts", "P");
     const int crs = clp.getValue<int>("cs", 31467);

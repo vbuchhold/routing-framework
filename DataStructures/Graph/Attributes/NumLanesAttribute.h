@@ -5,7 +5,7 @@
 #include "DataStructures/Graph/Attributes/AbstractAttribute.h"
 
 // An attribute associating a number of lanes with each edge of a graph.
-class NumLanesAttribute : public AbstractAttribute<int> {
+class NumLanesAttribute : public AbstractAttribute<double> {
  public:
   // Returns the number of lanes of edge e.
   const Type& numLanes(const int e) const {

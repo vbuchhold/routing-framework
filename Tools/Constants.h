@@ -11,6 +11,9 @@ constexpr int INVALID_INDEX = -1;
 constexpr int INVALID_VERTEX = -1;
 constexpr int INVALID_EDGE = -1;
 
+// This enum provides constants to specify the direction in which a road segment is open.
+enum class RoadDirection { OPEN_IN_BOTH, FORWARD, REVERSE, CLOSED };
+
 // The earth's mean radius in meters.
 constexpr int EARTH_RADIUS = 6371000;
 

@@ -10,15 +10,15 @@
 class RoadGeometryAttribute : public AbstractAttribute<std::vector<LatLng>> {
  public:
   // Returns a vector of LatLngs representing the road geometry of edge e.
-  const Type& roadGeometry(const int v) const {
-    assert(v >= 0); assert(v < values.size());
-    return values[v];
+  const Type& roadGeometry(const int e) const {
+    assert(e >= 0); assert(e < values.size());
+    return values[e];
   }
 
   // Returns a reference to a vector of LatLngs representing the road geometry of edge e.
-  Type& roadGeometry(const int v) {
-    assert(v >= 0); assert(v < values.size());
-    return values[v];
+  Type& roadGeometry(const int e) {
+    assert(e >= 0); assert(e < values.size());
+    return values[e];
   }
 
  protected:
