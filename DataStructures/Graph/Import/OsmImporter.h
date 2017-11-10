@@ -312,10 +312,9 @@ inline RoadGeometryAttribute::Type OsmImporter::getValue<RoadGeometryAttribute>(
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
   const int first = osmGraph.first_modelling_node[currentEdge];
   const int last = osmGraph.first_modelling_node[currentEdge + 1];
-  std::vector<LatLng> path;
-  path.reserve(last - first);
-  for (int v = first; v != last; ++v)
-    path.emplace_back(osmGraph.modelling_node_latitude[v], osmGraph.modelling_node_longitude[v]);
+  std::vector<LatLng> path(last - first);
+  for (int v = first, i = 0; v != last; ++v, ++i)
+    path[i] = {osmGraph.modelling_node_latitude[v], osmGraph.modelling_node_longitude[v]};
   return path;
 }
 
