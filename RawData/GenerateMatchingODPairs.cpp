@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
     const auto outfile1 = clp.getValue<std::string>("o1");
     const auto outfile2 = clp.getValue<std::string>("o2");
     const int numPairs = clp.getValue<int>("n");
-    const int maxDist = clp.getValue<int>("d", 0);
+    const int maxDist = clp.getValue<int>("d", 15);
 
     // Read both input graphs from disk.
     using Graph = StaticGraph<VertexAttrs<LatLngAttribute>>;
