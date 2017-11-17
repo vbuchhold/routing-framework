@@ -11,10 +11,10 @@
 
 #include <csv.h>
 
+#include "DataStructures/Geometry/Area.h"
 #include "DataStructures/Geometry/Rectangle.h"
 #include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
 #include "DataStructures/Graph/Graph.h"
-#include "RawData/Visum/Surface.h"
 #include "RawData/Visum/ZonePolygons.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/CommandLine/ProgressBar.h"
@@ -58,7 +58,7 @@ inline void computeVertexSets(const CommandLineParser& clp) {
   std::cout << " done." << std::endl;
 
   std::cout << "Reading the zone polygons..." << std::flush;
-  const std::map<int, visum::Surface> zoneSurfaces = visum::readZonePolygonsFrom(visumFile);
+  const std::map<int, Area> zoneSurfaces = visum::readZonePolygonsFrom(visumFile);
   std::cout << " done." << std::endl;
 
   std::cout << "Computing the vertex sets for all traffic zones: " << std::flush;

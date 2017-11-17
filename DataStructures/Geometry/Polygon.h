@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <ostream>
 #include <vector>
@@ -13,6 +14,8 @@ class Polygon {
   // Iterators referring to vertices of this polygon.
   using VertexIterator = std::vector<Point>::iterator;
   using ConstVertexIterator = std::vector<Point>::const_iterator;
+  using ReverseVertexIterator = std::vector<Point>::reverse_iterator;
+  using ConstReverseVertexIterator = std::vector<Point>::const_reverse_iterator;
 
   // Constructs an empty polygon.
   Polygon() = default;
@@ -20,7 +23,7 @@ class Polygon {
   // Constructs a polygon with vertices from the specified sequence.
   template <typename VertexIteratorT>
   Polygon(VertexIteratorT first, VertexIteratorT last) {
-    addVertices(first, last);
+    add(first, last);
   }
 
   // Writes a character representation to the specified output stream.
@@ -68,19 +71,27 @@ class Polygon {
     return vertices.begin();
   }
 
-  // Returns an iterator which is the past-the-end value.
+  // Returns an iterator which is the past-the-end value for this polygon.
   ConstVertexIterator end() const {
     return vertices.end();
   }
 
+  ConstReverseVertexIterator rbegin() const {
+    return vertices.rbegin();
+  }
+
+  ConstReverseVertexIterator rend() const {
+    return vertices.rend();
+  }
+
   // Appends the specified vertex to this polygon.
-  void addVertex(const Point& p) {
+  void add(const Point& p) {
     vertices.push_back(p);
   }
 
   // Appends all of the specified vertices to this polygon.
   template <typename VertexIteratorT>
-  void addVertices(VertexIteratorT first, VertexIteratorT last) {
+  void add(VertexIteratorT first, VertexIteratorT last) {
     vertices.insert(vertices.end(), first, last);
   }
 
@@ -88,6 +99,12 @@ class Polygon {
   void removeBack() {
     assert(!empty());
     vertices.pop_back();
+  }
+
+  // Removes the vertex pointed to by pos from this polygon.
+  VertexIterator remove(ConstVertexIterator pos) {
+    assert(vertices.begin() <= pos); assert(pos < vertices.end());
+    return vertices.erase(pos);
   }
 
   // Returns the index of a lowest of the leftmost vertices.
@@ -113,6 +130,11 @@ class Polygon {
     const int p = (q - 1 + size()) % size();
     const int r = (q + 1) % size();
     return ::orientation(vertices[p], vertices[q], vertices[r]);
+  }
+
+  // Reverses the orientation of this polygon.
+  void reverseOrientation() {
+    std::reverse(vertices.begin(), vertices.end());
   }
 
   // Returns true if this polygon is simple, i.e., its boundary does not intersect itself.

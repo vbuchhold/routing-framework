@@ -9,10 +9,10 @@
 
 #include <csv.h>
 
+#include "DataStructures/Geometry/Area.h"
 #include "DataStructures/Geometry/Helpers.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Polygon.h"
-#include "RawData/Visum/Surface.h"
 #include "Tools/Constants.h"
 #include "Tools/Workarounds.h"
 
@@ -38,11 +38,11 @@ inline void splitPolygon(const Polygon& p, Polygon& p1, Polygon& p2) {
   }
   p2 = {p.begin() + i, p.begin() + j};
   p1 = {p.begin() + j, p.end()};
-  p1.addVertices(p.begin(), p.begin() + i);
+  p1.add(p.begin(), p.begin() + i);
 }
 
 // Returns all zone polygons (and their IDs) from the specified Visum network file.
-inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) {
+inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
   // Read all vertices from the Visum network file.
   std::unordered_map<int, Point> vertex;
   {
@@ -137,19 +137,19 @@ inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) 
           }
         }
         if (dir == 0)
-          currentPolygon.addVertex(currentEdge.front());
+          currentPolygon.add(currentEdge.front());
         else
-          currentPolygon.addVertex(currentEdge.back());
+          currentPolygon.add(currentEdge.back());
       } else {
         assert(!currentPolygon.empty());
         assert(idx == prevIdx + 1);
       }
       if (dir == 0) {
         assert(currentPolygon.back() == currentEdge.front());
-        currentPolygon.addVertices(currentEdge.begin() + 1, currentEdge.end());
+        currentPolygon.add(currentEdge.begin() + 1, currentEdge.end());
       } else {
         assert(currentPolygon.back() == currentEdge.back());
-        currentPolygon.addVertices(currentEdge.rbegin() + 1, currentEdge.rend());
+        currentPolygon.add(currentEdge.rbegin() + 1, currentEdge.rend());
       }
       prevId = id;
       prevIdx = idx;
@@ -162,7 +162,7 @@ inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) 
   }
 
   // Read all surfaces from the Visum network file.
-  std::unordered_map<int, Surface> surface;
+  std::unordered_map<int, Area> surface;
   {
     int id, polygonId, hole;
     int prevId = INVALID_ID;
@@ -182,7 +182,7 @@ inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) 
         broken = true;
       } else if (currentPolygon->second.simple()) {
         if ((currentPolygon->second.orientation() > 0) == (hole == 0))
-          surface[id].addFace(currentPolygon->second);
+          surface[id].combine(currentPolygon->second);
         else
           broken = true;
       } else {
@@ -193,9 +193,9 @@ inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) 
           swap(p1, p2);
         }
         if ((!p1.contains(p2.back()) || id != prevId) && (p1.orientation() > 0) == (hole == 0)) {
-          Surface& currentSurface = surface[id];
-          currentSurface.addFace(p1);
-          currentSurface.addFace(p2);
+          Area& currentSurface = surface[id];
+          currentSurface.combine(p1);
+          currentSurface.combine(p2);
         } else {
           broken = true;
         }
@@ -209,7 +209,7 @@ inline std::map<int, Surface> readZonePolygonsFrom(const std::string& filename) 
   }
 
   // Read all zones from the Visum network file.
-  std::map<int, Surface> zone;
+  std::map<int, Area> zone;
   {
     int id, surfaceId;
     int prevId = INVALID_ID;
