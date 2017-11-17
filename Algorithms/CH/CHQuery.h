@@ -2,6 +2,7 @@
 
 #include <array>
 #include <type_traits>
+#include <vector>
 
 #include "Algorithms/Dijkstra/BiDijkstra.h"
 #include "Algorithms/Dijkstra/Dijkstra.h"
