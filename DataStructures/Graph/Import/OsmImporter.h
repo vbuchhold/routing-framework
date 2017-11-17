@@ -55,9 +55,13 @@ class OsmImporter {
           if (endsWith(maxspeed, "mph")) {
             std::string maxspeedWithoutUnit(maxspeed, std::strlen(maxspeed) - 3);
             trim(maxspeedWithoutUnit);
-            return lexicalCast<double>(maxspeedWithoutUnit) * 1.609344; // mph to km/h
+            const double freeFlowSpeed = lexicalCast<double>(maxspeedWithoutUnit);
+            if (freeFlowSpeed > 0)
+              return freeFlowSpeed * 1.609344; // mph to km/h
           } else {
-            return lexicalCast<double>(maxspeed);
+            const double freeFlowSpeed = lexicalCast<double>(maxspeed);
+            if (freeFlowSpeed > 0)
+              return freeFlowSpeed;
           }
         } catch (std::logic_error& /*e*/) {}
       }
