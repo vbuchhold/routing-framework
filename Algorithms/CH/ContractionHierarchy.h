@@ -60,6 +60,11 @@ class ContractionHierarchy {
     return constituentEdges.size();
   }
 
+  // Returns true if edge e is a shortcut edge.
+  bool isEdgeShortcut(const int e) const {
+    return e >= numOrigEdges;
+  }
+
   // Returns the first constituent edge of shortcut s.
   int shortcutsFirstEdge(const int s) const {
     assert(s >= numOrigEdges); assert(s < numOrigEdges + constituentEdges.size());

@@ -18,7 +18,8 @@ class EliminationTreeQuery {
 
   // Constructs an elimination tree query instance.
   EliminationTreeQuery(const CH& ch, const std::vector<int>& eliminationTree)
-      : forwardSearch(ch.getUpwardGraph(), eliminationTree, tentativeDistances),
+      : ch(ch),
+        forwardSearch(ch.getUpwardGraph(), eliminationTree, tentativeDistances),
         reverseSearch(ch.getDownwardGraph(), eliminationTree, tentativeDistances) {}
 
   // Ensures that the internal data structures fit the size of the graph.
@@ -76,6 +77,24 @@ class EliminationTreeQuery {
     return subpath1;
   }
 
+  // Returns the edges on the i-th shortest path.
+  std::vector<int> getEdgePath(const int i = 0) {
+    auto packedPath = getPackedEdgePath(i);
+    std::reverse(packedPath.begin(), packedPath.end());
+    std::vector<int> fullPath;
+    while (!packedPath.empty()) {
+      const int e = packedPath.back();
+      packedPath.pop_back();
+      if (ch.isEdgeShortcut(e)) {
+        packedPath.push_back(ch.shortcutsSecondEdge(e));
+        packedPath.push_back(ch.shortcutsFirstEdge(e));
+      } else {
+        fullPath.push_back(e);
+      }
+    }
+    return fullPath;
+  }
+
  private:
   using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
   using ParentLabel = typename LabelSetT::ParentLabel;     // The parent information for a vertex.
@@ -91,6 +110,7 @@ class EliminationTreeQuery {
   using Weight      = typename CH::Weight;
   using UpwardSearch = EliminationTreeUpwardSearch<SearchGraph, Weight, LabelSetT>;
 
+  const CH& ch;                     // The CH on which we compute shortest paths.
   UpwardSearch forwardSearch;       // The forward search from the source vertices.
   UpwardSearch reverseSearch;       // The reverse search from the target vertices.
   DistanceLabel tentativeDistances; // One tentative distance for each simultaneous search.

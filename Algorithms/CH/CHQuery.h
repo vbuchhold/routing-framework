@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <type_traits>
 #include <vector>
@@ -27,14 +28,15 @@ class CHQuery {
   // Constructs a CH search instance that uses stall-on-demand.
   template <bool cond = useStallOnDemand>
   CHQuery(std::enable_if_t<cond, const CH&> ch)
-      : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph(),
+      : ch(ch),
+        chSearch(ch.getUpwardGraph(), ch.getDownwardGraph(),
                  CHQueryPruningCriterion(ch.getDownwardGraph()),
                  CHQueryPruningCriterion(ch.getUpwardGraph())) {}
 
   // Constructs a CH search instance that does not use stall-on-demand.
   template <bool cond = useStallOnDemand>
   CHQuery(std::enable_if_t<!cond, const CH&> ch)
-      : chSearch(ch.getUpwardGraph(), ch.getDownwardGraph()) {}
+      : ch(ch), chSearch(ch.getUpwardGraph(), ch.getDownwardGraph()) {}
 
   // Ensures that the internal data structures fit for the size of the graph.
   void resize() {
@@ -64,6 +66,24 @@ class CHQuery {
   // Returns the edges on the i-th packed shortest path.
   std::vector<int> getPackedEdgePath(const int i = 0) {
     return chSearch.getEdgePath(i);
+  }
+
+  // Returns the edges on the i-th shortest path.
+  std::vector<int> getEdgePath(const int i = 0) {
+    auto packedPath = getPackedEdgePath(i);
+    std::reverse(packedPath.begin(), packedPath.end());
+    std::vector<int> fullPath;
+    while (!packedPath.empty()) {
+      const int e = packedPath.back();
+      packedPath.pop_back();
+      if (ch.isEdgeShortcut(e)) {
+        packedPath.push_back(ch.shortcutsSecondEdge(e));
+        packedPath.push_back(ch.shortcutsFirstEdge(e));
+      } else {
+        fullPath.push_back(e);
+      }
+    }
+    return fullPath;
   }
 
  private:
@@ -120,6 +140,7 @@ class CHQuery {
       Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT, CHQueryPruningCriterion>,
       Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT>>;
 
+  const CH& ch;                                              // The CH on which we operate.
   BiDijkstra<CHDijkstra, CHQueryStoppingCriterion> chSearch; // The modified bidirectional search.
 };
 
