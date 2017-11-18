@@ -56,11 +56,15 @@ void printUsage() {
 
 // Some helper aliases.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
-using EdgeAttributes = EdgeAttrs<LengthAttribute, TravelTimeAttribute>;
+using EdgeAttributes = EdgeAttrs<EdgeIdAttribute, LengthAttribute, TravelTimeAttribute>;
 using InputGraph = StaticGraph<VertexAttributes, EdgeAttributes>;
 using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, TravelTimeAttribute>>;
 using CH = ContractionHierarchy<CHGraph, TravelTimeAttribute>;
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
+#else
 using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
+#endif
 
 // The query algorithms.
 using Dij = StandardDijkstra<InputGraph, TravelTimeAttribute, LabelSet>;
@@ -69,21 +73,43 @@ template <bool useStalling>
 using CHSearch = StandardCHQuery<CH, LabelSet, useStalling>;
 using CCHTree = EliminationTreeQuery<CH, LabelSet>;
 
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+InputGraph inputGraph;
+#endif
+
 // Writes the header line of the output CSV file.
 template <typename AlgoT>
 inline void writeHeaderLine(std::ofstream& out, AlgoT&) {
-  out << "query_time,distance\n";
+  out << "query_time,distance";
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+  out << ",length";
+#endif
+  out << '\n';
 }
 
 // Writes a record line of the output CSV file, containing statistics about a single query.
 template <typename AlgoT>
 inline void writeRecordLine(std::ofstream& out, AlgoT& algo, const int, const int elapsed) {
-  out << elapsed << ',' << algo.getDistance() << '\n';
+  out << elapsed << ',' << algo.getDistance();
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+  int len = 0;
+  for (const auto e : algo.getEdgePath())
+    len += inputGraph.length(e);
+  out << ',' << len;
+#endif
+  out << '\n';
 }
 
 template <>
 inline void writeRecordLine(std::ofstream& out, Dij& algo, const int dst, const int elapsed) {
-  out << elapsed << ',' << algo.getDistance(dst) << '\n';
+  out << elapsed << ',' << algo.getDistance(dst);
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+  int len = 0;
+  for (const auto e : algo.getReverseEdgePath(dst))
+    len += inputGraph.length(e);
+  out << ',' << len;
+#endif
+  out << '\n';
 }
 
 // Runs the queries in the specified OD-file using the specified P2P algorithm.
@@ -122,6 +148,18 @@ inline void runQueries(const CommandLineParser& clp) {
   const std::string chFilename = clp.getValue<std::string>("ch");
   const std::string odFilename = clp.getValue<std::string>("od");
   const std::string outfilename = clp.getValue<std::string>("o");
+
+#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
+  // Read the input graph.
+  std::ifstream graphFile(graphFilename, std::ios::binary);
+  if (!graphFile.good())
+    throw std::invalid_argument("file not found -- '" + graphFilename + "'");
+  inputGraph.readFrom(graphFile);
+  graphFile.close();
+  int id = 0;
+  FORALL_EDGES(inputGraph, v)
+    inputGraph.edgeId(v) = id++;
+#endif
 
   // Open the output CSV file.
   std::ofstream outfile(outfilename + ".csv");
