@@ -12,7 +12,15 @@
 #include <routingkit/osm_graph_builder.h>
 #include <routingkit/tag_map.h>
 
+#include "DataStructures/Graph/Attributes/CapacityAttribute.h"
+#include "DataStructures/Graph/Attributes/FreeFlowSpeedAttribute.h"
+#include "DataStructures/Graph/Attributes/LatLngAttribute.h"
+#include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
 #include "DataStructures/Graph/Attributes/OsmRoadCategoryAttribute.h"
+#include "DataStructures/Graph/Attributes/RoadGeometryAttribute.h"
+#include "DataStructures/Graph/Attributes/SpeedLimitAttribute.h"
+#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "Tools/Constants.h"
 #include "Tools/EnumParser.h"
 #include "Tools/LexicalCast.h"
@@ -46,8 +54,8 @@ class OsmImporter {
       return roadDefaults.at(cat).direction;
     };
 
-    // Returns the speed at zero flow.
-    auto getFreeFlowSpeed = [&](const OsmRoadCategory cat, const RoutingKit::TagMap& tags) {
+    // Returns the speed limit.
+    auto getSpeedLimit = [&](const OsmRoadCategory cat, const RoutingKit::TagMap& tags) {
       assert(cat != OsmRoadCategory::ROAD);
       const char* maxspeed = tags["maxspeed"];
       if (maxspeed) {
@@ -55,17 +63,17 @@ class OsmImporter {
           if (endsWith(maxspeed, "mph")) {
             std::string maxspeedWithoutUnit(maxspeed, std::strlen(maxspeed) - 3);
             trim(maxspeedWithoutUnit);
-            const double freeFlowSpeed = lexicalCast<double>(maxspeedWithoutUnit);
-            if (freeFlowSpeed > 0)
-              return freeFlowSpeed * 1.609344; // mph to km/h
+            const double speedLimit = lexicalCast<double>(maxspeedWithoutUnit);
+            if (speedLimit > 0)
+              return speedLimit * 1.609344; // mph to km/h
           } else {
-            const double freeFlowSpeed = lexicalCast<double>(maxspeed);
-            if (freeFlowSpeed > 0)
-              return freeFlowSpeed;
+            const double speedLimit = lexicalCast<double>(maxspeed);
+            if (speedLimit > 0)
+              return speedLimit;
           }
         } catch (std::logic_error& /*e*/) {}
       }
-      return static_cast<double>(roadDefaults.at(cat).freeFlowSpeed);
+      return static_cast<double>(roadDefaults.at(cat).speedLimit);
     };
 
     // Returns the number of lanes in the forward and reverse direction.
@@ -145,7 +153,7 @@ class OsmImporter {
       assert(dir != RoadDirection::CLOSED);
 
       wayCategory[seqId] = cat;
-      waySpeed[seqId] = getFreeFlowSpeed(cat, tags);
+      waySpeed[seqId] = getSpeedLimit(cat, tags);
       std::tie(numLanesInForward[seqId], numLanesInReverse[seqId]) = getNumLanes(cat, dir, tags);
 
       switch (dir) {
@@ -227,7 +235,8 @@ class OsmImporter {
  private:
   // A struct that carries standard values for a set of static road properties.
   struct RoadDefaults {
-    int freeFlowSpeed;       // The free-flow speed in km/h.
+    int speedLimit;          // The speed limit in km/h.
+    double freeFlowFactor;   // free-flow speed = free-flow factor * speed limit
     int numLanesOnOneWay;    // The number of lanes on one-way road segments.
     int numLanesOnTwoWay;    // The number of lanes in each direction on two-way road segments.
     int laneCapacity;        // The capacity per lane in veh/h.
@@ -253,7 +262,7 @@ class OsmImporter {
 
   RoutingKit::OSMRoutingGraph osmGraph;     // The graph extracted from OSM data.
   std::vector<OsmRoadCategory> wayCategory; // The OSM road category for each way.
-  std::vector<double> waySpeed;             // The free-flow speed for each way.
+  std::vector<double> waySpeed;             // The speed limit for each way.
   std::vector<double> numLanesInForward;    // The number of forward lanes for each way.
   std::vector<double> numLanesInReverse;    // The number of reverse lanes for each way.
 
@@ -284,7 +293,8 @@ inline CapacityAttribute::Type OsmImporter::getValue<CapacityAttribute>() const 
 template <>
 inline FreeFlowSpeedAttribute::Type OsmImporter::getValue<FreeFlowSpeedAttribute>() const {
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  return std::round(waySpeed[osmGraph.way[currentEdge]]);
+  const int way = osmGraph.way[currentEdge];
+  return std::round(roadDefaults.at(wayCategory[way]).freeFlowFactor * waySpeed[way]);
 }
 
 // Returns the value of the length attribute for the current edge.
@@ -320,6 +330,13 @@ inline RoadGeometryAttribute::Type OsmImporter::getValue<RoadGeometryAttribute>(
   for (int v = first, i = 0; v != last; ++v, ++i)
     path[i] = {osmGraph.modelling_node_latitude[v], osmGraph.modelling_node_longitude[v]};
   return path;
+}
+
+// Returns the value of the speed limit attribute for the current edge.
+template <>
+inline SpeedLimitAttribute::Type OsmImporter::getValue<SpeedLimitAttribute>() const {
+  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
+  return std::round(waySpeed[osmGraph.way[currentEdge]]);
 }
 
 // Returns the value of the travel time attribute for the current edge.
