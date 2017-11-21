@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <ostream>
 
 #include "DataStructures/Graph/Attributes/AbstractAttribute.h"
 #include "Tools/EnumParser.h"
@@ -42,6 +43,27 @@ void EnumParser<OsmRoadCategory>::initNameToEnumMap() {
     {"living_street",  OsmRoadCategory::LIVING_STREET},
     {"road",           OsmRoadCategory::ROAD}
   };
+}
+
+// Writes the character representation of the specified OSM road category to the given stream.
+inline std::ostream& operator<<(std::ostream& os, const OsmRoadCategory cat) {
+  switch (cat) {
+    case OsmRoadCategory::MOTORWAY:       os << "motorway";       break;
+    case OsmRoadCategory::TRUNK:          os << "trunk";          break;
+    case OsmRoadCategory::PRIMARY:        os << "primary";        break;
+    case OsmRoadCategory::SECONDARY:      os << "secondary";      break;
+    case OsmRoadCategory::TERTIARY:       os << "tertiary";       break;
+    case OsmRoadCategory::UNCLASSIFIED:   os << "unclassified";   break;
+    case OsmRoadCategory::RESIDENTIAL:    os << "residential";    break;
+    case OsmRoadCategory::MOTORWAY_LINK:  os << "motorway_link";  break;
+    case OsmRoadCategory::TRUNK_LINK:     os << "trunk_link";     break;
+    case OsmRoadCategory::PRIMARY_LINK:   os << "primary_link";   break;
+    case OsmRoadCategory::SECONDARY_LINK: os << "secondary_link"; break;
+    case OsmRoadCategory::TERTIARY_LINK:  os << "tertiary_link";  break;
+    case OsmRoadCategory::LIVING_STREET:  os << "living_street";  break;
+    case OsmRoadCategory::ROAD:           os << "road";           break;
+  }
+  return os;
 }
 
 // An attribute associating an OSM road category with each edge of a graph.

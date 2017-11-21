@@ -16,6 +16,7 @@
 #include "DataStructures/Utilities/Permutation.h"
 #include "Tools/Simd/AlignVector.h"
 #include "Tools/BinaryIO.h"
+#include "Tools/Constants.h"
 #include "Tools/ContainerHelpers.h"
 #include "Tools/TemplateProgramming.h"
 #include "Tools/Workarounds.h"
@@ -201,6 +202,21 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
       if (edgeHead(e) == head)
         return true;
     return false;
+  }
+
+  // Returns the index of the edge between u and v, or -1 if there is no (unique) edge.
+  int uniqueEdgeBetween(const int u, const int v) const {
+    int result = INVALID_EDGE;
+    for (int e = firstEdge(u); e != lastEdge(u); ++e)
+      if (edgeHeads[e] == v) {
+        if (result == INVALID_EDGE) {
+          result = e;
+        } else {
+          result = INVALID_EDGE;
+          break;
+        }
+      }
+    return result;
   }
 
   // Ensures that the graph can hold at least the specified number of vertices and edges without
