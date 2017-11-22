@@ -246,19 +246,19 @@ class OsmImporter {
   // A map that carries default road properties for a set of OSM road categories.
   const std::unordered_map<OsmRoadCategory, RoadDefaults> roadDefaults = {
 #ifndef CALIBRATE_OSM
-    {OsmRoadCategory::MOTORWAY,       {120, 1.0, 2, 2, 2000, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK,          {80,  1.0, 2, 1, 2000, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY,        {80,  1.0, 2, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY,      {30,  1.0, 2, 1, 1000, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY,       {25,  1.0, 1, 1, 600,  RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::UNCLASSIFIED,   {15,  1.0, 1, 1, 600,  RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::RESIDENTIAL,    {15,  1.0, 1, 1, 600,  RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::MOTORWAY_LINK,  {80,  1.0, 1, 1, 1500, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK_LINK,     {50,  1.0, 1, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY_LINK,   {60,  1.0, 1, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY_LINK, {30,  1.0, 1, 1, 1000, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY_LINK,  {25,  1.0, 1, 1, 600,  RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::LIVING_STREET,  {10,  1.0, 1, 1, 300,  RoadDirection::OPEN_IN_BOTH}}
+    {OsmRoadCategory::MOTORWAY,       {120, 1.0, 2, 2, 800, RoadDirection::FORWARD}},
+    {OsmRoadCategory::TRUNK,          {80,  1.0, 2, 1, 800, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::PRIMARY,        {80,  1.0, 2, 1, 600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::SECONDARY,      {60,  1.0, 2, 1, 400, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::TERTIARY,       {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::UNCLASSIFIED,   {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::RESIDENTIAL,    {30,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::MOTORWAY_LINK,  {80,  1.0, 1, 1, 600, RoadDirection::FORWARD}},
+    {OsmRoadCategory::TRUNK_LINK,     {50,  1.0, 1, 1, 600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::PRIMARY_LINK,   {60,  1.0, 1, 1, 600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::SECONDARY_LINK, {60,  1.0, 1, 1, 400, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::TERTIARY_LINK,  {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::LIVING_STREET,  {15,  1.0, 1, 1, 120, RoadDirection::OPEN_IN_BOTH}}
 #else
     {OsmRoadCategory::MOTORWAY,       {-1, 1.0, 2, 2, -1, RoadDirection::FORWARD}},
     {OsmRoadCategory::TRUNK,          {-1, 1.0, 2, 1, -1, RoadDirection::OPEN_IN_BOTH}},
