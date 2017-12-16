@@ -350,6 +350,20 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return idx;
   }
 
+  // Removes the edge out of vertex u with index e.
+  void removeEdge(const int u, const int e) {
+    static_assert(dynamic, "Graph::removeEdge is not supported by static graphs.");
+    assert(u >= 0); assert(u < outEdges.size());
+    assert(e >= outEdges[u].first()); assert(e < outEdges[u].last());
+    const int last = --outEdges[u].last();
+    if (e != last) {
+      edgeHeads[e] = edgeHeads[last];
+      RUN_FORALL(EdgeAttributes::values[e] = EdgeAttributes::values[last]);
+    }
+    edgeHeads[last] = INVALID_EDGE;
+    --edgeCount;
+  }
+
   // Sets the head of edge e to vertex v.
   void setEdgeHead(const int e, const int v) {
     assert(e >= 0); assert(e <= maxEdgeIndex());
