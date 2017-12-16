@@ -76,7 +76,7 @@ class Point {
     y = std::max(y, p.y);
   }
 
-  // Returns the Manhattan distance to the specified point.
+  // Returns the Manhattan or "city block" distance to the specified point.
   int getManhattanDistanceTo(const Point& p) const {
     return std::abs(x - p.x) + std::abs(y - p.y);
   }
@@ -91,6 +91,11 @@ class Point {
     int64_t deltaX = x - p.x;
     int64_t deltaY = y - p.y;
     return deltaX * deltaX + deltaY * deltaY;
+  }
+
+  // Returns the chessboard, Chebyshev, or sup norm distance to the specified point.
+  int getChessboardDistanceTo(const Point& p) const {
+    return std::max(std::abs(x - p.x), std::abs(y - p.y));
   }
 
  private:
