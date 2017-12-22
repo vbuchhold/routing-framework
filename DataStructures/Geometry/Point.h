@@ -94,7 +94,7 @@ class Point {
   }
 
   // Returns the chessboard, Chebyshev, or sup norm distance to the specified point.
-  int getChessboardDistanceTo(const Point& p) const {
+  int getChebyshevDistanceTo(const Point& p) const {
     return std::max(std::abs(x - p.x), std::abs(y - p.y));
   }
 

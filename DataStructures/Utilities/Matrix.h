@@ -8,8 +8,8 @@ template <typename E>
 class Matrix {
  public:
   // Constructs a matrix with the specified number of rows and columns.
-  Matrix(const int numRows, const int numCols)
-      : data(numRows * numCols), rowCount(numRows), colCount(numCols) {
+  Matrix(const int numRows, const int numCols, const E& val = E())
+      : data(numRows * numCols, val), rowCount(numRows), colCount(numCols) {
     assert(numRows >= 0);
     assert(numCols >= 0);
   }
