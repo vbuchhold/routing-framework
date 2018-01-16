@@ -69,7 +69,7 @@ class AllOrNothingAssignment {
       double avgChange = 0;
       double maxChange = 0;
 
-      #pragma omp for schedule(static, 128) nowait
+      #pragma omp for schedule(dynamic, 128) nowait
       for (int i = 0; i < clusters.size() - 1; ++i) {
         const int first = clusters[i];
         const int size = clusters[i + 1] - clusters[i];
