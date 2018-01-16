@@ -28,8 +28,53 @@ class DijkstraAdapter {
   // The number of simultaneous shortest-path computations.
   static constexpr int K = CentralizedLabelSet::K;
 
+  // The search algorithm using the graph and possibly auxiliary data to compute shortest paths.
+  // Multiple instances may work on the same data concurrently.
+  class QueryAlgo {
+   public:
+    // Constructs a query algorithm instance working on the specified data.
+    explicit QueryAlgo(const InputGraph& graph) : search(graph), centralizedSearch(graph) {}
+
+    // Computes the shortest path from s to t.
+    void run(const int s, const int t) {
+      search.run(s, t);
+    }
+
+    // Computes shortest paths from each source to its target simultaneously.
+    void run(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+      centralizedSearch.run(sources, targets);
+    }
+
+    // Returns the length of the shortest path.
+    int getDistance(const int dst) {
+      return search.getDistance(dst);
+    }
+
+    // Returns the length of the i-th centralized shortest path.
+    int getDistance(const int dst, const int i) {
+      return centralizedSearch.getDistance(dst, i);
+    }
+
+    // Returns the edges on the (packed) shortest path.
+    std::vector<int> getPackedEdgePath(const int dst) {
+      return search.getReverseEdgePath(dst);
+    }
+
+    // Returns the edges on the i-th (packed) centralized shortest path.
+    std::vector<int> getPackedEdgePath(const int dst, const int i) {
+      return centralizedSearch.getReverseEdgePath(dst, i);
+    }
+
+   private:
+    using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+    using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
+
+    Search search;                       // Dijkstra search for a single path.
+    CentralizedSearch centralizedSearch; // Dijkstra search for multiple paths.
+  };
+
   // Constructs an adapter for Dijkstra's algorithm.
-  DijkstraAdapter(const InputGraph& graph) : search(graph), centralizedSearch(graph) {}
+  DijkstraAdapter(const InputGraph& graph) : inputGraph(graph) {}
 
   // Invoked before the first iteration.
   void preprocess() { /* do nothing */ }
@@ -37,34 +82,9 @@ class DijkstraAdapter {
   // Invoked before each iteration.
   void customize() { /* do nothing */ }
 
-  // Computes the shortest path from s to t.
-  void query(const int s, const int t) {
-    search.run(s, t);
-  }
-
-  // Computes shortest paths from each source to its target simultaneously.
-  void query(const std::array<int, K>& sources, const std::array<int, K>& targets) {
-    centralizedSearch.run(sources, targets);
-  }
-
-  // Returns the length of the shortest path.
-  int getDistance(const int dst) {
-    return search.getDistance(dst);
-  }
-
-  // Returns the length of the i-th centralized shortest path.
-  int getDistance(const int dst, const int i) {
-    return centralizedSearch.getDistance(dst, i);
-  }
-
-  // Returns the edges on the (packed) shortest path.
-  std::vector<int> getPackedEdgePath(const int dst) {
-    return search.getReverseEdgePath(dst);
-  }
-
-  // Return the edges on the i-th (packed) centralized shortest path.
-  std::vector<int> getPackedEdgePath(const int dst, const int i) {
-    return centralizedSearch.getReverseEdgePath(dst, i);
+  // Returns an instance of the query algorithm.
+  QueryAlgo getQueryAlgoInstance() const {
+    return QueryAlgo(inputGraph);
   }
 
   // Returns the first constituent edge of shortcut s.
@@ -85,11 +105,7 @@ class DijkstraAdapter {
   }
 
  private:
-  using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
-  using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
-
-  Search search;                       // Dijkstra search computing a single path.
-  CentralizedSearch centralizedSearch; // Dijkstra search computing multiple paths.
+  const InputGraph& inputGraph; // The input graph.
 };
 
 }

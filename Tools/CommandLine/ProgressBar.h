@@ -4,6 +4,8 @@
 #include <iostream>
 #include <ostream>
 
+#include <omp.h>
+
 // A textual indicator of progress towards some goal.
 class ProgressBar {
  public:
@@ -49,14 +51,29 @@ class ProgressBar {
 
   // Advances the progress bar by one step.
   void operator++() {
-    assert(stepsDone < numSteps);
-    advanceTo(stepsDone + 1);
+    if (!verbose)
+      return;
+    int done;
+    #pragma omp atomic capture
+    done = ++stepsDone;
+#ifdef _OPENMP
+    if (omp_get_thread_num() == 0)
+#endif
+      print(done * 100l / numSteps);
   }
 
   // Advances the progress bar by the specified number of steps.
   void operator+=(const int steps) {
-    assert(steps >= 0); assert(steps <= numSteps - stepsDone);
-    advanceTo(stepsDone + steps);
+    assert(steps >= 0);
+    if (!verbose)
+      return;
+    int done;
+    #pragma omp atomic capture
+    done = stepsDone += steps;
+#ifdef _OPENMP
+    if (omp_get_thread_num() == 0)
+#endif
+      print(done * 100l / numSteps);
   }
 
  private:

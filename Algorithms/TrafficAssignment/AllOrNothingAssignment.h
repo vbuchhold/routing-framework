@@ -39,6 +39,14 @@ class AllOrNothingAssignment {
     stats.lastRoutingTime = stats.totalPreprocessingTime;
     stats.totalRoutingTime = stats.totalPreprocessingTime;
     if (verbose) std::cout << "  Prepro: " << stats.totalPreprocessingTime << "ms" << std::endl;
+
+    clusters.push_back(0);
+    for (int i = 1, j = 1; i < odPairs.size(); ++i, ++j)
+      if (j == K || !odPairs[i].hasSameZones(odPairs[i - 1])) {
+        clusters.push_back(i);
+        j = 0;
+      }
+    clusters.push_back(odPairs.size());
   }
 
   // Assigns all OD-flows to their currently shortest paths.
@@ -50,37 +58,84 @@ class AllOrNothingAssignment {
     stats.lastCustomizationTime = timer.elapsed();
 
     timer.restart();
-    ProgressBar bar(odPairs.size(), verbose);
-    trafficFlows.clear();
-    trafficFlows.resize(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts());
+    ProgressBar bar(clusters.size(), verbose);
+    trafficFlows.assign(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts(), 0);
     stats.startIteration();
-    for (int i = 0, k = 1; i < odPairs.size(); i += k, k = 1) {
-      if (i + 1 >= odPairs.size() || !odPairs[i + 1].hasSameZones(odPairs[i])) {
-        // Run a single shortest-path computation.
-        shortestPathAlgo.query(odPairs[i].origin, odPairs[i].destination);
-        const int dist = shortestPathAlgo.getDistance(odPairs[i].destination);
-        const std::vector<int>& path = shortestPathAlgo.getPackedEdgePath(odPairs[i].destination);
-        processResult(i, dist, path);
-      } else {
-        // Run multiple shortest-path computations simultaneously.
-        std::array<int, K> sources;
-        std::array<int, K> targets;
-        sources.fill(odPairs[i].origin);
-        targets.fill(odPairs[i].destination);
-        for (; k < K && i + k < odPairs.size() && odPairs[i + k].hasSameZones(odPairs[i]); ++k) {
-          sources[k] = odPairs[i + k].origin;
-          targets[k] = odPairs[i + k].destination;
+    #pragma omp parallel
+    {
+      auto queryAlgo = shortestPathAlgo.getQueryAlgoInstance();
+      std::vector<int> flows(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts());
+      int64_t checksum = 0;
+      double avgChange = 0;
+      double maxChange = 0;
+
+      #pragma omp for schedule(static, 128) nowait
+      for (int i = 0; i < clusters.size() - 1; ++i) {
+        const int first = clusters[i];
+        const int size = clusters[i + 1] - clusters[i];
+        if (size == 1) {
+          // Run a single shortest-path computation.
+          queryAlgo.run(odPairs[first].origin, odPairs[first].destination);
+
+          // Maintain the avg and max change in the OD-distances between the last two iterations.
+          const int dst = odPairs[first].destination;
+          const int dist = queryAlgo.getDistance(dst);
+          const int prevDist = stats.lastDistances[first];
+          const double change = 1.0 * std::abs(dist - prevDist) / prevDist;
+          checksum += dist;
+          stats.lastDistances[first] = dist;
+          avgChange += std::max(0.0, change);
+          maxChange = std::max(maxChange, change);
+
+          // Assign the OD-flow to each edge on the computed path.
+          for (const auto e : queryAlgo.getPackedEdgePath(dst)) {
+            assert(e >= 0); assert(e < flows.size());
+            ++flows[e];
+          }
+        } else {
+          // Run multiple shortest-path computations simultaneously.
+          std::array<int, K> sources;
+          std::array<int, K> targets;
+          sources.fill(odPairs[first].origin);
+          targets.fill(odPairs[first].destination);
+          for (int j = 1; j < size; ++j) {
+            sources[j] = odPairs[first + j].origin;
+            targets[j] = odPairs[first + j].destination;
+          }
+          queryAlgo.run(sources, targets);
+
+          for (int j = 0; j < size; ++j) {
+            // Maintain the avg and max change in the OD-distances between the last two iterations.
+            const int dst = odPairs[first + j].destination;
+            const int dist = queryAlgo.getDistance(dst, j);
+            const int prevDist = stats.lastDistances[first + j];
+            const double change = 1.0 * std::abs(dist - prevDist) / prevDist;
+            checksum += dist;
+            stats.lastDistances[first + j] = dist;
+            avgChange += std::max(0.0, change);
+            maxChange = std::max(maxChange, change);
+
+            // Assign the OD-flow to each edge on the computed path.
+            for (const auto e : queryAlgo.getPackedEdgePath(dst, j)) {
+              assert(e >= 0); assert(e < flows.size());
+              ++flows[e];
+            }
+          }
         }
-        shortestPathAlgo.query(sources, targets);
-        for (int j = 0; j < k; ++j) {
-          const int dst = odPairs[i].destination;
-          const int dist = shortestPathAlgo.getDistance(dst, j);
-          const std::vector<int>& path = shortestPathAlgo.getPackedEdgePath(dst, j);
-          processResult(i + j, dist, path);
-        }
+        ++bar;
       }
-      bar += k;
+
+      #pragma omp critical (mergeResults)
+      {
+        stats.lastChecksum += checksum;
+        stats.avgChangeInDistances += avgChange;
+        stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, maxChange);
+        assert(trafficFlows.size() == flows.size());
+        for (int e = 0; e < flows.size(); ++e)
+          trafficFlows[e] += flows[e];
+      }
     }
+    bar.advanceTo(clusters.size());
 
     // Propagate traffic flows from shortcut to original edges.
     const int maxShortcutId = inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts() - 1;
@@ -114,27 +169,12 @@ class AllOrNothingAssignment {
   // The maximum number of simultaneous shortest-path computations.
   static constexpr int K = ShortestPathAlgoT::K;
 
-  // Processes the result of the shortest-path computation for the i-th OD-pair.
-  void processResult(const int i, const int dist, const std::vector<int>& path) {
-    // Maintain the avg and max change in the OD-distances between the last two iterations.
-    const double change = 1.0 * std::abs(dist - stats.lastDistances[i]) / stats.lastDistances[i];
-    stats.lastChecksum += dist;
-    stats.lastDistances[i] = dist;
-    stats.avgChangeInDistances += std::max(0.0, change);
-    stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, change);
-
-    // Assign the OD-flow to each edge on the computed path.
-    for (const auto e : path) {
-      assert(e >= 0); assert(e < trafficFlows.size());
-      ++trafficFlows[e];
-    }
-  }
-
   using ODPairs = std::vector<ClusteredOriginDestination>;
 
   ShortestPathAlgoT shortestPathAlgo; // Algo computing shortest paths between OD-pairs.
   const InputGraph& inputGraph;       // The input graph.
   const ODPairs& odPairs;             // The OD-pairs to be assigned onto the graph.
+  std::vector<int> clusters;          // OD-pairs in a cluster have same origin/destination zones.
   AlignVector<int> trafficFlows;      // The traffic flows on the edges.
   const bool verbose;                 // Should informative messages be displayed?
 };

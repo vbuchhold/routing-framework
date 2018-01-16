@@ -4,7 +4,6 @@
 #include <cassert>
 #include <vector>
 
-#include <routingkit/bit_vector.h>
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
@@ -41,11 +40,61 @@ class CCHAdapter {
   // The number of simultaneous shortest-path computations.
   static constexpr int K = CentralizedLabelSet::K;
 
+  // The search algorithm using the graph and possibly auxiliary data to compute shortest paths.
+  // Multiple instances may work on the same data concurrently.
+  class QueryAlgo {
+   public:
+    // Constructs a query algorithm instance working on the specified data.
+    QueryAlgo(const CH& perfectCH, const std::vector<int>& eliminationTree)
+        : search(perfectCH, eliminationTree),
+          centralizedSearch(perfectCH, eliminationTree),
+          perfectCH(perfectCH) {}
+
+    // Computes the shortest path from s to t.
+    void run(const int s, const int t) {
+      search.run(perfectCH.rank(s), perfectCH.rank(t));
+    }
+
+    // Computes shortest paths from each source to its target simultaneously.
+    void run(std::array<int, K>& sources, std::array<int, K>& targets) {
+      for (int i = 0; i < K; ++i) {
+        sources[i] = perfectCH.rank(sources[i]);
+        targets[i] = perfectCH.rank(targets[i]);
+      }
+      centralizedSearch.run(sources, targets);
+    }
+
+    // Returns the length of the shortest path.
+    int getDistance(const int /*dst*/) {
+      return search.getDistance();
+    }
+
+    // Returns the length of the i-th centralized shortest path.
+    int getDistance(const int /*dst*/, const int i) {
+      return centralizedSearch.getDistance(i);
+    }
+
+    // Returns the edges on the (packed) shortest path.
+    std::vector<int> getPackedEdgePath(const int /*dst*/) {
+      return search.getPackedEdgePath();
+    }
+
+    // Return the edges on the i-th (packed) centralized shortest path.
+    std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
+      return centralizedSearch.getPackedEdgePath(i);
+    }
+
+   private:
+    using Search = EliminationTreeQuery<CH, LabelSet>;
+    using CentralizedSearch = EliminationTreeQuery<CH, CentralizedLabelSet>;
+
+    Search search;                       // CH search on the perfect CH for a single path.
+    CentralizedSearch centralizedSearch; // CH search on the perfect CH for multiple paths.
+    const CH& perfectCH;                 // The CH resulting from perfectly customizing the CCH.
+  };
+
   // Constructs an adapter for CCHs.
-  CCHAdapter(const InputGraph& graph)
-      : inputGraph(graph),
-        search(perfectCH, eliminationTree),
-        centralizedSearch(perfectCH, eliminationTree) {
+  explicit CCHAdapter(const InputGraph& graph) : inputGraph(graph) {
     assert(graph.numEdges() > 0); assert(graph.isDefrag());
   }
 
@@ -66,15 +115,12 @@ class CCHAdapter {
     }
 
     // Compute a nested dissection order for the input graph.
-    const RoutingKit::GraphFragment graph =
-        RoutingKit::make_graph_fragment(inputGraph.numVertices(), tails, heads);
-
+    const auto graph = RoutingKit::make_graph_fragment(inputGraph.numVertices(), tails, heads);
     auto computeSeparator = [&lats, &lngs](const RoutingKit::GraphFragment& fragment) {
-      const RoutingKit::BitVector cut = inertial_flow(fragment, 30, lats, lngs).is_node_on_side;
-      return derive_separator_from_cut(fragment, cut);
+      const auto cut = inertial_flow(fragment, 30, lats, lngs);
+      return derive_separator_from_cut(fragment, cut.is_node_on_side);
     };
-
-    std::vector<unsigned int> order = compute_nested_node_dissection_order(graph, computeSeparator);
+    const auto order = compute_nested_node_dissection_order(graph, computeSeparator);
 
     // Build the metric-independent CCH.
     cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
@@ -90,42 +136,11 @@ class CCHAdapter {
     const int numEdges = inputGraph.numEdges();
     perfectCH = convert<CH>(
         currentMetric.build_contraction_hierarchy_using_perfect_witness_search(), numEdges);
-    search.resize();
-    centralizedSearch.resize();
   }
 
-  // Computes the shortest path from s to t.
-  void query(const int s, const int t) {
-    search.run(perfectCH.rank(s), perfectCH.rank(t));
-  }
-
-  // Computes shortest paths from each source to its target simultaneously.
-  void query(std::array<int, K>& sources, std::array<int, K>& targets) {
-    for (int i = 0; i < K; ++i) {
-      sources[i] = perfectCH.rank(sources[i]);
-      targets[i] = perfectCH.rank(targets[i]);
-    }
-    centralizedSearch.run(sources, targets);
-  }
-
-  // Returns the length of the shortest path.
-  int getDistance(const int /*dst*/) {
-    return search.getDistance();
-  }
-
-  // Returns the length of the i-th centralized shortest path.
-  int getDistance(const int /*dst*/, const int i) {
-    return centralizedSearch.getDistance(i);
-  }
-
-  // Returns the edges on the (packed) shortest path.
-  std::vector<int> getPackedEdgePath(const int /*dst*/) {
-    return search.getPackedEdgePath();
-  }
-
-  // Return the edges on the i-th (packed) centralized shortest path.
-  std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
-    return centralizedSearch.getPackedEdgePath(i);
+  // Returns an instance of the query algorithm.
+  QueryAlgo getQueryAlgoInstance() const {
+    return QueryAlgo(perfectCH, eliminationTree);
   }
 
   // Returns the first constituent edge of shortcut s.
@@ -146,16 +161,12 @@ class CCHAdapter {
  private:
   using CCH = RoutingKit::CustomizableContractionHierarchy;
   using CCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
-  using Search = EliminationTreeQuery<CH, LabelSet>;
-  using CentralizedSearch = EliminationTreeQuery<CH, CentralizedLabelSet>;
 
-  const InputGraph& inputGraph;        // The input graph.
-  CCH cch;                             // The metric-independent CCH.
-  std::vector<int> eliminationTree;    // eliminationTree[v] is the parent of v in the tree.
-  CCHMetric currentMetric;             // The current metric for the CCH.
-  CH perfectCH;                        // The CH resulting from perfectly customizing the CCH.
-  Search search;                       // CH search on the perfect CH computing a single path.
-  CentralizedSearch centralizedSearch; // CH search on the perfect CH computing multiple paths.
+  const InputGraph& inputGraph;     // The input graph.
+  CCH cch;                          // The metric-independent CCH.
+  std::vector<int> eliminationTree; // eliminationTree[v] is the parent of v in the tree.
+  CCHMetric currentMetric;          // The current metric for the CCH.
+  CH perfectCH;                     // The CH resulting from perfectly customizing the CCH.
 };
 
 }

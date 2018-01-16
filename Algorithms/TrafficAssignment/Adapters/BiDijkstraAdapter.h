@@ -30,13 +30,56 @@ class BiDijkstraAdapter {
   // The number of simultaneous shortest-path computations.
   static constexpr int K = CentralizedLabelSet::K;
 
+  // The search algorithm using the graph and possibly auxiliary data to compute shortest paths.
+  // Multiple instances may work on the same data concurrently.
+  class QueryAlgo {
+   public:
+    // Constructs a query algorithm instance working on the specified data.
+    QueryAlgo(const InputGraph& graph, const InputGraph& reverse)
+        : search(graph, reverse), centralizedSearch(graph, reverse) {}
+
+    // Computes the shortest path from s to t.
+    void run(const int s, const int t) {
+      search.run(s, t);
+    }
+
+    // Computes shortest paths from each source to its target simultaneously.
+    void run(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+      centralizedSearch.run(sources, targets);
+    }
+
+    // Returns the length of the shortest path.
+    int getDistance(const int /*dst*/) {
+      return search.getDistance();
+    }
+
+    // Returns the length of the i-th centralized shortest path.
+    int getDistance(const int /*dst*/, const int i) {
+      return centralizedSearch.getDistance(i);
+    }
+
+    // Returns the edges on the (packed) shortest path.
+    std::vector<int> getPackedEdgePath(const int /*dst*/) {
+      return search.getEdgePath();
+    }
+
+    // Returns the edges on the i-th (packed) centralized shortest path.
+    std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
+      return centralizedSearch.getEdgePath(i);
+    }
+
+   private:
+    using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+    using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
+
+    BiDijkstra<Search> search;                       // Bidirectional search for a single path.
+    BiDijkstra<CentralizedSearch> centralizedSearch; // Bidirectional search for multiple paths.
+  };
+
   // Constructs an adapter for bidirectional search.
   BiDijkstraAdapter(const InputGraph& graph)
-      : inputGraph(graph),
-        reverseGraph(graph.getReverseGraph()),
-        search(graph, reverseGraph),
-        centralizedSearch(graph, reverseGraph) {
-      assert(graph.isDefrag());
+      : inputGraph(graph), reverseGraph(graph.getReverseGraph()) {
+    assert(graph.isDefrag());
   }
 
   // Invoked before the first iteration.
@@ -51,34 +94,9 @@ class BiDijkstraAdapter {
     }
   }
 
-  // Computes the shortest path from s to t.
-  void query(const int s, const int t) {
-    search.run(s, t);
-  }
-
-  // Computes shortest paths from each source to its target simultaneously.
-  void query(const std::array<int, K>& sources, const std::array<int, K>& targets) {
-    centralizedSearch.run(sources, targets);
-  }
-
-  // Returns the length of the shortest path.
-  int getDistance(const int /*dst*/) {
-    return search.getDistance();
-  }
-
-  // Returns the length of the i-th centralized shortest path.
-  int getDistance(const int /*dst*/, const int i) {
-    return centralizedSearch.getDistance(i);
-  }
-
-  // Returns the edges on the (packed) shortest path.
-  std::vector<int> getPackedEdgePath(const int /*dst*/) {
-    return search.getEdgePath();
-  }
-
-  // Return the edges on the i-th (packed) centralized shortest path.
-  std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
-    return centralizedSearch.getEdgePath(i);
+  // Returns an instance of the query algorithm.
+  QueryAlgo getQueryAlgoInstance() const {
+    return QueryAlgo(inputGraph, reverseGraph);
   }
 
   // Returns the first constituent edge of shortcut s.
@@ -99,13 +117,8 @@ class BiDijkstraAdapter {
   }
 
  private:
-  using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
-  using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
-
-  const InputGraph& inputGraph;                    // The input graph.
-  InputGraph reverseGraph;                         // The reverse graph.
-  BiDijkstra<Search> search;                       // Bidirectional search computing a single path.
-  BiDijkstra<CentralizedSearch> centralizedSearch; // Bidirectional search computing multiple paths.
+  const InputGraph& inputGraph; // The input graph.
+  InputGraph reverseGraph;      // The reverse graph.
 };
 
 }

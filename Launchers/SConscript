@@ -1,4 +1,5 @@
-p1 = Program(source=['AssignTraffic.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['routingkit'])
+p1 = Program(
+    source=['AssignTraffic.cpp'], parse_flags='-DCSV_IO_NO_THREAD -fopenmp', LIBS=['routingkit'])
 p2 = Program(source=['RunP2PAlgo.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['routingkit'])
 
 Alias('AssignTraffic', p1)
