@@ -51,6 +51,7 @@ void printUsage() {
       "                      possible values: random input (default) sorted\n"
       "  -s <seed>         start the random number generator with <seed>\n"
       "  -U <num>          the maximum height of a subtree (used for ordering OD-pairs)\n"
+      "  -si <intervals>   a blank-separated list of sampling intervals\n"
       "  -i <file>         the input graph in binary format\n"
       "  -od <file>        the OD-pairs to be assigned\n"
       "  -o <file>         the output CSV file without file extension\n"
@@ -139,6 +140,28 @@ void assignTraffic(const CommandLineParser& clp) {
     throw std::invalid_argument("invalid order -- '" + ord + "'");
   }
 
+  const int numIterations = clp.getValue<int>("n");
+  if (numIterations < 0) {
+    const std::string msg("negative number of iterations");
+    throw std::invalid_argument(msg + " -- " + std::to_string(numIterations));
+  }
+
+  const auto intervals = clp.getValues<int>("si");
+  if (intervals[0] <= 0) {
+    const std::string msg("non-positive sampling interval");
+    throw std::invalid_argument(msg + " -- " + std::to_string(intervals[0]));
+  }
+  for (int i = 1; i < intervals.size(); ++i) {
+    if (intervals[i] <= 0) {
+      const std::string msg("non-positive sampling interval");
+      throw std::invalid_argument(msg + " -- " + std::to_string(intervals[i]));
+    }
+    if (intervals[i - 1] % intervals[i] != 0) {
+      const std::string msg("sampling interval is no divisor of its predecessor");
+      throw std::invalid_argument(msg + " -- " + std::to_string(intervals[i]));
+    }
+  }
+
   std::ofstream csv;
   if (!csvfile.empty()) {
     csv.open(csvfile + ".csv");
@@ -150,6 +173,11 @@ void assignTraffic(const CommandLineParser& clp) {
     csv << "# Function: " << clp.getValue<std::string>("f", "modified_davidson") << "\n";
     csv << "# Shortest-path algo: " << clp.getValue<std::string>("a", "dijkstra") << "\n";
     csv << "# Period of analysis: " << period << "h\n";
+    csv << "# Sampling intervals: [";
+    for (int i = 0, prevInterval = -1; i < intervals.size(); prevInterval = intervals[i++])
+      if (intervals[i] != prevInterval)
+        csv << intervals[i] << '@' << i + 1 << ':';
+    csv << "1@" << intervals.size() << "]\n";
     csv << std::flush;
   }
 
@@ -165,12 +193,12 @@ void assignTraffic(const CommandLineParser& clp) {
 
   if (csv.is_open()) {
     csv << "# Preprocessing time: " << assign.stats.totalRunningTime << "ms\n";
-    csv << "iteration,customization_time,query_time,line_search_time,total_time,";
+    csv << "iteration,sampling_interval,customization_time,query_time,line_search_time,total_time,";
     csv << "avg_change,max_change,total_travel_cost,checksum\n";
     csv << std::flush;
   }
 
-  assign.run(clp.getValue<int>("n"));
+  assign.run(numIterations, intervals);
 }
 
 // Picks the shortest-path algorithm according to the command line options.

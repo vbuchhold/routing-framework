@@ -50,7 +50,7 @@ class AllOrNothingAssignment {
   }
 
   // Assigns all OD-flows to their currently shortest paths.
-  void run() {
+  void run(const int samplingInterval = 1) {
     Timer timer;
     ++stats.numIterations;
     if (verbose) std::cout << "Iteration " << stats.numIterations << ": " << std::flush;
@@ -61,6 +61,7 @@ class AllOrNothingAssignment {
     ProgressBar bar(clusters.size(), verbose);
     trafficFlows.assign(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts(), 0);
     stats.startIteration();
+    int totalNumPairs = 0;
     #pragma omp parallel
     {
       auto queryAlgo = shortestPathAlgo.getQueryAlgoInstance();
@@ -68,11 +69,14 @@ class AllOrNothingAssignment {
       int64_t checksum = 0;
       double avgChange = 0;
       double maxChange = 0;
+      int numPairs = 0;
 
       #pragma omp for schedule(dynamic, 128) nowait
-      for (int i = 0; i < clusters.size() - 1; ++i) {
+      for (int i = 0; i < clusters.size() - 1; i += samplingInterval) {
         const int first = clusters[i];
         const int size = clusters[i + 1] - clusters[i];
+        if (stats.lastDistances[first] != -1)
+          numPairs += size;
         if (size == 1) {
           // Run a single shortest-path computation.
           queryAlgo.run(odPairs[first].origin, odPairs[first].destination);
@@ -130,9 +134,10 @@ class AllOrNothingAssignment {
         stats.lastChecksum += checksum;
         stats.avgChangeInDistances += avgChange;
         stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, maxChange);
+        totalNumPairs += numPairs;
         assert(trafficFlows.size() == flows.size());
         for (int e = 0; e < flows.size(); ++e)
-          trafficFlows[e] += flows[e];
+          trafficFlows[e] += flows[e] * samplingInterval;
       }
     }
     bar.advanceTo(clusters.size());
@@ -144,7 +149,7 @@ class AllOrNothingAssignment {
       trafficFlows[shortestPathAlgo.getShortcutsSecondEdge(s)] += trafficFlows[s];
     }
     stats.lastQueryTime = timer.elapsed();
-    stats.avgChangeInDistances /= odPairs.size();
+    stats.avgChangeInDistances /= totalNumPairs;
     stats.finishIteration();
 
     if (verbose) {

@@ -18,6 +18,7 @@
 #include "Tools/Simd/AlignVector.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/Timer.h"
+#include "Tools/Workarounds.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
 // method). At its heart are iterative shortest-paths computations. The algo can be parameterized to
@@ -45,8 +46,13 @@ class FrankWolfeAssignment {
   }
 
   // Assigns all OD-flows onto the input graph.
-  void run(const int numIterations = 0) {
+  void run(const int numIterations = 0, const std::vector<int>& samplingIntervals = {}) {
     assert(numIterations >= 0);
+    assert(samplingIntervals[0] > 0);
+    for (int i = 1; i < samplingIntervals.size(); ++i) {
+      assert(samplingIntervals[i] > 0);
+      assert(samplingIntervals[i - 1] % samplingIntervals[i] == 0);
+    }
     const AllOrNothingAssignmentStats& substats = allOrNothingAssignment.stats;
 
     // Initialization.
@@ -63,7 +69,8 @@ class FrankWolfeAssignment {
         weight.store_partial(inputGraph.numEdges() - e, &inputGraph.travelCost(e));
     }
 #endif
-    allOrNothingAssignment.run();
+    const int interval = !samplingIntervals.empty() ? samplingIntervals[0] : 1;
+    allOrNothingAssignment.run(interval);
 #ifdef TA_NO_SIMD_LINE_SEARCH
     FORALL_EDGES(inputGraph, e) {
       trafficFlows[e] = allOrNothingAssignment.trafficFlowOn(e);
@@ -89,10 +96,10 @@ class FrankWolfeAssignment {
     stats.finishIteration();
 
     if (csv.is_open()) {
-      csv << substats.numIterations << "," << substats.lastCustomizationTime << ",";
-      csv << substats.lastQueryTime << "," << stats.lastLineSearchTime << ",";
-      csv << stats.lastRunningTime << ",nan,nan," << stats.totalTravelCost << ",";
-      csv << substats.lastChecksum << std::endl;
+      csv << substats.numIterations << "," << interval << ",";
+      csv << substats.lastCustomizationTime << "," << substats.lastQueryTime << ",";
+      csv << stats.lastLineSearchTime << "," << stats.lastRunningTime << ",nan,nan,";
+      csv << stats.totalTravelCost << "," << substats.lastChecksum << std::endl;
     }
 
     if (patternFile.is_open())
@@ -125,7 +132,9 @@ class FrankWolfeAssignment {
 #endif
 
       // Direction finding.
-      allOrNothingAssignment.run();
+      const int interval = substats.numIterations < samplingIntervals.size() ?
+          samplingIntervals[substats.numIterations] : 1;
+      allOrNothingAssignment.run(interval);
 
       // Line search.
       const double alpha = bisectionMethod([this](const double alpha) {
@@ -180,11 +189,11 @@ class FrankWolfeAssignment {
       stats.finishIteration();
 
       if (csv.is_open()) {
-        csv << substats.numIterations << "," << substats.lastCustomizationTime << ",";
-        csv << substats.lastQueryTime << "," << stats.lastLineSearchTime << ",";
-        csv << stats.lastRunningTime << "," << substats.avgChangeInDistances << ",";
-        csv << substats.maxChangeInDistances << "," << stats.totalTravelCost << ",";
-        csv << substats.lastChecksum << std::endl;
+        csv << substats.numIterations << "," << interval << ",";
+        csv << substats.lastCustomizationTime << "," << substats.lastQueryTime << ",";
+        csv << stats.lastLineSearchTime << "," << stats.lastRunningTime << ",";
+        csv << substats.avgChangeInDistances << "," << substats.maxChangeInDistances << ",";
+        csv << stats.totalTravelCost << "," << substats.lastChecksum << std::endl;
       }
 
       if (patternFile.is_open())
