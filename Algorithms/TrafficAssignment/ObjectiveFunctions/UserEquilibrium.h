@@ -2,6 +2,8 @@
 
 #include <vectorclass/vectorclass.h>
 
+#include "Tools/Simd/AlignVector.h"
+
 // Represents the user-equilibrium (UE) objective function. The flow pattern that minimizes the UE
 // objective function (while satisfying the flow conservation constraint) is such that all drivers
 // minimize their own travel cost. The UE flow pattern is obtained by iterative shortest-path
@@ -11,6 +13,14 @@ class UserEquilibrium {
  public:
   // Constructs an UE objective function.
   UserEquilibrium(TravelCostFunctionT function) : travelCostFunction(function) {}
+
+  // Returns the value of the objective function for the specified edge flows.
+  double operator()(const AlignVector<double>& flows) const {
+    double sum = 0;
+    for (int e = 0; e < flows.size(); ++e)
+      sum += travelCostFunction.integral(e, flows[e]);
+    return sum;
+  }
 
   // Returns the weight of edge e, given the flow x on e.
   double getEdgeWeight(const int e, const double x) const {

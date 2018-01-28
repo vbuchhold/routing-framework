@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
 
 #include <vectorclass/vectorclass.h>
 
@@ -26,6 +27,19 @@ class InverseFunction {
     assert(x >= 0);
     const double tmp = x + 1;
     return 1.0 * graph.length(e) * -155 / (tmp * tmp);
+  }
+
+  // Returns the antiderivative of e's travel cost function at x.
+  double antiderivative(const int e, const double x) const {
+    assert(x >= 0);
+    const int length = graph.length(e);
+    const int time = graph.travelTime(e);
+    return 1.0 * length * (155 * std::log(x + 1) + 0.85 * x) + 0.0 * time * x;
+  }
+
+  // Returns the integral of e's travel cost function from 0 to b.
+  double integral(const int e, const double b) const {
+    return antiderivative(e, b) - antiderivative(e, 0);
   }
 
   // Returns the travel costs on four consecutive edges starting at e, given the flows x on them.

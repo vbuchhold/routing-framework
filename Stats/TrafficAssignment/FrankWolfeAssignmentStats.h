@@ -4,7 +4,8 @@
 struct FrankWolfeAssignmentStats {
   // Constructs a struct collecting statistics about a Frank-Wolfe assignment.
   FrankWolfeAssignmentStats()
-      : totalTravelCost(0),
+      : objFunctionValue(0),
+        totalTravelCost(0),
         lastLineSearchTime(0),
         lastRunningTime(0),
         totalLineSearchTime(0),
@@ -21,7 +22,8 @@ struct FrankWolfeAssignmentStats {
     totalRunningTime += lastRunningTime;
   }
 
-  double totalTravelCost; // The total travel cost resulting from the current edge flows.
+  double objFunctionValue; // The value of the objective function resulting from current edge flows.
+  double totalTravelCost;  // The total travel cost resulting from current edge flows.
 
   int lastLineSearchTime; // The time spent on the line search in the last iteration.
   int lastRunningTime;    // The running time for the last iteration.

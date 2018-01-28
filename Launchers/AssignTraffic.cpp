@@ -194,7 +194,7 @@ void assignTraffic(const CommandLineParser& clp) {
   if (csv.is_open()) {
     csv << "# Preprocessing time: " << assign.stats.totalRunningTime << "ms\n";
     csv << "iteration,sampling_interval,customization_time,query_time,line_search_time,total_time,";
-    csv << "avg_change,max_change,total_travel_cost,checksum\n";
+    csv << "avg_change,max_change,obj_function_value,total_travel_cost,checksum\n";
     csv << std::flush;
   }
 

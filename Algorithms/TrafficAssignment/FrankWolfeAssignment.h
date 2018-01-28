@@ -93,13 +93,15 @@ class FrankWolfeAssignment {
 #endif
     stats.lastRunningTime = timer.elapsed();
     stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
+    stats.objFunctionValue = objFunction(trafficFlows);
     stats.finishIteration();
 
     if (csv.is_open()) {
       csv << substats.numIterations << "," << interval << ",";
       csv << substats.lastCustomizationTime << "," << substats.lastQueryTime << ",";
       csv << stats.lastLineSearchTime << "," << stats.lastRunningTime << ",nan,nan,";
-      csv << stats.totalTravelCost << "," << substats.lastChecksum << std::endl;
+      csv << stats.objFunctionValue << "," << stats.totalTravelCost << ",";
+      csv << substats.lastChecksum << std::endl;
     }
 
     if (patternFile.is_open())
@@ -108,6 +110,7 @@ class FrankWolfeAssignment {
     if (verbose) {
       std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
       std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
+      std::cout << "  Objective function value: " << stats.objFunctionValue << "\n";
       std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
       std::cout << std::flush;
     }
@@ -186,6 +189,7 @@ class FrankWolfeAssignment {
 #endif
       stats.lastRunningTime = timer.elapsed();
       stats.lastLineSearchTime = stats.lastRunningTime - substats.lastRoutingTime;
+      stats.objFunctionValue = objFunction(trafficFlows);
       stats.finishIteration();
 
       if (csv.is_open()) {
@@ -193,7 +197,8 @@ class FrankWolfeAssignment {
         csv << substats.lastCustomizationTime << "," << substats.lastQueryTime << ",";
         csv << stats.lastLineSearchTime << "," << stats.lastRunningTime << ",";
         csv << substats.avgChangeInDistances << "," << substats.maxChangeInDistances << ",";
-        csv << stats.totalTravelCost << "," << substats.lastChecksum << std::endl;
+        csv << stats.objFunctionValue << "," << stats.totalTravelCost << ",";
+        csv << substats.lastChecksum << std::endl;
       }
 
       if (patternFile.is_open())
@@ -204,6 +209,7 @@ class FrankWolfeAssignment {
         std::cout << "  Total: " << stats.lastRunningTime << "ms\n";
         std::cout << "  Max change in OD-distances: " << substats.maxChangeInDistances << "\n";
         std::cout << "  Avg change in OD-distances: " << substats.avgChangeInDistances << "\n";
+        std::cout << "  Objective function value: " << stats.objFunctionValue << "\n";
         std::cout << "  Total travel cost: " << stats.totalTravelCost << "\n";
         std::cout << std::flush;
       }

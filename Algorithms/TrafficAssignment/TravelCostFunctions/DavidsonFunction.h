@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
 
 #include <vectorclass/vectorclass.h>
 
@@ -22,6 +23,19 @@ class DavidsonFunction {
     assert(x >= 0); assert(x < graph.capacity(e));
     const double tmp = graph.capacity(e) - x;
     return graph.travelTime(e) * 0.01 * graph.capacity(e) / (tmp * tmp);
+  }
+
+  // Returns the antiderivative of e's travel cost function at x.
+  double antiderivative(const int e, const double x) const {
+    assert(x >= 0); assert(x < graph.capacity(e));
+    const int time = graph.travelTime(e);
+    const int capacity = graph.capacity(e);
+    return time * (x - 0.01 * (capacity * std::log(capacity - x) + x));
+  }
+
+  // Returns the integral of e's travel cost function from 0 to b.
+  double integral(const int e, const double b) const {
+    return antiderivative(e, b) - antiderivative(e, 0);
   }
 
   // Returns the travel times on four consecutive edges starting at e, given the flows x on them.
