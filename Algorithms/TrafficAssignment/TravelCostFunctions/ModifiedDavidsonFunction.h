@@ -36,7 +36,7 @@ class ModifiedDavidsonFunction {
     if (b <= pt)
       return davidson.integral(e, b);
     else
-      return davidson.integral(e, pt) + (b - pt) * (davidson(e, b) + davidson(e, pt)) / 2;
+      return davidson.integral(e, pt) + (b - pt) * (operator()(e, b) + operator()(e, pt)) / 2;
   }
 
   // Returns the travel times on four consecutive edges starting at e, given the flows x on them.

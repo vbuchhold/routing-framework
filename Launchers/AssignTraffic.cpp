@@ -147,13 +147,13 @@ void assignTraffic(const CommandLineParser& clp) {
   }
 
   const auto intervals = clp.getValues<int>("si");
-  if (intervals[0] <= 0) {
-    const std::string msg("non-positive sampling interval");
+  if (!intervals.empty() && intervals[0] < 2) {
+    const std::string msg("sampling interval is less than 2");
     throw std::invalid_argument(msg + " -- " + std::to_string(intervals[0]));
   }
   for (int i = 1; i < intervals.size(); ++i) {
-    if (intervals[i] <= 0) {
-      const std::string msg("non-positive sampling interval");
+    if (intervals[i] < 2) {
+      const std::string msg("sampling interval is less than 2");
       throw std::invalid_argument(msg + " -- " + std::to_string(intervals[i]));
     }
     if (intervals[i - 1] % intervals[i] != 0) {
@@ -177,7 +177,7 @@ void assignTraffic(const CommandLineParser& clp) {
     for (int i = 0, prevInterval = -1; i < intervals.size(); prevInterval = intervals[i++])
       if (intervals[i] != prevInterval)
         csv << intervals[i] << '@' << i + 1 << ':';
-    csv << "1@" << intervals.size() << "]\n";
+    csv << "1@" << intervals.size() + 1 << "]\n";
     csv << std::flush;
   }
 
