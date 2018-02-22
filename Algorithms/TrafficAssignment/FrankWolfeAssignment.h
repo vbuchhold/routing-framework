@@ -33,13 +33,15 @@ class FrankWolfeAssignment {
 
   // Constructs an assignment procedure based on the Frank-Wolfe method.
   FrankWolfeAssignment(InputGraphT& graph, const std::vector<ClusteredOriginDestination>& odPairs,
-                       std::ofstream& csv, std::ofstream& patternFile, const bool verbose = true)
+                       std::ofstream& csv, std::ofstream& distFile, std::ofstream& patternFile,
+                       const bool verbose = true)
       : allOrNothingAssignment(graph, odPairs, verbose),
         inputGraph(graph),
         trafficFlows(graph.numEdges()),
         travelCostFunction(graph),
         objFunction(travelCostFunction),
         csv(csv),
+        distanceFile(distFile),
         patternFile(patternFile),
         verbose(verbose) {
     stats.totalRunningTime = allOrNothingAssignment.stats.totalRoutingTime;
@@ -103,6 +105,10 @@ class FrankWolfeAssignment {
       csv << stats.objFunctionValue << "," << stats.totalTravelCost << ",";
       csv << substats.lastChecksum << std::endl;
     }
+
+    if (distanceFile.is_open())
+      for (const auto dist : substats.lastDistances)
+        distanceFile << substats.numIterations << ',' << dist << '\n';
 
     if (patternFile.is_open())
       bio::write(patternFile, trafficFlows);
@@ -201,6 +207,10 @@ class FrankWolfeAssignment {
         csv << substats.lastChecksum << std::endl;
       }
 
+      if (distanceFile.is_open())
+        for (const auto dist : substats.lastDistances)
+          distanceFile << substats.numIterations << ',' << dist << '\n';
+
       if (patternFile.is_open())
         bio::write(patternFile, trafficFlows);
 
@@ -248,6 +258,7 @@ class FrankWolfeAssignment {
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
   std::ofstream& csv;                    // The output CSV file containing statistics.
+  std::ofstream& distanceFile;           // The output file containing the OD-distances.
   std::ofstream& patternFile;            // The output file containing the flow patterns.
   const bool verbose;                    // Should informative messages be displayed?
 };

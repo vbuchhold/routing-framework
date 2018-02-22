@@ -55,6 +55,7 @@ void printUsage() {
       "  -i <file>         the input graph in binary format\n"
       "  -od <file>        the OD-pairs to be assigned\n"
       "  -o <file>         the output CSV file without file extension\n"
+      "  -dist <file>      output the OD-distances after each iteration in <file>\n"
       "  -fp <file>        output the flow pattern after each iteration in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -109,17 +110,18 @@ inline void assignZonesToODPairs(
 // Assigns all OD-flows onto the input graph.
 template <typename FrankWolfeAssignmentT>
 void assignTraffic(const CommandLineParser& clp) {
-  const std::string infile = clp.getValue<std::string>("i");
-  const std::string odfile = clp.getValue<std::string>("od");
-  const std::string csvfile = clp.getValue<std::string>("o");
-  const std::string outfile = clp.getValue<std::string>("fp");
+  const std::string infilename = clp.getValue<std::string>("i");
+  const std::string odFilename = clp.getValue<std::string>("od");
+  const std::string csvFilename = clp.getValue<std::string>("o");
+  const std::string distFilename = clp.getValue<std::string>("dist");
+  const std::string patternFilename = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
   const int maxHeight = clp.getValue<int>("U", 32);
   const double period = clp.getValue<double>("p", 1);
 
-  std::ifstream in(infile, std::ios::binary);
+  std::ifstream in(infilename, std::ios::binary);
   if (!in.good())
-    throw std::invalid_argument("file not found -- '" + infile + "'");
+    throw std::invalid_argument("file not found -- '" + infilename + "'");
   typename FrankWolfeAssignmentT::InputGraph graph(in);
   in.close();
 
@@ -129,7 +131,7 @@ void assignTraffic(const CommandLineParser& clp) {
     graph.edgeId(e) = id++;
   }
 
-  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(odfile);
+  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(odFilename);
   if (ord == "random") {
     std::default_random_engine rand(clp.getValue<int>("s", 19900325));
     std::shuffle(odPairs.begin(), odPairs.end(), rand);
@@ -163,12 +165,12 @@ void assignTraffic(const CommandLineParser& clp) {
   }
 
   std::ofstream csv;
-  if (!csvfile.empty()) {
-    csv.open(csvfile + ".csv");
+  if (!csvFilename.empty()) {
+    csv.open(csvFilename + ".csv");
     if (!csv.good())
-      throw std::invalid_argument("file cannot be opened -- '" + csvfile + ".csv'");
-    csv << "# Input graph: " << infile << "\n";
-    csv << "# OD-pairs: " << odfile << "\n";
+      throw std::invalid_argument("file cannot be opened -- '" + csvFilename + ".csv'");
+    csv << "# Input graph: " << infilename << "\n";
+    csv << "# OD-pairs: " << odFilename << "\n";
     csv << "# Objective: " << (clp.isSet("so") ? "SO" : "UE") << "\n";
     csv << "# Function: " << clp.getValue<std::string>("f", "modified_davidson") << "\n";
     csv << "# Shortest-path algo: " << clp.getValue<std::string>("a", "dijkstra") << "\n";
@@ -181,15 +183,25 @@ void assignTraffic(const CommandLineParser& clp) {
     csv << std::flush;
   }
 
+  std::ofstream distanceFile;
+  if (!distFilename.empty()) {
+    distanceFile.open(distFilename + ".csv");
+    if (!distanceFile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + distFilename + ".csv'");
+    if (!csvFilename.empty())
+      distanceFile << "# Main file: " << csvFilename << ".csv\n";
+    distanceFile << "iteration,travel_cost\n";
+  }
+
   std::ofstream patternFile;
-  if (!outfile.empty()) {
-    patternFile.open(outfile + ".fp.bin", std::ios::binary);
+  if (!patternFilename.empty()) {
+    patternFile.open(patternFilename + ".fp.bin", std::ios::binary);
     if (!patternFile.good())
-      throw std::invalid_argument("file cannot be opened -- '" + outfile + ".fp.bin'");
+      throw std::invalid_argument("file cannot be opened -- '" + patternFilename + ".fp.bin'");
     bio::write(patternFile, period);
   }
 
-  FrankWolfeAssignmentT assign(graph, odPairs, csv, patternFile, clp.isSet("v"));
+  FrankWolfeAssignmentT assign(graph, odPairs, csv, distanceFile, patternFile, clp.isSet("v"));
 
   if (csv.is_open()) {
     csv << "# Preprocessing time: " << assign.stats.totalRunningTime << "ms\n";
