@@ -1,0 +1,179 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+PROG=Build/Release/Launchers/AssignTraffic
+INPUT_GRAPH=$1/Inputs/Graphs/Visum_Stuttgart.gr.bin
+OD_DIR=$1/Inputs/ODPairs/TA
+OUTPUT_DIR=$1/Experiments/FastTA/SEA18/TA
+DIST_DIR=$1/Experiments/FastTA/SEA18/TA/ODDistances
+FLOW_PATTERN=$1/Experiments/FastTA/SEA18/TA/FlowPatterns/Tue02h
+mkdir --parents $OUTPUT_DIR
+mkdir --parents $DIST_DIR
+mkdir --parents ${FLOW_PATTERN%/*}
+
+export OMP_NUM_THREADS=1
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+scons variant=Release def=TA_LOG_K=0 AssignTraffic
+$PROG -p 0.5 -n 12 -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/Dij_rand_Tue30m
+$PROG -p 1   -n 12 -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/Dij_rand_Tue01h
+$PROG -p 2   -n 12 -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/Dij_rand_Tue02h
+$PROG -p 24  -n 6  -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/Dij_rand_Tue24h
+$PROG -p 168 -n 6  -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/Dij_rand_MonSun
+
+$PROG -p 0.5 -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_rand_Tue30m
+$PROG -p 1   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_rand_Tue01h
+$PROG -p 2   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_rand_Tue02h
+$PROG -p 24  -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_rand_Tue24h
+$PROG -p 168 -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_rand_MonSun
+
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_sorted_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_sorted_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_sorted_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_sorted_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_sorted_MonSun
+
+scons variant=Release def=TA_LOG_K=2 def=TA_NO_SIMD_SEARCH AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k4_NoSIMD_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k4_NoSIMD_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k4_NoSIMD_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k4_NoSIMD_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k4_NoSIMD_MonSun
+
+scons variant=Release def=TA_LOG_K=2 AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k4_SSE_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k4_SSE_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k4_SSE_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k4_SSE_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k4_SSE_MonSun
+
+scons variant=Release def=TA_LOG_K=3 def=TA_NO_SIMD_SEARCH AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k8_NoSIMD_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k8_NoSIMD_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k8_NoSIMD_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k8_NoSIMD_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k8_NoSIMD_MonSun
+
+scons variant=Release def=TA_LOG_K=3 AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k8_SSE_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k8_SSE_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k8_SSE_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k8_SSE_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k8_SSE_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=3 AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k8_AVX_Tue30m
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k8_AVX_Tue01h
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k8_AVX_Tue02h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k8_AVX_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k8_AVX_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=4 AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k16_AVX_Tue30m
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k16_AVX_Tue02h
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k16_AVX_Tue01h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k16_AVX_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k16_AVX_MonSun
+
+scons variant=Release simd=avx AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k32_AVX_Tue30m
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k32_AVX_Tue02h
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k32_AVX_Tue01h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k32_AVX_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k32_AVX_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=6 AssignTraffic
+$PROG -p 0.5 -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_k64_AVX_Tue30m
+$PROG -p 2   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_k64_AVX_Tue02h
+$PROG -p 1   -n 12 -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_k64_AVX_Tue01h
+$PROG -p 24  -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_k64_AVX_Tue24h
+$PROG -p 168 -n 6  -a ch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_k64_AVX_MonSun
+
+scons variant=Release def=TA_LOG_K=0 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_rand_Tue30m
+$PROG -p 1   -n 12 -a cch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_rand_Tue01h
+$PROG -p 2   -n 12 -a cch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_rand_Tue02h
+$PROG -p 24  -n 6  -a cch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_rand_Tue24h
+$PROG -p 168 -n 6  -a cch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_rand_MonSun
+
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_sorted_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_sorted_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_sorted_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_sorted_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_sorted_MonSun
+
+scons variant=Release def=TA_LOG_K=2 def=TA_NO_SIMD_SEARCH AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k4_NoSIMD_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k4_NoSIMD_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k4_NoSIMD_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k4_NoSIMD_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k4_NoSIMD_MonSun
+
+scons variant=Release def=TA_LOG_K=2 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k4_SSE_Tue30m
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k4_SSE_Tue02h
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k4_SSE_Tue01h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k4_SSE_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k4_SSE_MonSun
+
+scons variant=Release def=TA_LOG_K=3 def=TA_NO_SIMD_SEARCH AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k8_NoSIMD_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k8_NoSIMD_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k8_NoSIMD_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k8_NoSIMD_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k8_NoSIMD_MonSun
+
+scons variant=Release def=TA_LOG_K=3 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k8_SSE_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k8_SSE_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k8_SSE_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k8_SSE_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k8_SSE_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=3 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k8_AVX_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k8_AVX_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k8_AVX_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k8_AVX_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k8_AVX_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=4 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k16_AVX_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k16_AVX_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k16_AVX_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k16_AVX_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k16_AVX_MonSun
+
+scons variant=Release simd=avx AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k32_AVX_MonSun
+
+scons variant=Release simd=avx def=TA_LOG_K=6 AssignTraffic
+$PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k64_AVX_Tue30m
+$PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k64_AVX_Tue01h
+$PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k64_AVX_Tue02h
+$PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k64_AVX_Tue24h
+$PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k64_AVX_MonSun
+
+scons variant=Release simd=avx AssignTraffic
+for ((numCores = 2; numCores <= 4; ++numCores)); do
+  export OMP_NUM_THREADS=$numCores
+  $PROG -p 0.5 -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue30m_${numCores}cores
+  $PROG -p 1   -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue01h_${numCores}cores
+  $PROG -p 2   -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue02h_${numCores}cores
+  $PROG -p 24  -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue24h_${numCores}cores
+  $PROG -p 168 -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k32_AVX_MonSun_${numCores}cores
+done
+
+$PROG -p 0.5 -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -dist $DIST_DIR/Tue30m
+$PROG -p 1   -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -dist $DIST_DIR/Tue01h
+$PROG -p 2   -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -dist $DIST_DIR/Tue02h
+$PROG -p 24  -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -dist $DIST_DIR/Tue24h
+$PROG -p 168 -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -dist $DIST_DIR/MonSun
+awk -F, -i inplace '$0 !~ /^[0-9]/ || $1 <= 15 || $1 == 300 { print }' $DIST_DIR/Tue30m.csv $DIST_DIR/Tue01h.csv $DIST_DIR/Tue02h.csv $DIST_DIR/Tue24h.csv $DIST_DIR/MonSun.csv
+
+$PROG -p 2 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -fp $FLOW_PATTERN

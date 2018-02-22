@@ -1,0 +1,24 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+BUILD_DIR=Build/Release/RawData
+INPUT_GRAPH=$3/Inputs/Graphs/Visum_Stuttgart.gr.bin
+OD_DIR=$3/Inputs/ODPairs/TA
+mkdir --parents ${INPUT_GRAPH%/*}
+mkdir --parents $OD_DIR
+
+scons variant=Release RawData
+$BUILD_DIR/ConvertGraph -s visum -d binary -scc -a capacity coordinate free_flow_speed lat_lng length num_lanes travel_time vertex_id -i $1 -o ${INPUT_GRAPH%%.*}
+$BUILD_DIR/ParseMobiTopp -g $INPUT_GRAPH -v $1 -o $OD_DIR/Visum_Stuttgart
+
+$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 07:30:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue30m.tmp
+$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 08:00:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue01h.tmp
+$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 09:00:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue02h.tmp
+$BUILD_DIR/ParseMobiTopp -ed Tue -et 00:00 -ld Tue -lt 23:59:59 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue24h.tmp
+$BUILD_DIR/ParseMobiTopp -ed Mon -et 00:00 -ld Sun -lt 23:59:59 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_MonSun.tmp
+
+$BUILD_DIR/ComputeDijkstraRanks -od $OD_DIR/Visum_Stuttgart_Tue30m.tmp.csv -g $INPUT_GRAPH -o $OD_DIR/Visum_Stuttgart_Tue30m
+$BUILD_DIR/ComputeDijkstraRanks -od $OD_DIR/Visum_Stuttgart_Tue01h.tmp.csv -g $INPUT_GRAPH -o $OD_DIR/Visum_Stuttgart_Tue01h
+$BUILD_DIR/ComputeDijkstraRanks -od $OD_DIR/Visum_Stuttgart_Tue02h.tmp.csv -g $INPUT_GRAPH -o $OD_DIR/Visum_Stuttgart_Tue02h
+$BUILD_DIR/ComputeDijkstraRanks -od $OD_DIR/Visum_Stuttgart_Tue24h.tmp.csv -g $INPUT_GRAPH -o $OD_DIR/Visum_Stuttgart_Tue24h
+$BUILD_DIR/ComputeDijkstraRanks -od $OD_DIR/Visum_Stuttgart_MonSun.tmp.csv -g $INPUT_GRAPH -o $OD_DIR/Visum_Stuttgart_MonSun
+rm $OD_DIR/*.tmp.csv

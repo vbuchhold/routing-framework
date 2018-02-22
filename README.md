@@ -2,8 +2,9 @@
 
 This repository contains the C++14 source code used in the following publications/submissions:
 
-* V. Buchhold, P. Sanders, D. Wagner. Faster Traffic Assignment in Road Networks.  
-  Submitted to the 20th Meeting on Algorithm Engineering and Experiments (ALENEX'18).
+* V. Buchhold, P. Sanders, D. Wagner. Real-Time Traffic Assignment Using Fast Queries in
+  Customizable Contraction Hierarchies. Submitted to the 17th International Symposium on
+  Experimental Algorithms (SEA'18).
 
 ## Prerequisites
 
@@ -41,19 +42,19 @@ Once you installed the packages, simply type `scons` at the top-level directory 
 $ scons
 ```
 
-## Experiments in *Faster Traffic Assignment in Road Networks*
+## Experiments in *Real-Time Traffic Assignment Using Fast Queries in Customizable Contraction Hierarchies*
 
-To get the version of the source code used in the publication, check out the `ALENEX18` tag:
+To get the version of the source code used in the publication, check out the `SEA18` tag:
 
 ```
-$ git checkout ALENEX18
+$ git checkout SEA18
 ```
 
 To run the experiments presented in the publication, enter the following commands at the top-level
 directory of the framework:
 
 ```
-$ cd Publications/FastTA/ALENEX18
+$ cd Publications/FastTA/SEA18
 $ ./PrepareP2P <path-to-xatf-data> ~
 $ ./PrepareTA <path-to-visum-data> <path-to-mobitopp-data> ~
 $ ./ConductP2P ~

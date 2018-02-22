@@ -1,0 +1,22 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+PROG=Build/Release/Launchers/RunP2PAlgo
+INPUT_GRAPH=$1/Inputs/Graphs/DIMACS_eur.gr.bin
+ORDER=$1/Inputs/Partitions/DIMACS_eur.nd30.ord.bin
+OD_DIR=$1/Inputs/ODPairs/P2P
+OUTPUT_DIR=$1/Experiments/FastTA/SEA18/P2P
+mkdir --parents $OUTPUT_DIR
+
+scons variant=Release RunP2PAlgo
+$PROG -a CH -ch $1/Inputs/CH/DIMACS_eur.time.ch.bin -od $OD_DIR/DIMACS_eur.time.rank.csv -o $OUTPUT_DIR/LocalQueries_time_CH
+$PROG -a CH -ch $1/Inputs/CH/DIMACS_eur.dist.ch.bin -od $OD_DIR/DIMACS_eur.dist.rank.csv -o $OUTPUT_DIR/LocalQueries_dist_CH
+
+$PROG -a CCH-Dij -s -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.time.rank.csv -o $OUTPUT_DIR/LocalQueries_time_CCHDij
+$PROG -a CCH-Dij -s -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.dist.rank.csv -o $OUTPUT_DIR/LocalQueries_dist_CCHDij -l
+
+$PROG -a CCH-tree -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.time.rank.csv -o $OUTPUT_DIR/LocalQueries_time_CCHTreeFast
+$PROG -a CCH-tree -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.dist.rank.csv -o $OUTPUT_DIR/LocalQueries_dist_CCHTreeFast -l
+
+scons variant=Release def=NO_FAST_ELIMINATION_TREE_QUERY RunP2PAlgo
+$PROG -a CCH-tree -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.time.rank.csv -o $OUTPUT_DIR/LocalQueries_time_CCHTree
+$PROG -a CCH-tree -g $INPUT_GRAPH -ord $ORDER -od $OD_DIR/DIMACS_eur.dist.rank.csv -o $OUTPUT_DIR/LocalQueries_dist_CCHTree -l

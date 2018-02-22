@@ -1,0 +1,20 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+BUILD_DIR=Build/Release
+INPUT_GRAPH=$2/Inputs/Graphs/DIMACS_eur.gr.bin
+ORDER=$2/Inputs/Partitions/DIMACS_eur
+CH=$2/Inputs/CH/DIMACS_eur
+OD_DIR=$2/Inputs/ODPairs/P2P
+mkdir --parents ${INPUT_GRAPH%/*}
+mkdir --parents ${ORDER%/*}
+mkdir --parents ${CH%/*}
+mkdir --parents $OD_DIR
+
+scons variant=Release
+$BUILD_DIR/RawData/ConvertGraph -s xatf -d binary -scc -a capacity lat_lng length num_lanes travel_time xatf_road_category -i $1 -o ${INPUT_GRAPH%%.*}
+$BUILD_DIR/Launchers/RunP2PAlgo -a CH -g $INPUT_GRAPH -o $CH
+$BUILD_DIR/Launchers/RunP2PAlgo -a CH -g $INPUT_GRAPH -o $CH -l
+$BUILD_DIR/Launchers/RunP2PAlgo -a CCH -b 30 -g $INPUT_GRAPH -o $ORDER
+
+$BUILD_DIR/RawData/GenerateODPairs -n 1000 -i $INPUT_GRAPH -o $OD_DIR/DIMACS_eur.time.rank -r {7..24}
+$BUILD_DIR/RawData/GenerateODPairs -n 1000 -i $INPUT_GRAPH -o $OD_DIR/DIMACS_eur.dist.rank -r {7..24} -len
