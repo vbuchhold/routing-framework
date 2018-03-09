@@ -18,7 +18,6 @@
 #include "Tools/Simd/AlignVector.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/Timer.h"
-#include "Tools/Workarounds.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
 // method). At its heart are iterative shortest-paths computations. The algo can be parameterized to
@@ -50,7 +49,7 @@ class FrankWolfeAssignment {
   // Assigns all OD-flows onto the input graph.
   void run(const int numIterations = 0, const std::vector<int>& samplingIntervals = {}) {
     assert(numIterations >= 0);
-    assert(samplingIntervals[0] > 0);
+    assert(samplingIntervals.empty() || samplingIntervals[0] > 0);
     for (int i = 1; i < samplingIntervals.size(); ++i) {
       assert(samplingIntervals[i] > 0);
       assert(samplingIntervals[i - 1] % samplingIntervals[i] == 0);
