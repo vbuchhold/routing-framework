@@ -49,6 +49,11 @@ class ProgressBar {
     print(stepsDone * 100l / numSteps);
   }
 
+  // Advances the progress bar to 100 %.
+  void finish() {
+    advanceTo(numSteps);
+  }
+
   // Advances the progress bar by one step.
   void operator++() {
     if (!verbose)

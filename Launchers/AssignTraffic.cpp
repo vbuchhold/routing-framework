@@ -116,7 +116,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string distFilename = clp.getValue<std::string>("dist");
   const std::string patternFilename = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
-  const int maxHeight = clp.getValue<int>("U", 32);
+  const int maxHeight = clp.getValue<int>("U", 16);
   const double period = clp.getValue<double>("p", 1);
 
   std::ifstream in(infilename, std::ios::binary);
