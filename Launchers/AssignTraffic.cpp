@@ -1,12 +1,15 @@
 #include <algorithm>
+#include <cassert>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
@@ -29,7 +32,6 @@
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
-#include "DataStructures/Utilities/UnionFind.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/BinaryIO.h"
 
@@ -50,7 +52,7 @@ void printUsage() {
       "  -ord <order>      the order of the OD-pairs\n"
       "                      possible values: random input (default) sorted\n"
       "  -s <seed>         start the random number generator with <seed>\n"
-      "  -U <num>          the maximum height of a subtree (used for ordering OD-pairs)\n"
+      "  -U <num>          the maximum diameter of a cell (used for ordering OD-pairs)\n"
       "  -si <intervals>   a blank-separated list of sampling intervals\n"
       "  -i <file>         the input graph in binary format\n"
       "  -od <file>        the OD-pairs to be assigned\n"
@@ -60,10 +62,20 @@ void printUsage() {
       "  -help             display this help and exit\n";
 }
 
+// An active vertex during a DFS, i.e., a vertex that has been reached but not finished.
+struct ActiveVertex {
+  // Constructs an active vertex.
+  ActiveVertex(const int id, const int nextUnexploredEdge)
+      : id(id), nextUnexploredEdge(nextUnexploredEdge) {}
+
+  int id;                 // The ID of this active vertex.
+  int nextUnexploredEdge; // The next unexplored incident edge.
+};
+
 // Assigns origin and destination zones to OD-pairs based on a partition of the elimination tree.
 template <typename GraphT>
 inline void assignZonesToODPairs(
-    std::vector<ClusteredOriginDestination>& odPairs, const GraphT& inGraph, const int maxHeight) {
+    std::vector<ClusteredOriginDestination>& odPairs, const GraphT& inGraph, const int maxDiam) {
   // Convert the input graph to RoutingKit's graph representation.
   const int numVertices = inGraph.numVertices();
   std::vector<float> lats(numVertices);
@@ -88,19 +100,57 @@ inline void assignZonesToODPairs(
   const auto cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
   std::vector<int> tree(cch.elimination_tree_parent.begin(), cch.elimination_tree_parent.end());
 
+  // Build the elimination out-tree from the elimination in-tree.
+  std::vector<int> firstChild(numVertices + 1);
+  std::vector<int> children(numVertices - 1);
+  for (int v = 0; v < numVertices - 1; ++v)
+    ++firstChild[tree[v]];
+  int first = 0; // The index of the first edge out of the current/next vertex.
+  for (int v = 0; v <= numVertices; ++v) {
+    std::swap(first, firstChild[v]);
+    first += firstChild[v];
+  }
+  for (int v = 0; v < numVertices - 1; ++v)
+    children[firstChild[tree[v]]++] = v;
+  for (int v = numVertices - 1; v > 0; --v)
+    firstChild[v] = firstChild[v - 1];
+  firstChild.front() = 0;
+
   // Decompose the elimination tree into as few cells with bounded diameter as possible.
-  UnionFind partition(numVertices);
-  std::vector<int> height(numVertices, 0); // height[v] is the height of the subtree rooted at v.
-  for (int i = 0; i != numVertices - 1; ++i)
-    if (height[i] < maxHeight) {
-      partition.unite(i, tree[i]);
-      height[tree[i]] = std::max(height[tree[i]], height[i] + 1);
-    }
+  boost::dynamic_bitset<> isRoot(numVertices);
+  std::vector<int> height(numVertices); // height[v] is the height of the subtree rooted at v.
+  for (int v = 0; v < numVertices; ++v) {
+    const int first = firstChild[v];
+    const int last = firstChild[v + 1];
+    std::sort(children.begin() + first, children.begin() + last, [&](const int u, const int v) {
+      assert(u >= 0); assert(u < height.size());
+      assert(v >= 0); assert(v < height.size());
+      return height[u] < height[v];
+    });
+    for (int i = first; i < last; ++i)
+      if (height[v] + 1 + height[children[i]] <= maxDiam)
+        height[v] = 1 + height[children[i]];
+      else
+        isRoot[children[i]] = true;
+  }
+
+  // Number the cells in the order in which they are discovered during a DFS from the root.
+  int freeCellId = 1; // The next free cell ID.
+  std::vector<int> cellId(numVertices);
+  std::stack<ActiveVertex, std::vector<ActiveVertex>> activeVertices;
+  activeVertices.emplace(numVertices - 1, firstChild[numVertices - 1]);
+  while (!activeVertices.empty()) {
+    auto &v = activeVertices.top();
+    const int head = children[v.nextUnexploredEdge];
+    ++v.nextUnexploredEdge;
+    cellId[order[head]] = isRoot[head] ? freeCellId++ : cellId[order[v.id]];
+    if (v.nextUnexploredEdge == firstChild[v.id + 1])
+      activeVertices.pop();
+    if (firstChild[head] != firstChild[head + 1])
+      activeVertices.emplace(head, firstChild[head]);
+  }
 
   // Assign origin and destination zones to OD-pairs.
-  std::vector<int> cellId(numVertices);
-  for (int i = 0; i != numVertices; ++i)
-    cellId[order[i]] = partition.find(i);
   for (auto& od : odPairs) {
     od.originZone = cellId[od.origin];
     od.destinationZone = cellId[od.destination];
@@ -116,7 +166,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string distFilename = clp.getValue<std::string>("dist");
   const std::string patternFilename = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
-  const int maxHeight = clp.getValue<int>("U", 16);
+  const int maxDiam = clp.getValue<int>("U", 40);
   const double period = clp.getValue<double>("p", 1);
 
   std::ifstream in(infilename, std::ios::binary);
@@ -136,7 +186,7 @@ void assignTraffic(const CommandLineParser& clp) {
     std::default_random_engine rand(clp.getValue<int>("s", 19900325));
     std::shuffle(odPairs.begin(), odPairs.end(), rand);
   } else if (ord == "sorted") {
-    assignZonesToODPairs(odPairs, graph, maxHeight);
+    assignZonesToODPairs(odPairs, graph, maxDiam);
     std::sort(odPairs.begin(), odPairs.end());
   } else if (ord != "input") {
     throw std::invalid_argument("invalid order -- '" + ord + "'");
