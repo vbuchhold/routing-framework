@@ -2,9 +2,10 @@
 
 This repository contains the C++14 source code used in the following publications/submissions:
 
-* V. Buchhold, P. Sanders, D. Wagner. Real-Time Traffic Assignment Using Fast Queries in
-  Customizable Contraction Hierarchies. Submitted to the 17th International Symposium on
-  Experimental Algorithms (SEA'18).
+* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-Time Traffic Assignment Using Fast
+  Queries in Customizable Contraction Hierarchies. In *Proceedings of the 17th International
+  Symposium on Experimental Algorithms (SEA'18)*, pages 27:1–27:15, 2018.
+  [doi:10.4230/LIPIcs.SEA.2018.27](http://dx.doi.org/10.4230/LIPIcs.SEA.2018.27).
 
 ## Prerequisites
 
