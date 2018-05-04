@@ -16,7 +16,6 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/FrankWolfeAssignmentStats.h"
 #include "Tools/Simd/AlignVector.h"
-#include "Tools/BinaryIO.h"
 #include "Tools/Timer.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
@@ -110,7 +109,8 @@ class FrankWolfeAssignment {
         distanceFile << substats.numIterations << ',' << dist << '\n';
 
     if (patternFile.is_open())
-      bio::write(patternFile, trafficFlows);
+      for (const auto flow : trafficFlows)
+        patternFile << substats.numIterations << ',' << flow << '\n';
 
     if (verbose) {
       std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";
@@ -211,7 +211,8 @@ class FrankWolfeAssignment {
           distanceFile << substats.numIterations << ',' << dist << '\n';
 
       if (patternFile.is_open())
-        bio::write(patternFile, trafficFlows);
+        for (const auto flow : trafficFlows)
+          patternFile << substats.numIterations << ',' << flow << '\n';
 
       if (verbose) {
         std::cout << "  Line search: " << stats.lastLineSearchTime << "ms";

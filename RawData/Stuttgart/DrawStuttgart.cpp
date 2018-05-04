@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -23,7 +24,6 @@
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "Tools/CommandLine/CommandLineParser.h"
-#include "Tools/BinaryIO.h"
 #include "Tools/Constants.h"
 #include "Visualization/Graphics/PdfGraphic.h"
 #include "Visualization/Graphics/PngGraphic.h"
@@ -43,6 +43,7 @@ void printUsage() {
       "                      possible values: pdf png (default) svg\n"
       "  -w <cm>           width in cm of the graphic (defaults to 14)\n"
       "  -h <cm>           height in cm of the graphic (defaults to 14)\n"
+      "  -a <hrs>          analysis period in hours (defaults to 1.0)\n"
       "  -g <file>         network of Stuttgart in binary format\n"
       "  -v <file>         Visum file that contains polylines representing edges\n"
       "  -p <file>         flow pattern file resulting from traffic assignment\n"
@@ -83,7 +84,7 @@ int main(int argc, char* argv[]) {
       return EXIT_SUCCESS;
     }
 
-    // Read the network of Stuttgart from disk.
+    // Read the network of Stuttgart from file.
     const std::string graphFilename = clp.getValue<std::string>("g");
     std::ifstream graphFile(graphFilename, std::ios::binary);
     if (!graphFile.good())
@@ -109,14 +110,15 @@ int main(int argc, char* argv[]) {
     scc.run(graph);
     graph.extractVertexInducedSubgraph(scc.getLargestSccAsBitmask());
 
-    // Read the edge polylines from disk.
+    // Read the edge polylines from file.
     EdgePolylineMap edgePolylines;
-    std::pair<int, int> edge, prevEdge = {INVALID_ID, INVALID_ID};
+    std::pair<int, int> edge;
     int idx;
     Point coordinate;
+    std::pair<int, int> prevEdge = {INVALID_ID, INVALID_ID};
     const std::string visumFilename = clp.getValue<std::string>("v");
     io::CSVReader<5, io::trim_chars<>, io::no_quote_escape<';'>> visumFile(visumFilename);
-    const io::ignore_column ignore = io::ignore_extra_column;
+    const auto ignore = io::ignore_extra_column;
     visumFile.read_header(ignore, "VONKNOTNR", "NACHKNOTNR", "INDEX", "XKOORD", "YKOORD");
     while (visumFile.read_row(edge.first, edge.second, idx, coordinate.getX(), coordinate.getY())) {
       if (edge.first < 0 || edge.second < 0)
@@ -125,18 +127,18 @@ int main(int argc, char* argv[]) {
         if (idx != 1)
           throw std::invalid_argument("Visum file corrupt");
         if (prevEdge.first > prevEdge.second) {
-          std::vector<Point>& prev = edgePolylines[{prevEdge.second, prevEdge.first}];
+          auto& prev = edgePolylines[{prevEdge.second, prevEdge.first}];
           std::reverse(prev.begin(), prev.end());
         }
         prevEdge = edge;
       }
-      std::vector<Point>& polyline = edgePolylines[std::minmax(edge.first, edge.second)];
+      auto& polyline = edgePolylines[std::minmax(edge.first, edge.second)];
       polyline.push_back(coordinate);
       if (polyline.size() != idx)
         throw std::invalid_argument("Visum file corrupt");
     }
     if (prevEdge.first > prevEdge.second) {
-      std::vector<Point>& prev = edgePolylines[{prevEdge.second, prevEdge.first}];
+      auto& prev = edgePolylines[{prevEdge.second, prevEdge.first}];
       std::reverse(prev.begin(), prev.end());
     }
 
@@ -171,26 +173,31 @@ int main(int argc, char* argv[]) {
       FORALL_VALID_EDGES(graph, u, e)
         drawEdge(pd, LineWidth::VERY_THIN, graph, edgePolylines, u, e);
     } else {
-      // Read the pattern file from disk.
-      const std::string patternFilename = clp.getValue<std::string>("p");
-      std::ifstream patternFile(patternFilename, std::ios::binary);
-      if (!patternFile.good())
-        throw std::invalid_argument("file not found -- '" + patternFilename + "'");
-      double analysisPeriod;
-      bio::read(patternFile, analysisPeriod);
+      // Read the pattern file into memory.
       std::vector<std::vector<double>> flowPatterns;
-      while (patternFile.peek() != std::ofstream::traits_type::eof()) {
-        flowPatterns.emplace_back();
-        bio::read(patternFile, flowPatterns.back());
-        for (auto flow : flowPatterns.back())
-          if (flow < 0)
+      int iteration;
+      double flow;
+      int prevIteration = 0;
+      io::CSVReader<
+          2, io::trim_chars<>, io::no_quote_escape<','>, io::throw_on_overflow,
+          io::single_line_comment<'#'>> patternFile(clp.getValue<std::string>("p"));
+      patternFile.read_header(io::ignore_no_column, "iteration", "traffic_flow");
+      while (patternFile.read_row(iteration, flow)) {
+        if (iteration <= 0 || flow < 0)
+          throw std::invalid_argument("pattern file corrupt");
+        if (iteration != prevIteration) {
+          if (!flowPatterns.empty() && flowPatterns.back().size() != 307759)
             throw std::invalid_argument("pattern file corrupt");
+          flowPatterns.emplace_back();
+          ++prevIteration;
+        }
+        flowPatterns.back().push_back(flow);
       }
-      patternFile.close();
 
-      // Scale segment capacities according to the period of analysis.
+      // Scale segment capacities according to the analysis period.
+      const double period = clp.getValue<double>("a", 1.0);
       FORALL_EDGES(graph, e)
-        graph.capacity(e) = std::max(std::round(analysisPeriod * graph.capacity(e)), 1.0);
+        graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0);
 
       // Draw the flow pattern after each iteration on a separate graphic.
       std::array<std::vector<std::pair<int, int>>, REDS_9CLASS.size() - 1> congestionLevels;

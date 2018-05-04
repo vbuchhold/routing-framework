@@ -33,7 +33,6 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
-#include "Tools/BinaryIO.h"
 
 void printUsage() {
   std::cout <<
@@ -163,7 +162,7 @@ void assignTraffic(const CommandLineParser& clp) {
   const std::string infilename = clp.getValue<std::string>("i");
   const std::string odFilename = clp.getValue<std::string>("od");
   const std::string csvFilename = clp.getValue<std::string>("o");
-  const std::string distFilename = clp.getValue<std::string>("dist");
+  const std::string distanceFilename = clp.getValue<std::string>("dist");
   const std::string patternFilename = clp.getValue<std::string>("fp");
   const std::string ord = clp.getValue<std::string>("ord", "input");
   const int maxDiam = clp.getValue<int>("U", 40);
@@ -234,10 +233,10 @@ void assignTraffic(const CommandLineParser& clp) {
   }
 
   std::ofstream distanceFile;
-  if (!distFilename.empty()) {
-    distanceFile.open(distFilename + ".csv");
+  if (!distanceFilename.empty()) {
+    distanceFile.open(distanceFilename + ".csv");
     if (!distanceFile.good())
-      throw std::invalid_argument("file cannot be opened -- '" + distFilename + ".csv'");
+      throw std::invalid_argument("file cannot be opened -- '" + distanceFilename + ".csv'");
     if (!csvFilename.empty())
       distanceFile << "# Main file: " << csvFilename << ".csv\n";
     distanceFile << "iteration,travel_cost\n";
@@ -245,10 +244,12 @@ void assignTraffic(const CommandLineParser& clp) {
 
   std::ofstream patternFile;
   if (!patternFilename.empty()) {
-    patternFile.open(patternFilename + ".fp.bin", std::ios::binary);
+    patternFile.open(patternFilename + ".csv");
     if (!patternFile.good())
-      throw std::invalid_argument("file cannot be opened -- '" + patternFilename + ".fp.bin'");
-    bio::write(patternFile, period);
+      throw std::invalid_argument("file cannot be opened -- '" + patternFilename + ".csv'");
+    if (!csvFilename.empty())
+      patternFile << "# Main file: " << csvFilename << ".csv\n";
+    patternFile << "iteration,traffic_flow\n";
   }
 
   FrankWolfeAssignmentT assign(graph, odPairs, csv, distanceFile, patternFile, clp.isSet("v"));
