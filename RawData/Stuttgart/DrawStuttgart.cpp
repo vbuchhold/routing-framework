@@ -15,7 +15,11 @@
 #include <csv.h>
 
 #include "Algorithms/GraphTraversal/StronglyConnectedComponents.h"
+#include "DataStructures/Geometry/Area.h"
+#include "DataStructures/Geometry/CoordinateConversion.h"
+#include "DataStructures/Geometry/LatLng.h"
 #include "DataStructures/Geometry/Point.h"
+#include "DataStructures/Geometry/Polygon.h"
 #include "DataStructures/Geometry/Rectangle.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
@@ -23,6 +27,7 @@
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/Constants.h"
 #include "Visualization/Graphics/PdfGraphic.h"
@@ -34,11 +39,11 @@
 
 void printUsage() {
   std::cout <<
-      "Usage: DrawStuttgart [-bb <box>] -g <file> -v <file> [-p <file>] -o <file>\n"
-      "This program visualizes the metropolitan area of Stuttgart and flow patterns\n"
-      "throughout its network.\n"
-      "  -bb <box>         bounding box of the printed region\n"
-      "                      possible values: inner outer (default)\n"
+      "Usage: DrawStuttgart -g <file> -v <file> -p <file> -b <file> -d <file> -o <file>\n"
+      "Visualize the metropolitan area of Stuttgart, flow patterns throughout its\n"
+      "network, and travel demand data.\n"
+      "  -c <box>          clip the output to <box>\n"
+      "                      possible values: small normal large (default)\n"
       "  -f <fmt>          file format of the graphic\n"
       "                      possible values: pdf png (default) svg\n"
       "  -w <cm>           width in cm of the graphic (defaults to 14)\n"
@@ -47,6 +52,8 @@ void printUsage() {
       "  -g <file>         network of Stuttgart in binary format\n"
       "  -v <file>         Visum file that contains polylines representing edges\n"
       "  -p <file>         flow pattern file resulting from traffic assignment\n"
+      "  -b <file>         boundary in OSM POLY format\n"
+      "  -d <file>         travel demand file that contains the OD-pairs\n"
       "  -o <file>         place the output in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -84,6 +91,18 @@ int main(int argc, char* argv[]) {
       return EXIT_SUCCESS;
     }
 
+    // Select the bounding box to be used as clipping path.
+    Rectangle boundingBox;
+    const std::string box = clp.getValue<std::string>("c", "large");
+    if (box == "small")
+      boundingBox = {{3502933, 5394965}, {3523284, 5414346}};
+    else if (box == "normal")
+      boundingBox = {{3481370, 5373316}, {3573272, 5438087}};
+    else if (box == "large")
+      boundingBox = {{3419985, 5322402}, {3606696, 5476854}};
+    else
+      throw std::invalid_argument("invalid bounding box -- '" + box + "'");
+
     // Read the network of Stuttgart from file.
     const std::string graphFilename = clp.getValue<std::string>("g");
     std::ifstream graphFile(graphFilename, std::ios::binary);
@@ -96,6 +115,7 @@ int main(int argc, char* argv[]) {
     int id = 0;
     FORALL_EDGES(graph, e)
       graph.edgeId(e) = id++;
+    const std::vector<Point> origCoordinates(&graph.coordinate(0), &graph.coordinate(134662) + 1);
 
     // Cut off the highways to Basle, Frankfurt, Zurich, Nuremberg, and Munich.
     boost::dynamic_bitset<> bitmask(graph.numVertices());
@@ -142,16 +162,6 @@ int main(int argc, char* argv[]) {
       std::reverse(prev.begin(), prev.end());
     }
 
-    // Select the bounding box of the printed region.
-    Rectangle boundingBox;
-    const std::string box = clp.getValue<std::string>("bb", "outer");
-    if (box == "inner")
-      boundingBox = {{3502933, 5394965}, {3523284, 5414346}};
-    else if (box == "outer")
-      boundingBox = {{3419985, 5322402}, {3606696, 5476854}};
-    else
-      throw std::invalid_argument("invalid bounding box -- '" + box + "'");
-
     // Create a graphic of the specified type.
     std::unique_ptr<Graphic> graphic;
     const std::string fmt = clp.getValue<std::string>("f", "png");
@@ -170,8 +180,34 @@ int main(int argc, char* argv[]) {
     PrimitiveDrawer pd(graphic.get());
     if (!clp.isSet("p")) {
       // Draw only the network, without any traffic flows.
+      if (clp.isSet("b"))
+        pd.setColor({217, 217, 217});
       FORALL_VALID_EDGES(graph, u, e)
         drawEdge(pd, LineWidth::VERY_THIN, graph, edgePolylines, u, e);
+      pd.setLineWidth(LineWidth::THIN);
+
+      if (clp.isSet("b")) {
+        // Draw the boundary.
+        pd.setColor(KIT_BLACK);
+        CoordinateConversion conv(CoordinateConversion::DHDN_GAUSS_KRUGER_ZONE_3);
+        Area area;
+        area.importFromOsmPolyFile(clp.getValue<std::string>("b"));
+        for (auto& face : area) {
+          Polygon polygon;
+          for (const auto& vertex : face)
+            polygon.add(conv.convert(LatLng(vertex.getY(), vertex.getX())));
+          assert(polygon.simple());
+          pd.drawPolygon(polygon);
+        }
+      }
+
+      if (clp.isSet("d")) {
+        // Draw the travel demand data, each OD-pair as a straight line.
+        pd.setColor({0, 150, 130, 7});
+        const auto odPairs = importODPairsFrom(clp.getValue<std::string>("d"));
+        for (const auto& od : odPairs)
+          pd.drawLine(origCoordinates[od.origin], origCoordinates[od.destination]);
+      }
     } else {
       // Read the pattern file into memory.
       std::vector<std::vector<double>> flowPatterns;

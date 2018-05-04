@@ -21,6 +21,20 @@
 // read from and written to OSM POLY files.
 class Area {
  public:
+  // Iterators referring to faces of the area.
+  using Iterator = std::vector<Polygon>::iterator;
+  using ConstIterator = std::vector<Polygon>::const_iterator;
+
+  // Returns an iterator referring to the first face of the area.
+  ConstIterator begin() const {
+    return faces.begin();
+  }
+
+  // Returns an iterator which is the past-the-end value for the area.
+  ConstIterator end() const {
+    return faces.end();
+  }
+
   // Returns true if p is inside the boundary of this area.
   bool contains(const Point& p) const {
     for (auto face = faces.rbegin(); face != faces.rend(); ++face)
