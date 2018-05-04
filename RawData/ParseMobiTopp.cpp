@@ -12,7 +12,6 @@
 #include <csv.h>
 
 #include "DataStructures/Geometry/Area.h"
-#include "DataStructures/Geometry/Rectangle.h"
 #include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "RawData/Visum/ZonePolygons.h"
@@ -25,15 +24,16 @@
 void printUsage() {
   std::cout <<
       "Usage: ParseMobiTopp -g <file> -v <file> -o <file>\n"
-      "       ParseMobiTopp [-s <seed>] -g <file> -vs <file> -od <file> -o <file>\n"
-      "This program extracts all OD-pairs between traffic zones from a given mobiTopp\n"
-      "file that lie in a selected analysis period and translates the zone IDs into\n"
-      "vertex IDs in the corresponding graph.\n"
+      "       ParseMobiTopp [-r] [-s <seed>] -g <file> -vs <file> -od <file> -o <file>\n"
+      "Extract all OD-pairs between traffic zones from a given mobiTopp file that lie\n"
+      "in a selected period of analysis and translate the zone IDs into vertex IDs in\n"
+      "the corresponding graph.\n"
+      "  -r                restrict the origins/destinations to the area under study\n"
       "  -s <seed>         start the random number generator with <seed>\n"
       "  -m <mode>         extract OD-pairs that use <mode> (defaults to 'MIV')\n"
-      "  -ed <day>         earliest day of departure such as 'Di'\n"
+      "  -ed <day>         earliest day of departure such as 'Tue'\n"
       "  -et <HH:mm:ss>    earliest departure time such as 07:00:00\n"
-      "  -ld <day>         latest day of departure such as 'Di'\n"
+      "  -ld <day>         latest day of departure such as 'Tue'\n"
       "  -lt <HH:mm:ss>    latest departure time such as 09:00:00\n"
       "  -g <file>         corresponding graph in binary format\n"
       "  -v <file>         directory containing Visum files managing the zone polygons\n"
@@ -69,7 +69,7 @@ inline void computeVertexSets(const CommandLineParser& clp) {
 
   std::vector<std::vector<int>> zoneVertexSets;
   for (const auto& surface : zoneSurfaces) {
-    const Rectangle box = surface.second.boundingBox();
+    const auto box = surface.second.boundingBox();
     zoneVertexSets.emplace_back();
     FORALL_VERTICES(graph, v)
       if (box.contains(graph.coordinate(v)) && surface.second.contains(graph.coordinate(v)))
@@ -92,6 +92,7 @@ inline void computeVertexSets(const CommandLineParser& clp) {
 
 // Extracts selected OD-pairs from a mobiTopp file.
 inline void extractODPairs(const CommandLineParser& clp) {
+  const bool restrictTrips = clp.isSet("r");
   const int seed = clp.getValue<int>("s", 19900325);
   const std::string selectedMode = clp.getValue<std::string>("m", "MIV");
   const std::string earliestDay = clp.getValue<std::string>("ed");
@@ -128,7 +129,6 @@ inline void extractODPairs(const CommandLineParser& clp) {
   std::vector<std::vector<int>> zoneVertexSets(numZones);
   for (auto& vertexSet : zoneVertexSets)
     bio::read(in, vertexSet);
-
   in.close();
   std::cout << " done." << std::endl;
 
@@ -164,15 +164,20 @@ inline void extractODPairs(const CommandLineParser& clp) {
     if (destinationZone[0] != 'Z')
       throw std::domain_error("invalid zone ID -- '" + std::string(destinationZone) + "'");
 
-    int oZoneId = origToSeqZoneIds[lexicalCast<int>(++originZone)];
-    int dZoneId = origToSeqZoneIds[lexicalCast<int>(++destinationZone)];
-    if (oZoneId-- == 0)
+    const int origOZoneId = lexicalCast<int>(++originZone);
+    const int origDZoneId = lexicalCast<int>(++destinationZone);
+    if (restrictTrips && (origOZoneId > 66102 || origDZoneId > 66102))
+      continue;
+
+    int seqOZoneId = origToSeqZoneIds[origOZoneId];
+    int seqDZoneId = origToSeqZoneIds[origDZoneId];
+    if (seqOZoneId-- == 0)
       throw std::domain_error("zone not found -- '" + std::string(originZone) + "'");
-    if (dZoneId-- == 0)
+    if (seqDZoneId-- == 0)
       throw std::domain_error("zone not found -- '" + std::string(destinationZone) + "'");
 
-    const std::vector<int>& originVertexSet = zoneVertexSets[oZoneId];
-    const std::vector<int>& destinationVertexSet = zoneVertexSets[dZoneId];
+    const std::vector<int>& originVertexSet = zoneVertexSets[seqOZoneId];
+    const std::vector<int>& destinationVertexSet = zoneVertexSets[seqDZoneId];
     if (originVertexSet.size() == 0 || destinationVertexSet.size() == 0)
       continue;
 
@@ -180,7 +185,7 @@ inline void extractODPairs(const CommandLineParser& clp) {
     std::uniform_int_distribution<> destinationDist(0, destinationVertexSet.size() - 1);
     const int o = originVertexSet[originDist(rand)];
     const int d = destinationVertexSet[destinationDist(rand)];
-    out << o << ',' << d << ',' << oZoneId << ',' << dZoneId << ',' << departure << std::endl;
+    out << o << ',' << d << ',' << seqOZoneId << ',' << seqDZoneId << ',' << departure << std::endl;
   }
   std::cout << " done." << std::endl;
 }
