@@ -1,25 +1,26 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <stdexcept>
 #include <string>
 
 #include <csv.h>
 
-#include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "Algorithms/CH/CHQuery.h"
+#include "Algorithms/CH/ContractionHierarchy.h"
+#include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
-#include "Experiments/ODPairGenerator.h"
+#include "DataStructures/Labels/BasicLabelSet.h"
+#include "DataStructures/Labels/ParentInfo.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 
 void printUsage() {
   std::cout <<
-      "Usage: ComputeDijkstraRanks [-l] -od <file> -g <file> -o <file>\n"
-      "Compute Dijkstra ranks for given OD-pairs.\n"
-      "  -l                compute ranks wrt physical lengths (default: travel times)\n"
+      "Usage: ComputeDistances -od <file> -ch <file> -o <file>\n"
+      "Compute distances for given OD-pairs.\n"
       "  -od <file>        input OD-file\n"
-      "  -g <file>         input graph in binary format\n"
+      "  -ch <file>        input CH in binary format\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -33,21 +34,17 @@ int main(int argc, char* argv[]) {
     }
 
     const std::string odFilename = clp.getValue<std::string>("od");
-    const std::string graphFilename = clp.getValue<std::string>("g");
+    const std::string chFilename = clp.getValue<std::string>("ch");
     const std::string outfilename = clp.getValue<std::string>("o");
 
-    // Read the graph from file.
-    using Graph = StaticGraph<VertexAttrs<>, EdgeAttrs<LengthAttribute, TravelTimeAttribute>>;
-    std::ifstream graphFile(graphFilename, std::ios::binary);
-    if (!graphFile.good())
-      throw std::invalid_argument("file not found -- '" + graphFilename + "'");
-    Graph graph(graphFile);
-    graphFile.close();
-
-    if (clp.isSet("l"))
-      // Compute Dijkstra ranks wrt physical lengths.
-      FORALL_EDGES(graph, e)
-        graph.travelTime(e) = graph.length(e);
+    // Read the CH from file.
+    using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, TravelTimeAttribute>>;
+    using CH = ContractionHierarchy<CHGraph, TravelTimeAttribute>;
+    std::ifstream chFile(chFilename, std::ios::binary);
+    if (!chFile.good())
+      throw std::invalid_argument("file not found -- '" + chFilename + "'");
+    CH ch(chFile);
+    chFile.close();
 
     // Copy the comment lines at the beginning of the input OD-file into the output OD-file.
     std::ifstream in(odFilename);
@@ -71,33 +68,33 @@ int main(int argc, char* argv[]) {
     io::CSVReader<6, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy> csv(odFilename);
     csv.read_header(
         io::ignore_extra_column | io::ignore_missing_column,
-        "origin", "destination", "origin_zone", "destination_zone", "departure", "distance");
+        "origin", "destination", "origin_zone", "destination_zone", "departure", "dijkstra_rank");
     if (!csv.has_column("origin") || !csv.has_column("destination"))
       throw std::invalid_argument("OD-file corrupt");
     if (csv.has_column("origin_zone") != csv.has_column("destination_zone"))
       throw std::invalid_argument("OD-file corrupt");
     const bool hasZones = csv.has_column("origin_zone");
     const bool hasDep = csv.has_column("departure");
-    const bool hasDist = csv.has_column("distance");
+    const bool hasRank = csv.has_column("dijkstra_rank");
 
     // Write the header line to the output OD-file.
     out << "origin,destination";
     if (hasZones) out << ",origin_zone,destination_zone";
     if (hasDep) out << ",departure";
-    out << ",dijkstra_rank";
-    if (hasDist) out << ",distance";
+    if (hasRank) out << ",dijkstra_rank";
+    out << ",distance";
     out << '\n';
 
-    // Compute the Dijkstra rank for each OD-pair.
-    std::default_random_engine rand;
-    ODPairGenerator<Graph, TravelTimeAttribute> gen(graph, rand);
-    int origin, destination, originZone, destinationZone, dep, dist;
-    while (csv.read_row(origin, destination, originZone, destinationZone, dep, dist)) {
+    // Compute the distance for each OD-pair.
+    StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
+    int origin, destination, originZone, destinationZone, dep, rank;
+    while (csv.read_row(origin, destination, originZone, destinationZone, dep, rank)) {
+      chSearch.run(ch.rank(origin), ch.rank(destination));
       out << origin << ',' << destination;
       if (hasZones) out << ',' << originZone << ',' << destinationZone;
       if (hasDep) out << ',' << dep;
-      out << ',' << gen.getDijkstraRankFor({origin, destination});
-      if (hasDist) out << ',' << dist;
+      if (hasRank) out << ',' << rank;
+      out << ',' << chSearch.getDistance();
       out << '\n';
     }
   } catch (std::exception& e) {
