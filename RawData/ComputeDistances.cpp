@@ -3,23 +3,27 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <csv.h>
 
 #include "Algorithms/CH/CHQuery.h"
 #include "Algorithms/CH/ContractionHierarchy.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
+#include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/Constants.h"
 
 void printUsage() {
   std::cout <<
-      "Usage: ComputeDistances -od <file> -ch <file> -o <file>\n"
+      "Usage: ComputeDistances -od <file> -g <file> -ch <file> -o <file>\n"
       "Compute distances for given OD-pairs.\n"
       "  -od <file>        input OD-file\n"
+      "  -g <file>         input graph in binary format\n"
       "  -ch <file>        input CH in binary format\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
@@ -34,8 +38,17 @@ int main(int argc, char* argv[]) {
     }
 
     const std::string odFilename = clp.getValue<std::string>("od");
+    const std::string graphFilename = clp.getValue<std::string>("g");
     const std::string chFilename = clp.getValue<std::string>("ch");
     const std::string outfilename = clp.getValue<std::string>("o");
+
+    // Read the graph from file.
+    using Graph = StaticGraph<VertexAttrs<SequentialVertexIdAttribute>>;
+    std::ifstream graphFile(graphFilename, std::ios::binary);
+    if (!graphFile.good())
+      throw std::invalid_argument("file not found -- '" + graphFilename + "'");
+    Graph graph(graphFile);
+    graphFile.close();
 
     // Read the CH from file.
     using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, TravelTimeAttribute>>;
@@ -45,6 +58,20 @@ int main(int argc, char* argv[]) {
       throw std::invalid_argument("file not found -- '" + chFilename + "'");
     CH ch(chFile);
     chFile.close();
+
+    // Build a map to translate an original into a local vertex identifier.
+    std::vector<int> origToLocalId(graph.numVertices(), INVALID_VERTEX);
+    if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX) {
+      FORALL_VERTICES(graph, v)
+        origToLocalId[v] = v;
+    } else {
+      FORALL_VERTICES(graph, v) {
+        const int origId = graph.sequentialVertexId(v);
+        if (origToLocalId.size() < origId + 1)
+          origToLocalId.resize(origId + 1, INVALID_VERTEX);
+        origToLocalId[origId] = v;
+      }
+    }
 
     // Copy the comment lines at the beginning of the input OD-file into the output OD-file.
     std::ifstream in(odFilename);
@@ -89,7 +116,7 @@ int main(int argc, char* argv[]) {
     StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
     int origin, destination, originZone, destinationZone, dep, rank;
     while (csv.read_row(origin, destination, originZone, destinationZone, dep, rank)) {
-      chSearch.run(ch.rank(origin), ch.rank(destination));
+      chSearch.run(ch.rank(origToLocalId[origin]), ch.rank(origToLocalId[destination]));
       out << origin << ',' << destination;
       if (hasZones) out << ',' << originZone << ',' << destinationZone;
       if (hasDep) out << ',' << dep;

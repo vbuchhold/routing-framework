@@ -6,7 +6,11 @@
 #include <string>
 #include <vector>
 
+#include <boost/dynamic_bitset.hpp>
+
 #include "Algorithms/GraphTraversal/StronglyConnectedComponents.h"
+#include "DataStructures/Geometry/Area.h"
+#include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
 #include "DataStructures/Graph/Attributes/FreeFlowSpeedAttribute.h"
@@ -15,6 +19,7 @@
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
 #include "DataStructures/Graph/Attributes/OsmRoadCategoryAttribute.h"
 #include "DataStructures/Graph/Attributes/RoadGeometryAttribute.h"
+#include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/SpeedLimitAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
@@ -28,7 +33,8 @@
 #include "Tools/ContainerHelpers.h"
 
 // A graph data structure encompassing all vertex and edge attributes available for output.
-using VertexAttributes = VertexAttrs<CoordinateAttribute, LatLngAttribute, VertexIdAttribute>;
+using VertexAttributes = VertexAttrs<
+    CoordinateAttribute, LatLngAttribute, SequentialVertexIdAttribute, VertexIdAttribute>;
 using EdgeAttributes = EdgeAttrs<
     CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
     NumLanesAttribute, OsmRoadCategoryAttribute, RoadGeometryAttribute, SpeedLimitAttribute,
@@ -45,24 +51,20 @@ void printUsage() {
       "  -d <fmt>          destination file format\n"
       "                      possible values: binary default dimacs\n"
       "  -c                compress the output file(s), if available\n"
+      "  -p <file>         extract a region given as an OSM POLY file\n"
       "  -scc              extract the largest strongly connected component\n"
       "  -ts <sys>         the system whose network is to be imported (Visum only)\n"
       "  -cs <epsg-code>   input coordinate system (Visum only)\n"
-      "  -ap <hours>       analysis period, capacity is in vehicles/AP (Visum only)\n"
+      "  -ap <hrs>         analysis period, capacity is in vehicles/AP (Visum only)\n"
       "  -a <attrs>        blank-separated list of vertex/edge attributes to be output\n"
       "                      possible values:\n"
       "                        capacity coordinate free_flow_speed lat_lng length\n"
-      "                        num_lanes osm_road_category road_geometry speed_limit\n"
-      "                        travel_time vertex_id xatf_road_category\n"
+      "                        num_lanes osm_road_category road_geometry\n"
+      "                        sequential_vertex_id speed_limit travel_time vertex_id\n"
+      "                        xatf_road_category\n"
       "  -i <file>         input file(s) without file extension\n"
       "  -o <file>         output file(s) without file extension\n"
       "  -help             display this help and exit\n";
-}
-
-// Prints the specified error message to standard error.
-void printErrorMessage(const std::string& invokedName, const std::string& msg) {
-  std::cerr << invokedName << ": " << msg << std::endl;
-  std::cerr << "Try '" << invokedName <<" -help' for more information." << std::endl;
 }
 
 // Imports a graph according to the input file format specified on the command line and returns it.
@@ -131,23 +133,32 @@ void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
 }
 
 int main(int argc, char* argv[]) {
-  CommandLineParser clp;
   try {
-    clp.parse(argc, argv);
-  } catch (std::invalid_argument& e) {
-    printErrorMessage(argv[0], e.what());
-    return EXIT_FAILURE;
-  }
+    CommandLineParser clp(argc, argv);
+    if (clp.isSet("help")) {
+      printUsage();
+      return EXIT_SUCCESS;
+    }
 
-  if (clp.isSet("help")) {
-    printUsage();
-    return EXIT_SUCCESS;
-  }
-
-  try {
     std::cout << "Reading the input file(s)..." << std::flush;
-    GraphT graph = importGraph(clp);
+    auto graph = importGraph(clp);
     std::cout << " done." << std::endl;
+
+    if (clp.isSet("p")) {
+      std::cout << "Extracting the given region..." << std::flush;
+      boost::dynamic_bitset<> isVertexInsideRegion(graph.numVertices());
+      Area area;
+      area.importFromOsmPolyFile(clp.getValue<std::string>("p"));
+      const auto box = area.boundingBox();
+      FORALL_VERTICES(graph, v) {
+        const Point p(graph.latLng(v).longitude(), graph.latLng(v).latitude());
+        isVertexInsideRegion[v] = box.contains(p) && area.contains(p);
+      }
+      FORALL_VERTICES(graph, v)
+        graph.sequentialVertexId(v) = v;
+      graph.extractVertexInducedSubgraph(isVertexInsideRegion);
+      std::cout << " done." << std::endl;
+    }
 
     if (clp.isSet("scc")) {
       std::cout << "Computing strongly connected components..." << std::flush;
@@ -159,13 +170,15 @@ int main(int argc, char* argv[]) {
       graph.extractVertexInducedSubgraph(scc.getLargestSccAsBitmask());
       std::cout << " done." << std::endl;
     }
+
     if (clp.isSet("o")) {
       std::cout << "Writing the output file(s)..." << std::flush;
       exportGraph(clp, graph);
       std::cout << " done." << std::endl;
     }
   } catch (std::invalid_argument& e) {
-    printErrorMessage(argv[0], e.what());
+    std::cerr << argv[0] << ": " << e.what() << std::endl;
+    std::cerr << "Try '" << argv[0] <<" -help' for more information." << std::endl;
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

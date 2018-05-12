@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -13,11 +14,13 @@
 
 #include "DataStructures/Geometry/Area.h"
 #include "DataStructures/Graph/Attributes/CoordinateAttribute.h"
+#include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "RawData/Visum/ZonePolygons.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/CommandLine/ProgressBar.h"
 #include "Tools/BinaryIO.h"
+#include "Tools/Constants.h"
 #include "Tools/DateHelpers.h"
 #include "Tools/LexicalCast.h"
 
@@ -53,8 +56,13 @@ inline void computeVertexSets(const CommandLineParser& clp) {
   std::ifstream in(graphFile, std::ios::binary);
   if (!in.good())
     throw std::invalid_argument("file not found -- '" + graphFile + "'");
-  StaticGraph<VertexAttrs<CoordinateAttribute>> graph(in);
+  StaticGraph<VertexAttrs<CoordinateAttribute, SequentialVertexIdAttribute>> graph(in);
   in.close();
+  if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX)
+    FORALL_VERTICES(graph, v) {
+      assert(graph.sequentialVertexId(v) == INVALID_VERTEX);
+      graph.sequentialVertexId(v) = v;
+    }
   std::cout << " done." << std::endl;
 
   std::cout << "Reading the zone polygons..." << std::flush;
@@ -73,7 +81,7 @@ inline void computeVertexSets(const CommandLineParser& clp) {
     zoneVertexSets.emplace_back();
     FORALL_VERTICES(graph, v)
       if (box.contains(graph.coordinate(v)) && surface.second.contains(graph.coordinate(v)))
-        zoneVertexSets.back().push_back(v);
+        zoneVertexSets.back().push_back(graph.sequentialVertexId(v));
     ++bar;
   }
   std::cout << " done." << std::endl;

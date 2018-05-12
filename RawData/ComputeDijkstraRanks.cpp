@@ -4,14 +4,17 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <csv.h>
 
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "Experiments/ODPairGenerator.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/Constants.h"
 
 void printUsage() {
   std::cout <<
@@ -37,7 +40,9 @@ int main(int argc, char* argv[]) {
     const std::string outfilename = clp.getValue<std::string>("o");
 
     // Read the graph from file.
-    using Graph = StaticGraph<VertexAttrs<>, EdgeAttrs<LengthAttribute, TravelTimeAttribute>>;
+    using VertexAttributes = VertexAttrs<SequentialVertexIdAttribute>;
+    using EdgeAttributes = EdgeAttrs<LengthAttribute, TravelTimeAttribute>;
+    using Graph = StaticGraph<VertexAttributes, EdgeAttributes>;
     std::ifstream graphFile(graphFilename, std::ios::binary);
     if (!graphFile.good())
       throw std::invalid_argument("file not found -- '" + graphFilename + "'");
@@ -48,6 +53,20 @@ int main(int argc, char* argv[]) {
       // Compute Dijkstra ranks wrt physical lengths.
       FORALL_EDGES(graph, e)
         graph.travelTime(e) = graph.length(e);
+
+    // Build a map to translate an original into a local vertex identifier.
+    std::vector<int> origToLocalId(graph.numVertices(), INVALID_VERTEX);
+    if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX) {
+      FORALL_VERTICES(graph, v)
+        origToLocalId[v] = v;
+    } else {
+      FORALL_VERTICES(graph, v) {
+        const int origId = graph.sequentialVertexId(v);
+        if (origToLocalId.size() < origId + 1)
+          origToLocalId.resize(origId + 1, INVALID_VERTEX);
+        origToLocalId[origId] = v;
+      }
+    }
 
     // Copy the comment lines at the beginning of the input OD-file into the output OD-file.
     std::ifstream in(odFilename);
@@ -96,7 +115,7 @@ int main(int argc, char* argv[]) {
       out << origin << ',' << destination;
       if (hasZones) out << ',' << originZone << ',' << destinationZone;
       if (hasDep) out << ',' << dep;
-      out << ',' << gen.getDijkstraRankFor({origin, destination});
+      out << ',' << gen.getDijkstraRankFor({origToLocalId[origin], origToLocalId[destination]});
       if (hasDist) out << ',' << dist;
       out << '\n';
     }
