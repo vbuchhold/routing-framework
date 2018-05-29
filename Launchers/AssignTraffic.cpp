@@ -249,7 +249,7 @@ void assignTraffic(const CommandLineParser& clp) {
       throw std::invalid_argument("file cannot be opened -- '" + patternFilename + ".csv'");
     if (!csvFilename.empty())
       patternFile << "# Main file: " << csvFilename << ".csv\n";
-    patternFile << "iteration,traffic_flow\n";
+    patternFile << "iteration,edge_flow\n";
   }
 
   FrankWolfeAssignmentT assign(graph, odPairs, csv, distanceFile, patternFile, clp.isSet("v"));
