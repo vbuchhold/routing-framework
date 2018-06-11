@@ -217,7 +217,7 @@ int main(int argc, char* argv[]) {
       io::CSVReader<
           2, io::trim_chars<>, io::no_quote_escape<','>, io::throw_on_overflow,
           io::single_line_comment<'#'>> patternFile(clp.getValue<std::string>("p"));
-      patternFile.read_header(io::ignore_no_column, "iteration", "traffic_flow");
+      patternFile.read_header(io::ignore_no_column, "iteration", "edge_flow");
       while (patternFile.read_row(iteration, flow)) {
         if (iteration <= 0 || flow < 0)
           throw std::invalid_argument("pattern file corrupt");
