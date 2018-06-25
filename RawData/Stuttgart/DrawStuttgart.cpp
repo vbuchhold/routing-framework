@@ -43,7 +43,7 @@ void printUsage() {
       "Visualize the metropolitan area of Stuttgart, flow patterns throughout its\n"
       "network, and travel demand data.\n"
       "  -c <box>          clip the output to <box>\n"
-      "                      possible values: small normal large (default)\n"
+      "                      possible values: tiny small normal large (default)\n"
       "  -f <fmt>          file format of the graphic\n"
       "                      possible values: pdf png (default) svg\n"
       "  -w <cm>           width in cm of the graphic (defaults to 14)\n"
@@ -94,7 +94,9 @@ int main(int argc, char* argv[]) {
     // Select the bounding box to be used as clipping path.
     Rectangle boundingBox;
     const std::string box = clp.getValue<std::string>("c", "large");
-    if (box == "small")
+    if (box == "tiny")
+      boundingBox = {{3508021, 5399810}, {3518196, 5409501}};
+    else if (box == "small")
       boundingBox = {{3502933, 5394965}, {3523284, 5414346}};
     else if (box == "normal")
       boundingBox = {{3481370, 5373316}, {3573272, 5438087}};
