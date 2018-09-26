@@ -55,8 +55,8 @@ class SeparatorTree {
     int firstVertex = 0;
     int nextCellId = 0;
     for (int lastVertex = maxCellSize; lastVertex < numVertices; lastVertex += maxCellSize) {
-      while (mostSignificantDifferingBit(ord[firstVertex].second, ord[lastVertex - 1].second) >
-          mostSignificantDifferingBit(ord[lastVertex - 1].second, ord[lastVertex].second))
+      while (highestDifferingBit(ord[firstVertex].second, ord[lastVertex - 1].second) >
+          highestDifferingBit(ord[lastVertex - 1].second, ord[lastVertex].second))
         --lastVertex;
       for (int i = firstVertex; i < lastVertex; ++i)
         partition[ord[i].first] = nextCellId;
@@ -83,7 +83,7 @@ class SeparatorTree {
         isSeparatorVertexOnLevel |= ~packedSideIds[u] & packedSideIds[graph.edgeHead(e)];
       FORALL_INCIDENT_EDGES(reverseGraph, u, e)
         isSeparatorVertexOnLevel |= ~packedSideIds[u] & packedSideIds[reverseGraph.edgeHead(e)];
-      const int msb = mostSignificantOneBit(isSeparatorVertexOnLevel);
+      const int msb = highestOneBit(isSeparatorVertexOnLevel);
       mask[u] = msb == 63 ? 0 : uint64_t(-1) << (msb + 1);
     }
 

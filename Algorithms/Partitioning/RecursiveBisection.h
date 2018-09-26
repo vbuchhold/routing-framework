@@ -60,7 +60,7 @@ class RecursiveBisection {
     }
 
     for (auto& subgraph : subgraphs) {
-      const int msb = mostSignificantOneBit(subgraph.size() - 1);
+      const int msb = highestOneBit(subgraph.size() - 1);
       for (int i = 0; i < subgraph.size(); ++i) {
         auto& comp = subgraph[i];
         if (comp.node_count() == 1) {
