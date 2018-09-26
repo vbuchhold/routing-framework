@@ -14,7 +14,7 @@
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
 #include "DataStructures/Utilities/Permutation.h"
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 #include "Tools/BinaryIO.h"
 #include "Tools/Constants.h"
 #include "Tools/ContainerHelpers.h"
@@ -884,8 +884,8 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     RUN_FORALL(perm.applyTo(EdgeAttributes::values));
   }
 
-  AlignVector<OutEdgeRange> outEdges; // The ranges of outgoing edges of the vertices.
-  AlignVector<int> edgeHeads;         // The head vertices of the edges.
+  AlignedVector<OutEdgeRange> outEdges; // The ranges of outgoing edges of the vertices.
+  AlignedVector<int> edgeHeads;         // The head vertices of the edges.
 
   int edgeCount; // The number of edges in the graph.
 };

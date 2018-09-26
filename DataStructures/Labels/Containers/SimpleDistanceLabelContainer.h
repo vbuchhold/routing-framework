@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 #include "Tools/Constants.h"
 
 // The simplest implementation of a container maintaining distance labels during a shortest-path
@@ -34,5 +34,5 @@ class SimpleDistanceLabelContainer {
   }
 
  private:
-  AlignVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
+  AlignedVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
 };

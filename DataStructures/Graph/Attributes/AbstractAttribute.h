@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 
 // The common base class for all attributes. It associates a value of type T with each vertex/edge.
 template <typename T>
@@ -19,5 +19,5 @@ class AbstractAttribute {
     values.reserve(num);
   }
 
-  AlignVector<Type> values; // The attribute's values for the vertices/edges.
+  AlignedVector<Type> values; // The attribute's values for the vertices/edges.
 };

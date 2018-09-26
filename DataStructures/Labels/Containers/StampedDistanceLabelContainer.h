@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 #include "Tools/CompilerSpecific.h"
 #include "Tools/Constants.h"
 
@@ -46,7 +46,7 @@ class StampedDistanceLabelContainer {
   }
 
  private:
-  AlignVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
-  std::vector<int> timestamps;                // The timestamps indicating whether a label is valid.
-  int clock;                                  // The global clock.
+  AlignedVector<DistanceLabelT> distanceLabels; // The distance labels of the vertices.
+  std::vector<int> timestamps;                  // The timestamps indicating if a label is valid.
+  int clock;                                    // The global clock.
 };

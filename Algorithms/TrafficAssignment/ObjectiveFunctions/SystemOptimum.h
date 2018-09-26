@@ -2,7 +2,7 @@
 
 #include <vectorclass/vectorclass.h>
 
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 
 // Represents the system-optimum (SO) objective function. The flow pattern that minimizes the SO
 // objective function (while satisfying the flow conservation constraint) minimizes the total
@@ -15,7 +15,7 @@ class SystemOptimum {
   SystemOptimum(TravelCostFunctionT function) : travelCostFunction(function) {}
 
   // Returns the value of the objective function for the specified edge flows.
-  double operator()(const AlignVector<double>& flows) const {
+  double operator()(const AlignedVector<double>& flows) const {
     double sum = 0;
     for (int e = 0; e < flows.size(); ++e)
       sum += flows[e] * travelCostFunction(e, flows[e]);

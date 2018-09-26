@@ -15,7 +15,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/FrankWolfeAssignmentStats.h"
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 #include "Tools/Timer.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
@@ -254,7 +254,7 @@ class FrankWolfeAssignment {
 
   AllOrNothing allOrNothingAssignment;   // The all-or-nothing assignment algo used as a subroutine.
   InputGraphT& inputGraph;               // The input graph.
-  AlignVector<double> trafficFlows;      // The traffic flows on the edges.
+  AlignedVector<double> trafficFlows;    // The traffic flows on the edges.
   TravelCostFunction travelCostFunction; // A functor returning the travel cost on an edge.
   ObjFunction objFunction;               // The objective function to be minimized (UE or SO).
   std::ofstream& csv;                    // The output CSV file containing statistics.

@@ -12,7 +12,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/AllOrNothingAssignmentStats.h"
 #include "Tools/CommandLine/ProgressBar.h"
-#include "Tools/Simd/AlignVector.h"
+#include "Tools/Simd/AlignedVector.h"
 #include "Tools/Timer.h"
 
 // Implementation of an iterative all-or-nothing traffic assignment. Each OD-pair is processed in
@@ -149,6 +149,6 @@ class AllOrNothingAssignment {
   ShortestPathAlgoT shortestPathAlgo; // Algo computing shortest paths between OD-pairs.
   const InputGraph& inputGraph;       // The input graph.
   const ODPairs& odPairs;             // The OD-pairs to be assigned onto the graph.
-  AlignVector<int> trafficFlows;      // The traffic flows on the edges.
+  AlignedVector<int> trafficFlows;    // The traffic flows on the edges.
   const bool verbose;                 // Should informative messages be displayed?
 };
