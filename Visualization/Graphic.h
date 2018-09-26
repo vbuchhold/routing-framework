@@ -71,6 +71,14 @@ class Graphic {
   // Converts a value measured in points to an equivalent value measured in device-space units.
   virtual double toDeviceSpaceUnits(const double pt) const = 0;
 
+  // Converts a value measured in points to an equivalent value measured in user-space units.
+  double toUserSpaceUnits(const double pt) {
+    assert(isOpen());
+    double x = toDeviceSpaceUnits(pt), y = 0;
+    cairo_device_to_user_distance(cairoContext, &x, &y);
+    return x;
+  }
+
   // Outputs the current page and inserts a new blank page.
   // Note: This member function may or may not create a new cairo drawing context.
   virtual void newPage() = 0;

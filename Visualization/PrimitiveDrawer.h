@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <string>
 
 #include <cairo/cairo.h>
 
@@ -32,10 +33,12 @@ class PrimitiveDrawer {
 
   // Initializes the cairo drawing context of the current graphic.
   void initCairoContext() {
-    if (currentGraphic != nullptr && currentGraphic->getCairoContext() != nullptr) {
+    if (currentGraphic != nullptr && currentGraphic->isOpen()) {
+      cairo_t* const ctx = currentGraphic->getCairoContext();
       setColor(currentColor);
       setLineWidth(currentLineWidth);
-      cairo_set_line_cap(currentGraphic->getCairoContext(), CAIRO_LINE_CAP_ROUND);
+      cairo_set_line_cap(ctx, CAIRO_LINE_CAP_ROUND);
+      cairo_set_font_size(ctx, currentGraphic->toUserSpaceUnits(10));
     }
   }
 
@@ -59,9 +62,8 @@ class PrimitiveDrawer {
   void setLineWidth(const double width) {
     currentLineWidth = width;
     if (currentGraphic != nullptr && currentGraphic->getCairoContext() != nullptr) {
-      double x = currentGraphic->toDeviceSpaceUnits(currentLineWidth), y = 0;
-      cairo_device_to_user_distance(currentGraphic->getCairoContext(), &x, &y);
-      cairo_set_line_width(currentGraphic->getCairoContext(), x);
+      const double userSpaceUnits = currentGraphic->toUserSpaceUnits(currentLineWidth);
+      cairo_set_line_width(currentGraphic->getCairoContext(), userSpaceUnits);
     }
   }
 
@@ -111,6 +113,32 @@ class PrimitiveDrawer {
     setColor(color);
     setLineWidth(width);
     drawPolygon(polygon);
+  }
+
+  // Fills a circle with the specified center and radius, possibly setting the current color.
+  void fillCircle(const Point& center, const double radius) {
+    assert(currentGraphic != nullptr); assert(currentGraphic->isOpen());
+    cairo_t* const ctx = currentGraphic->getCairoContext();
+    cairo_arc(ctx, center.getX(), center.getY(), radius, 0, 2 * PI);
+    cairo_fill(ctx);
+  }
+  void fillCircle(const Point& center, const double radius, const Color& color) {
+    setColor(color);
+    fillCircle(center, radius);
+  }
+
+  // Draws the text given by the specified string centered on the specified position.
+  void drawString(const std::string& str, const Point& pos) {
+    assert(currentGraphic != nullptr); assert(currentGraphic->isOpen());
+    cairo_t* const ctx = currentGraphic->getCairoContext();
+    cairo_text_extents_t strMetrics;
+    cairo_text_extents(ctx, str.c_str(), &strMetrics);
+    const auto x = pos.getX() - strMetrics.width / 2 - strMetrics.x_bearing;
+    const auto y = pos.getY() + strMetrics.height / 2 + strMetrics.y_bearing;
+    cairo_move_to(ctx, x, y);
+    cairo_scale(ctx, 1, -1);
+    cairo_show_text(ctx, str.c_str());
+    cairo_scale(ctx, 1, -1);
   }
 
  private:
