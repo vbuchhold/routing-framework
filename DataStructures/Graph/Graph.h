@@ -437,7 +437,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     if (dynamic) {
       perm.applyTo(outEdges);
     } else {
-      std::vector<OutEdgeRange> temp(outEdges.size());
+      AlignedVector<OutEdgeRange> temp(outEdges.size());
       temp.back().first() = numEdges();
       Permutation inversePerm = perm.getInversePermutation();
       Permutation edgePerm(numEdges());
