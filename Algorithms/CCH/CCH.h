@@ -11,14 +11,24 @@
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Partitioning/SeparatorDecomposition.h"
+#include "DataStructures/Utilities/Permutation.h"
 #include "Tools/Constants.h"
 
 // A metric-independent customizable contraction hierarchy. It uses a nested dissection order
 // associated with a separator decomposition to order the vertices by importance.
 class CCH {
  public:
+  using EliminationTree = std::vector<int32_t>;                             // The elimination tree.
   using UpGraph = StaticGraph<>;                                            // The upward graph.
   using DownGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute>>; // The downward graph.
+
+  // Constructs an empty CCH.
+  CCH() = default;
+
+  // Constructs a CCH from the specified binary file.
+  explicit CCH(std::ifstream& in) {
+    readFrom(in);
+  }
 
   // Builds the metric-independent CCH for the specified graph and separator decomposition.
   template <typename InputGraphT>
@@ -77,6 +87,21 @@ class CCH {
     }
     firstUpInputEdge.back() = upInputEdges.size();
     firstDownInputEdge.back() = downInputEdges.size();
+  }
+
+  // Returns the order in which vertices were contracted.
+  const Permutation& getContractionOrder() const noexcept {
+    return decomp.order;
+  }
+
+  // Returns the position of each vertex in the contraction order.
+  const Permutation& getRanks() const noexcept {
+    return ranks;
+  }
+
+  // Returns the elimination tree.
+  const EliminationTree& getEliminationTree() const noexcept {
+    return eliminationTree;
   }
 
   // Returns the upward graph.
@@ -141,6 +166,32 @@ class CCH {
     return true;
   }
 
+  // Reads the CCH from the specified binary file.
+  void readFrom(std::ifstream& in) {
+    decomp.readFrom(in);
+    ranks.readFrom(in);
+    bio::read(in, eliminationTree);
+    upGraph.readFrom(in);
+    downGraph.readFrom(in);
+    bio::read(in, firstUpInputEdge);
+    bio::read(in, firstDownInputEdge);
+    bio::read(in, upInputEdges);
+    bio::read(in, downInputEdges);
+  }
+
+  // Writes the CCH to the specified binary file.
+  void writeTo(std::ofstream& out) const {
+    decomp.writeTo(out);
+    ranks.writeTo(out);
+    bio::write(out, eliminationTree);
+    upGraph.writeTo(out);
+    downGraph.writeTo(out);
+    bio::write(out, firstUpInputEdge);
+    bio::write(out, firstDownInputEdge);
+    bio::write(out, upInputEdges);
+    bio::write(out, downInputEdges);
+  }
+
  private:
   // Applies func to each vertex in bottom-up fashion, starting from from and proceeding to to - 1.
   // That is, func is applied to a vertex after it has been applied to each downward neighbor. If
@@ -187,9 +238,9 @@ class CCH {
     }
   }
 
-  SeparatorDecomposition decomp;        // The separator decomposition used to build this CCH.
-  std::vector<int32_t> ranks;           // The position of each vertex in the contraction order.
-  std::vector<int32_t> eliminationTree; // The associated elimination tree.
+  SeparatorDecomposition decomp;   // The separator decomposition used to build this CCH.
+  Permutation ranks;               // The position of each vertex in the contraction order.
+  EliminationTree eliminationTree; // The associated elimination tree.
 
   UpGraph upGraph;     // The upward graph.
   DownGraph downGraph; // The downward graph.

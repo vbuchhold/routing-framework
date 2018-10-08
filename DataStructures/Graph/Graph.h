@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <fstream>
 #include <ostream>
 #include <string>
@@ -80,6 +81,9 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   friend class Graph;
 
  public:
+  using OutEdgeRange =
+      std::conditional_t<dynamic, impl::DynamicOutEdgeRange, impl::StaticOutEdgeRange>;
+
   // Constructs an empty graph.
   Graph() {
     init();
@@ -90,6 +94,18 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   Graph(const int numVertices, const int numEdges) {
     reserve(numVertices, numEdges);
     init();
+  }
+
+  // Constructs a graph from the specified vertex and edge arrays. The constructor enables the
+  // internal data structures of the graph to be built externally.
+  Graph(
+      AlignedVector<OutEdgeRange>&& outEdges, AlignedVector<int32_t>&& edgeHeads, int edgeCount,
+      AlignedVector<typename VertexAttributes::Type>&& ...vertexAttrs,
+      AlignedVector<typename EdgeAttributes::Type>&& ...edgeAttrs)
+      : outEdges(std::move(outEdges)), edgeHeads(std::move(edgeHeads)), edgeCount(edgeCount) {
+    RUN_FORALL(VertexAttributes::values = std::move(vertexAttrs));
+    RUN_FORALL(EdgeAttributes::values = std::move(edgeAttrs));
+    assert(validate());
   }
 
   // Constructs a graph from a file. Different importers support different file formats.
@@ -806,9 +822,6 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   }
 
  private:
-  using OutEdgeRange =
-      std::conditional_t<dynamic, impl::DynamicOutEdgeRange, impl::StaticOutEdgeRange>;
-
   // If a graph is dynamic, its edge arrays may contain "holes". To indicate that an edge is a hole
   // and not an actual edge, we store this value as its head.
   static constexpr int INVALID_EDGE = -1;
@@ -885,7 +898,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   }
 
   AlignedVector<OutEdgeRange> outEdges; // The ranges of outgoing edges of the vertices.
-  AlignedVector<int> edgeHeads;         // The head vertices of the edges.
+  AlignedVector<int32_t> edgeHeads;     // The head vertices of the edges.
 
   int edgeCount; // The number of edges in the graph.
 };
@@ -910,9 +923,9 @@ template <typename VertexAttributes = VertexAttrs<>, typename EdgeAttributes = E
 using DynamicGraph = Graph<VertexAttributes, EdgeAttributes, true>;
 
 // Iteration macros for conveniently looping through vertices or edges of a graph.
-#define FORALL_VERTICES(G, u) for (int u = 0; u != G.numVertices(); ++u)
+#define FORALL_VERTICES(G, u) for (int u = 0; u < G.numVertices(); ++u)
 #define FORALL_EDGES(G, e) for (int e = 0; e <= G.maxEdgeIndex(); ++e)
 #define FORALL_EDGES_SIMD(G, e, vecSize) for (int e = 0; e <= G.maxEdgeIndex(); e += vecSize)
-#define FORALL_VALID_EDGES(G, u, e) for (int u = 0; u != G.numVertices(); ++u) \
-    for (int e = G.firstEdge(u); e != G.lastEdge(u); ++e)
-#define FORALL_INCIDENT_EDGES(G, u, e) for (int e = G.firstEdge(u); e != G.lastEdge(u); ++e)
+#define FORALL_VALID_EDGES(G, u, e) for (int u = 0; u < G.numVertices(); ++u) \
+    for (int e = G.firstEdge(u); e < G.lastEdge(u); ++e)
+#define FORALL_INCIDENT_EDGES(G, u, e) for (int e = G.firstEdge(u); e < G.lastEdge(u); ++e)
