@@ -9,17 +9,19 @@
 #include <routingkit/customizable_contraction_hierarchy.h>
 
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
+#include "DataStructures/Graph/Attributes/EdgeTailAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Partitioning/SeparatorDecomposition.h"
 #include "DataStructures/Utilities/Permutation.h"
 #include "Tools/Constants.h"
+#include "Tools/Workarounds.h"
 
 // A metric-independent customizable contraction hierarchy. It uses a nested dissection order
 // associated with a separator decomposition to order the vertices by importance.
 class CCH {
  public:
   using EliminationTree = std::vector<int32_t>;                             // The elimination tree.
-  using UpGraph = StaticGraph<>;                                            // The upward graph.
+  using UpGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeTailAttribute>>; // The upward graph.
   using DownGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute>>; // The downward graph.
 
   // Constructs an empty CCH.
@@ -54,11 +56,9 @@ class CCH {
       upGraph.appendVertex();
       downGraph.appendVertex();
       for (int e = cch.up_first_out[v]; e != cch.up_first_out[v + 1]; ++e)
-        upGraph.appendEdge(cch.up_head[e]);
-      for (int e = cch.down_first_out[v]; e != cch.down_first_out[v + 1]; ++e) {
-        downGraph.appendEdge(cch.down_head[e]);
-        downGraph.edgeId(e) = cch.down_to_up[e];
-      }
+        upGraph.appendEdge(cch.up_head[e], cch.up_tail[e]);
+      for (int e = cch.down_first_out[v]; e != cch.down_first_out[v + 1]; ++e)
+        downGraph.appendEdge(cch.down_head[e], cch.down_to_up[e]);
     }
 
     firstUpInputEdge.resize(upGraph.numEdges() + 1);
@@ -105,24 +105,28 @@ class CCH {
   }
 
   // Returns the upward graph.
-  const StaticGraph<>& getUpwardGraph() const noexcept {
+  const UpGraph& getUpwardGraph() const noexcept {
     return upGraph;
   }
 
   // Applies func to each upward input edge mapping to the specified edge in the CCH.
   template <typename CallableT>
-  void forEachUpwardInputEdge(const int e, CallableT func) const {
+  bool forEachUpwardInputEdge(const int e, CallableT func) const {
     assert(e >= 0); assert(e < upGraph.numEdges());
     for (auto i = firstUpInputEdge[e]; i != firstUpInputEdge[e + 1]; ++i)
-      func(upInputEdges[i]);
+      if (!func(upInputEdges[i]))
+        return false;
+    return true;
   }
 
   // Applies func to each downward input edge mapping to the specified edge in the CCH.
   template <typename CallableT>
-  void forEachDownwardInputEdge(const int e, CallableT func) const {
+  bool forEachDownwardInputEdge(const int e, CallableT func) const {
     assert(e >= 0); assert(e < upGraph.numEdges());
     for (auto i = firstDownInputEdge[e]; i != firstDownInputEdge[e + 1]; ++i)
-      func(downInputEdges[i]);
+      if (!func(downInputEdges[i]))
+        return false;
+    return true;
   }
 
   // Applies func to each vertex in bottom-up fashion. That is, func is applied to a vertex after it
@@ -139,6 +143,32 @@ class CCH {
   template <typename CallableT>
   void forEachVertexTopDown(CallableT func) const {
     forEachVertexTopDown(0, upGraph.numVertices(), 0, func);
+  }
+
+  // Applies func to each lower triangle of the specified edge.
+  template <typename CallableT>
+  bool forEachLowerTriangle(const int tail, const int head, const int edge, CallableT func) const {
+    unused(edge);
+    assert(head == upGraph.edgeHead(edge));
+    int edgeOnTail = downGraph.firstEdge(tail);
+    int edgeOnHead = downGraph.firstEdge(head);
+    const int lastEdgeOnTail = downGraph.lastEdge(tail);
+    const int lastEdgeOnHead = downGraph.lastEdge(head);
+    while (edgeOnTail != lastEdgeOnTail && edgeOnHead != lastEdgeOnHead) {
+      const int neighborOfTail = downGraph.edgeHead(edgeOnTail);
+      const int neighborOfHead = downGraph.edgeHead(edgeOnHead);
+      if (neighborOfTail < neighborOfHead) {
+        ++edgeOnTail;
+      } else if (neighborOfTail > neighborOfHead) {
+        ++edgeOnHead;
+      } else {
+        if (!func(neighborOfTail, downGraph.edgeId(edgeOnTail), downGraph.edgeId(edgeOnHead)))
+          return false;
+        ++edgeOnTail;
+        ++edgeOnHead;
+      }
+    }
+    return true;
   }
 
   // Applies func to each upper triangle of the specified edge.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -9,10 +10,12 @@
 #include "Algorithms/CH/CH.h"
 #include "DataStructures/Containers/ConcurrentLocalIdMap.h"
 #include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
+#include "DataStructures/Graph/Attributes/UnpackingInfoAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "Tools/Simd/AlignedVector.h"
 #include "Tools/ConcurrentHelpers.h"
 #include "Tools/Constants.h"
+#include "Tools/Workarounds.h"
 
 // This class encodes the actual cost of the edges in a customizable contraction hierarchy. It
 // stores the edge weights and contains several sequential and parallel customization algorithms.
@@ -69,6 +72,8 @@ class CCHMetric {
     AlignedVector<int32_t> downEdgeHeads;
     AlignedVector<TraversalCostAttribute::Type> upEdgeWeights;
     AlignedVector<TraversalCostAttribute::Type> downEdgeWeights;
+    AlignedVector<UnpackingInfoAttribute::Type> upUnpackingInfo;
+    AlignedVector<UnpackingInfoAttribute::Type> downUnpackingInfo;
 
     #pragma omp parallel sections
     {
@@ -84,6 +89,10 @@ class CCHMetric {
       upEdgeWeights.resize(numUpEdges);
       #pragma omp section
       downEdgeWeights.resize(numDownEdges);
+      #pragma omp section
+      upUnpackingInfo.resize(numUpEdges);
+      #pragma omp section
+      downUnpackingInfo.resize(numDownEdges);
     }
 
     #pragma omp parallel for schedule(dynamic, 2048)
@@ -94,15 +103,65 @@ class CCHMetric {
 
     #pragma omp parallel for schedule(dynamic, 2048)
     FORALL_EDGES(cchGraph, e) {
+      const auto tail = cchGraph.edgeTail(e);
+      const auto head = cchGraph.edgeHead(e);
+
       if (keepUpEdge[e]) {
         const auto newIdx = upEdgeIdMap.toLocalId(e);
-        upEdgeHeads[newIdx] = cchGraph.edgeHead(e);
+        upEdgeHeads[newIdx] = head;
         upEdgeWeights[newIdx] = upWeights[e];
+
+        const auto isShortcut = cch.forEachUpwardInputEdge(e, [&](const int inputEdge) {
+          if (inputWeights[inputEdge] == upWeights[e]) {
+            upUnpackingInfo[newIdx] = std::make_pair(inputEdge, INVALID_EDGE);
+            return false;
+          }
+          return true;
+        });
+
+        if (isShortcut) {
+          const auto noTriangleFound = cch.forEachLowerTriangle(
+              tail, head, e, [&](int, const int lower, const int inter) {
+            if (downWeights[lower] + upWeights[inter] == upWeights[e] &&
+                keepDownEdge[lower] && keepUpEdge[inter]) {
+              upUnpackingInfo[newIdx].first = downEdgeIdMap.toLocalId(lower);
+              upUnpackingInfo[newIdx].second = upEdgeIdMap.toLocalId(inter);
+              return false;
+            }
+            return true;
+          });
+          unused(noTriangleFound);
+          assert(!noTriangleFound);
+        }
       }
+
       if (keepDownEdge[e]) {
         const auto newIdx = downEdgeIdMap.toLocalId(e);
-        downEdgeHeads[newIdx] = cchGraph.edgeHead(e);
+        downEdgeHeads[newIdx] = head;
         downEdgeWeights[newIdx] = downWeights[e];
+
+        const auto isShortcut = cch.forEachDownwardInputEdge(e, [&](const int inputEdge) {
+          if (inputWeights[inputEdge] == downWeights[e]) {
+            downUnpackingInfo[newIdx] = std::make_pair(inputEdge, INVALID_EDGE);
+            return false;
+          }
+          return true;
+        });
+
+        if (isShortcut) {
+          const auto noTriangleFound = cch.forEachLowerTriangle(
+              tail, head, e, [&](int, const int lower, const int inter) {
+            if (downWeights[inter] + upWeights[lower] == downWeights[e] &&
+                keepDownEdge[inter] && keepUpEdge[lower]) {
+              downUnpackingInfo[newIdx].first = downEdgeIdMap.toLocalId(inter);
+              downUnpackingInfo[newIdx].second = upEdgeIdMap.toLocalId(lower);
+              return false;
+            }
+            return true;
+          });
+          unused(noTriangleFound);
+          assert(!noTriangleFound);
+        }
       }
     }
 
@@ -111,10 +170,10 @@ class CCHMetric {
 
     CH::SearchGraph upGraph(
         std::move(upOutEdges), std::move(upEdgeHeads), numUpEdges,
-        std::move(upEdgeWeights));
+        std::move(upEdgeWeights), std::move(upUnpackingInfo));
     CH::SearchGraph downGraph(
         std::move(downOutEdges), std::move(downEdgeHeads), numDownEdges,
-        std::move(downEdgeWeights));
+        std::move(downEdgeWeights), std::move(downUnpackingInfo));
 
     Permutation order;
     Permutation ranks;
@@ -142,10 +201,12 @@ class CCHMetric {
       cch.forEachUpwardInputEdge(e, [&](const int inputEdge) {
         if (inputWeights[inputEdge] < upWeights[e])
           upWeights[e] = inputWeights[inputEdge];
+        return true;
       });
       cch.forEachDownwardInputEdge(e, [&](const int inputEdge) {
         if (inputWeights[inputEdge] < downWeights[e])
           downWeights[e] = inputWeights[inputEdge];
+        return true;
       });
     }
   }

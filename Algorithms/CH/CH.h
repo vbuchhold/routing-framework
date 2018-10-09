@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
+#include "DataStructures/Graph/Attributes/UnpackingInfoAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/Permutation.h"
 
@@ -12,7 +13,7 @@
 class CH {
  public:
   // The type of the upward and downward graph.
-  using EdgeAttributes = EdgeAttrs<TraversalCostAttribute>;
+  using EdgeAttributes = EdgeAttrs<TraversalCostAttribute, UnpackingInfoAttribute>;
   using SearchGraph = StaticGraph<VertexAttrs<>, EdgeAttributes>;
 
   // Constructs an empty CH.
