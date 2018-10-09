@@ -4,6 +4,8 @@
 #include <fstream>
 #include <utility>
 
+#include <routingkit/contraction_hierarchy.h>
+
 #include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
 #include "DataStructures/Graph/Attributes/UnpackingInfoAttribute.h"
 #include "DataStructures/Graph/Graph.h"
@@ -34,6 +36,48 @@ class CH {
   // Constructs a CH from the specified binary file.
   explicit CH(std::ifstream& in) {
     readFrom(in);
+  }
+
+  // Builds a weighted CH for the specified graph.
+  template <typename WeightT, typename InputGraphT>
+  void preprocess(const InputGraphT& inputGraph) {
+    const auto numVertices = inputGraph.numVertices();
+    const auto numEdges = inputGraph.numEdges();
+    std::vector<unsigned int> tails(numEdges);
+    std::vector<unsigned int> heads(numEdges);
+    std::vector<unsigned int> weights(numEdges);
+    FORALL_VALID_EDGES(inputGraph, u, e) {
+      tails[e] = u;
+      heads[e] = inputGraph.edgeHead(e);
+      weights[e] = inputGraph.template get<WeightT>(e);
+    }
+    const auto ch = RoutingKit::ContractionHierarchy::build(numVertices, tails, heads, weights);
+
+    upGraph.reserve(numVertices, ch.forward.head.size());
+    downGraph.reserve(numVertices, ch.backward.head.size());
+    for (int u = 0; u < numVertices; ++u) {
+      upGraph.appendVertex();
+      downGraph.appendVertex();
+      for (int e = ch.forward.first_out[u]; e < ch.forward.first_out[u + 1]; ++e) {
+        upGraph.appendEdge(ch.forward.head[e]);
+        upGraph.traversalCost(e) = ch.forward.weight[e];
+        upGraph.unpackingInfo(e).first = ch.forward.shortcut_first_arc[e];
+        upGraph.unpackingInfo(e).second = ch.forward.shortcut_second_arc[e];
+        if (ch.forward.is_shortcut_an_original_arc.is_set(e))
+          upGraph.unpackingInfo(e).second = INVALID_EDGE;
+      }
+      for (int e = ch.backward.first_out[u]; e < ch.backward.first_out[u + 1]; ++e) {
+        downGraph.appendEdge(ch.backward.head[e]);
+        downGraph.traversalCost(e) = ch.backward.weight[e];
+        downGraph.unpackingInfo(e).first = ch.backward.shortcut_first_arc[e];
+        downGraph.unpackingInfo(e).second = ch.backward.shortcut_second_arc[e];
+        if (ch.backward.is_shortcut_an_original_arc.is_set(e))
+          downGraph.unpackingInfo(e).second = INVALID_EDGE;
+      }
+    }
+
+    order.assign(ch.order.begin(), ch.order.end());
+    ranks.assign(ch.rank.begin(), ch.rank.end());
   }
 
   // Returns the upward graph.
