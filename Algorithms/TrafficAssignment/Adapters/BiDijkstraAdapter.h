@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <vector>
@@ -10,7 +11,7 @@
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Labels/SimdLabelSet.h"
-#include "Tools/Constants.h"
+#include "Tools/Simd/AlignedVector.h"
 
 namespace trafficassignment {
 
@@ -18,68 +19,80 @@ namespace trafficassignment {
 template <typename InputGraphT, typename WeightT>
 class BiDijkstraAdapter {
  public:
-  // The label sets used by the standard and centralized bidirectional search.
-  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
 #if TA_LOG_K < 2 || defined(TA_NO_SIMD_SEARCH)
-  using CentralizedLabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+  using LabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
 #else
-  using CentralizedLabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+  using LabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
 #endif
   using InputGraph = InputGraphT;
 
-  // The number of simultaneous shortest-path computations.
-  static constexpr int K = CentralizedLabelSet::K;
+  static constexpr int K = LabelSet::K; // The number of simultaneous shortest-path computations.
 
   // The search algorithm using the graph and possibly auxiliary data to compute shortest paths.
-  // Multiple instances may work on the same data concurrently.
+  // Multiple instances can work on the same data concurrently.
   class QueryAlgo {
    public:
     // Constructs a query algorithm instance working on the specified data.
-    QueryAlgo(const InputGraph& graph, const InputGraph& reverse)
-        : search(graph, reverse), centralizedSearch(graph, reverse) {}
-
-    // Computes the shortest path from s to t.
-    void run(const int s, const int t) {
-      search.run(s, t);
+    QueryAlgo(
+        const InputGraph& inputGraph, const InputGraph& reverseGraph,
+        AlignedVector<int>& flowsOnForwardEdges, AlignedVector<int>& flowsOnReverseEdges)
+        : search(inputGraph, reverseGraph),
+          flowsOnForwardEdges(flowsOnForwardEdges),
+          flowsOnReverseEdges(flowsOnReverseEdges),
+          localFlowsOnForwardEdges(flowsOnForwardEdges.size()),
+          localFlowsOnReverseEdges(flowsOnReverseEdges.size()) {
+      assert(inputGraph.numEdges() == flowsOnForwardEdges.size());
+      assert(reverseGraph.numEdges() == flowsOnReverseEdges.size());
     }
 
     // Computes shortest paths from each source to its target simultaneously.
-    void run(const std::array<int, K>& sources, const std::array<int, K>& targets) {
-      centralizedSearch.run(sources, targets);
+    void run(std::array<int, K>& sources, std::array<int, K>& targets, const int k) {
+      // Run a centralized bidirectional search.
+      search.run(sources, targets);
+
+      // Assign flow to the edges on the computed paths.
+      for (auto i = 0; i < k; ++i) {
+        for (const auto e : search.getEdgePathToMeetingVertex(i)) {
+          assert(e >= 0); assert(e < localFlowsOnForwardEdges.size());
+          ++localFlowsOnForwardEdges[e];
+        }
+        for (const auto e : search.getEdgePathFromMeetingVertex(i)) {
+          assert(e >= 0); assert(e < localFlowsOnReverseEdges.size());
+          ++localFlowsOnReverseEdges[e];
+        }
+      }
     }
 
-    // Returns the length of the shortest path.
-    int getDistance(const int /*dst*/) {
-      return search.getDistance();
-    }
-
-    // Returns the length of the i-th centralized shortest path.
+    // Returns the length of the i-th shortest path.
     int getDistance(const int /*dst*/, const int i) {
-      return centralizedSearch.getDistance(i);
+      return search.getDistance(i);
     }
 
-    // Returns the edges on the (packed) shortest path.
-    std::vector<int> getPackedEdgePath(const int /*dst*/) {
-      return search.getEdgePath();
-    }
-
-    // Returns the edges on the i-th (packed) centralized shortest path.
-    std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
-      return centralizedSearch.getEdgePath(i);
+    // Adds the local flow counters to the global ones. Must be synchronized externally.
+    void addLocalToGlobalFlows() {
+      for (auto e = 0; e < flowsOnForwardEdges.size(); ++e) {
+        flowsOnForwardEdges[e] += localFlowsOnForwardEdges[e];
+        flowsOnReverseEdges[e] += localFlowsOnReverseEdges[e];
+      }
     }
 
    private:
-    using Search = StandardDijkstra<InputGraph, WeightT, LabelSet>;
-    using CentralizedSearch = StandardDijkstra<InputGraph, WeightT, CentralizedLabelSet>;
+    using Dijkstra = StandardDijkstra<InputGraph, WeightT, LabelSet>;
 
-    BiDijkstra<Search> search;                       // Bidirectional search for a single path.
-    BiDijkstra<CentralizedSearch> centralizedSearch; // Bidirectional search for multiple paths.
+    BiDijkstra<Dijkstra> search;               // The bidirectional search.
+    AlignedVector<int>& flowsOnForwardEdges;   // The flows in the forward graph.
+    AlignedVector<int>& flowsOnReverseEdges;   // The flows in the reverse graph.
+    std::vector<int> localFlowsOnForwardEdges; // The local flows in the forward graph.
+    std::vector<int> localFlowsOnReverseEdges; // The local flows in the reverse graph.
   };
 
   // Constructs an adapter for bidirectional search.
-  BiDijkstraAdapter(const InputGraph& graph)
-      : inputGraph(graph), reverseGraph(graph.getReverseGraph()) {
-    assert(graph.isDefrag());
+  explicit BiDijkstraAdapter(const InputGraph& inputGraph)
+      : inputGraph(inputGraph),
+        reverseGraph(inputGraph.getReverseGraph()),
+        flowsOnForwardEdges(inputGraph.numEdges()),
+        flowsOnReverseEdges(inputGraph.numEdges()) {
+    assert(inputGraph.isDefrag());
   }
 
   // Invoked before the first iteration.
@@ -92,33 +105,29 @@ class BiDijkstraAdapter {
       const int weight = inputGraph.template get<WeightT>(reverseGraph.edgeId(e));
       reverseGraph.template get<WeightT>(e) = weight;
     }
+    std::fill(flowsOnForwardEdges.begin(), flowsOnForwardEdges.end(), 0);
+    std::fill(flowsOnReverseEdges.begin(), flowsOnReverseEdges.end(), 0);
   }
 
   // Returns an instance of the query algorithm.
-  QueryAlgo getQueryAlgoInstance() const {
-    return QueryAlgo(inputGraph, reverseGraph);
+  QueryAlgo getQueryAlgoInstance() {
+    return {inputGraph, reverseGraph, flowsOnForwardEdges, flowsOnReverseEdges};
   }
 
-  // Returns the first constituent edge of shortcut s.
-  int getShortcutsFirstEdge(const int /*s*/) const {
-    assert(false);
-    return INVALID_EDGE;
-  }
-
-  // Returns the second constituent edge of shortcut s.
-  int getShortcutsSecondEdge(const int /*s*/) const {
-    assert(false);
-    return INVALID_EDGE;
-  }
-
-  // Returns the number of shortcut edges.
-  int getNumShortcuts() const {
-    return 0;
+  // Propagates the flows on the edges in the search graphs to the edges in the input graph.
+  void propagateFlowsToInputEdges(AlignedVector<int>& flowsOnInputEdges) {
+    assert(flowsOnInputEdges.size() == flowsOnInputEdges.size());
+    flowsOnInputEdges.swap(flowsOnForwardEdges);
+    FORALL_EDGES(inputGraph, e)
+      flowsOnInputEdges[reverseGraph.edgeId(e)] += flowsOnReverseEdges[e];
   }
 
  private:
   const InputGraph& inputGraph; // The input graph.
   InputGraph reverseGraph;      // The reverse graph.
+
+  AlignedVector<int> flowsOnForwardEdges; // The flows on the edges in the forward graph.
+  AlignedVector<int> flowsOnReverseEdges; // The flows on the edges in the reverse graph.
 };
 
 }

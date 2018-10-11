@@ -53,6 +53,8 @@ class CH {
     }
     const auto ch = RoutingKit::ContractionHierarchy::build(numVertices, tails, heads, weights);
 
+    upGraph.clear();
+    downGraph.clear();
     upGraph.reserve(numVertices, ch.forward.head.size());
     downGraph.reserve(numVertices, ch.backward.head.size());
     for (int u = 0; u < numVertices; ++u) {

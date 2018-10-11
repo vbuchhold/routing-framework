@@ -2,8 +2,10 @@
 
 #include <array>
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
+#include "Algorithms/CH/CH.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/ParentLabelContainer.h"
 #include "DataStructures/Labels/Containers/SimpleDistanceLabelContainer.h"
@@ -14,17 +16,16 @@
 // elimination tree from a source vertex to the root, relaxing their outgoing edges. Depending on
 // the label set, the algorithm keeps parent vertices and/or edges and computes multiple shortest
 // paths simultaneously, possibly using SSE or AVX instructions.
-template <typename SearchGraphT, typename WeightT, typename LabelSetT>
+template <typename LabelSetT>
 class EliminationTreeUpwardSearch {
  private:
   using LabelMask = typename LabelSetT::LabelMask;         // Marks subset of components in label.
   using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
-  using ParentLabel   = typename LabelSetT::ParentLabel;   // The parent information for a vertex.
 
  public:
   // Constructs an upward search instance.
   EliminationTreeUpwardSearch(
-      const SearchGraphT& graph, const std::vector<int>& eliminationTree,
+      const CH::SearchGraph& graph, const std::vector<int32_t>& eliminationTree,
       const DistanceLabel& tentativeDist)
       : searchGraph(graph),
         eliminationTree(eliminationTree),
@@ -32,12 +33,6 @@ class EliminationTreeUpwardSearch {
         distanceLabels(graph.numVertices()),
         parent(graph),
         nextVertices({INVALID_VERTEX}) {}
-
-  // Ensures that the internal data structures fit the size of the graph.
-  void resize() {
-    distanceLabels.resize(searchGraph.numVertices());
-    parent.resize();
-  }
 
   // Initializes the labels of the source vertices.
   void init(const std::array<int, LabelSetT::K>& sources) {
@@ -64,7 +59,7 @@ class EliminationTreeUpwardSearch {
       FORALL_INCIDENT_EDGES(searchGraph, u, e) {
         const int v = searchGraph.edgeHead(e);
         DistanceLabel& distToV = distanceLabels[v];
-        const DistanceLabel tentativeDist = distToU + searchGraph.template get<WeightT>(e);
+        const DistanceLabel tentativeDist = distToU + searchGraph.traversalCost(e);
         const LabelMask mask = tentativeDist < distToV;
         if (mask) {
           distToV.min(tentativeDist);
@@ -102,9 +97,9 @@ class EliminationTreeUpwardSearch {
 
  private:
   using DistanceLabelCont = SimpleDistanceLabelContainer<DistanceLabel>;
-  using ParentLabelCont = ParentLabelContainer<SearchGraphT, LabelSetT>;
+  using ParentLabelCont = ParentLabelContainer<CH::SearchGraph, LabelSetT>;
 
-  const SearchGraphT& searchGraph;         // The upward or downward graph.
+  const CH::SearchGraph& searchGraph;      // The upward or downward graph.
   const std::vector<int>& eliminationTree; // eliminationTree[v] is the parent of v in the tree.
   const DistanceLabel& tentativeDistances; // One tentative distance for each simultaneous search.
 

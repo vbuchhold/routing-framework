@@ -52,13 +52,12 @@ class AllOrNothingAssignment {
 
     timer.restart();
     ProgressBar bar(std::ceil(1.0 * odPairs.size() / (K * samplingInterval)), verbose);
-    trafficFlows.assign(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts(), 0);
+    trafficFlows.assign(inputGraph.numEdges(), 0);
     stats.startIteration();
     int totalNumPairsSampledBefore = 0;
     #pragma omp parallel
     {
       auto queryAlgo = shortestPathAlgo.getQueryAlgoInstance();
-      std::vector<int> flows(inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts());
       int64_t checksum = 0;
       double avgChange = 0;
       double maxChange = 0;
@@ -76,7 +75,7 @@ class AllOrNothingAssignment {
           sources[k] = odPairs[i + k * samplingInterval].origin;
           targets[k] = odPairs[i + k * samplingInterval].destination;
         }
-        queryAlgo.run(sources, targets);
+        queryAlgo.run(sources, targets, k);
 
         for (int j = 0; j < k; ++j) {
           // Maintain the avg and max change in the OD-distances between the last two iterations.
@@ -89,35 +88,23 @@ class AllOrNothingAssignment {
           stats.lastDistances[i + j * samplingInterval] = dist;
           avgChange += std::max(0.0, change);
           maxChange = std::max(maxChange, change);
-
-          // Assign the OD-flow to each edge on the computed path.
-          for (const auto e : queryAlgo.getPackedEdgePath(dst, j)) {
-            assert(e >= 0); assert(e < flows.size());
-            ++flows[e];
-          }
         }
         ++bar;
       }
 
-      #pragma omp critical (mergeResults)
+      #pragma omp critical (combineResults)
       {
+        queryAlgo.addLocalToGlobalFlows();
         stats.lastChecksum += checksum;
         stats.avgChangeInDistances += avgChange;
         stats.maxChangeInDistances = std::max(stats.maxChangeInDistances, maxChange);
         totalNumPairsSampledBefore += numPairsSampledBefore;
-        assert(trafficFlows.size() == flows.size());
-        for (int e = 0; e < flows.size(); ++e)
-          trafficFlows[e] += flows[e] * samplingInterval;
       }
     }
     bar.finish();
 
-    // Propagate traffic flows from shortcut to original edges.
-    const int maxShortcutId = inputGraph.numEdges() + shortestPathAlgo.getNumShortcuts() - 1;
-    for (int s = maxShortcutId; s >= inputGraph.numEdges(); --s) {
-      trafficFlows[shortestPathAlgo.getShortcutsFirstEdge(s)] += trafficFlows[s];
-      trafficFlows[shortestPathAlgo.getShortcutsSecondEdge(s)] += trafficFlows[s];
-    }
+    shortestPathAlgo.propagateFlowsToInputEdges(trafficFlows);
+    std::for_each(trafficFlows.begin(), trafficFlows.end(), [&](int& f) { f *= samplingInterval; });
     stats.lastQueryTime = timer.elapsed();
     stats.avgChangeInDistances /= totalNumPairsSampledBefore;
     stats.finishIteration();

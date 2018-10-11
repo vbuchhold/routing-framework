@@ -42,15 +42,16 @@ class CCHMetric {
 
   // Returns a weighted CH having the smallest possible number of edges for the given order.
   CH buildMinimumWeightedCH() {
+    const auto& cchGraph = cch.getUpwardGraph();
     std::vector<int8_t> keepUpEdge;
     std::vector<int8_t> keepDownEdge;
 
     #pragma omp parallel sections
     {
       #pragma omp section
-      keepUpEdge.resize(upWeights.size() + 1, true);
+      keepUpEdge.resize(cchGraph.numEdges() + 1, true);
       #pragma omp section
-      keepDownEdge.resize(upWeights.size() + 1, true);
+      keepDownEdge.resize(cchGraph.numEdges() + 1, true);
     }
 
     keepUpEdge.back() = false;
@@ -60,7 +61,6 @@ class CCHMetric {
         [&](const int e) { keepUpEdge[e] = false; },
         [&](const int e) { keepDownEdge[e] = false; });
 
-    const auto& cchGraph = cch.getUpwardGraph();
     ConcurrentLocalIdMap<4> upEdgeIdMap(keepUpEdge);
     ConcurrentLocalIdMap<4> downEdgeIdMap(keepDownEdge);
     const auto numUpEdges = upEdgeIdMap.numLocalIds();

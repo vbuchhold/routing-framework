@@ -98,27 +98,27 @@ class BiDijkstra {
     return tentativeDistances[i];
   }
 
-  // Returns the vertices along the i-th shortest path.
+  // Returns the vertices on the i-th shortest path.
   std::vector<int> getPath(const int i = 0) {
-    static_assert(DijkstraT::LabelSet::KEEP_PARENT_VERTICES, "We do not keep parent vertices.");
     assert(tentativeDistances[i] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
-    std::vector<int> subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
+    auto subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
+    auto subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
     std::reverse(subpath1.begin(), subpath1.end());
     subpath1.pop_back();
     subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
     return subpath1;
   }
 
-  // Returns the edges along the i-th shortest path.
-  std::vector<int> getEdgePath(const int i = 0) {
-    static_assert(DijkstraT::LabelSet::KEEP_PARENT_EDGES, "We do not keep parent edges.");
+  // Returns the edges in the forward graph on the path to the meeting vertex (in reverse order).
+  std::vector<int> getEdgePathToMeetingVertex(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
-    std::vector<int> subpath2 = reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
-    std::reverse(subpath1.begin(), subpath1.end());
-    subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
-    return subpath1;
+    return forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
+  }
+
+  // Returns the edges in the reverse graph on the path from the meeting vertex.
+  std::vector<int> getEdgePathFromMeetingVertex(const int i = 0) {
+    assert(tentativeDistances[i] != INFTY);
+    return reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
  private:

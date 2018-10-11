@@ -66,7 +66,7 @@ class ParentLabelContainer {
     while (parent[t].vertex(i) != INVALID_VERTEX) {
       assert(graph.containsEdge(parent[t].vertex(i), t));
       assert(graph.edgeHead(parent[t].edge(i)) == t);
-      path.push_back(graph.edgeId(parent[t].edge(i)));
+      path.push_back(parent[t].edge(i));
       t = parent[t].vertex(i);
     }
     return path;

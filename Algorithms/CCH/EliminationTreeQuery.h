@@ -3,30 +3,26 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
+#include "Algorithms/CH/CH.h"
 #include "Algorithms/CCH/EliminationTreeUpwardSearch.h"
 #include "Tools/Constants.h"
 
 // An implementation of an elimination tree query, computing shortest paths in CCHs without using
 // priority queues. Depending on the label set, the algorithm keeps parent vertices and/or edges,
 // and computes multiple shortest paths simultaneously, possibly using SSE or AVX instructions.
-template <typename CH, typename LabelSetT>
+template <typename LabelSetT>
 class EliminationTreeQuery {
  public:
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
   // Constructs an elimination tree query instance.
-  EliminationTreeQuery(const CH& ch, const std::vector<int>& eliminationTree)
+  EliminationTreeQuery(const CH& ch, const std::vector<int32_t>& eliminationTree)
       : ch(ch),
-        forwardSearch(ch.getUpwardGraph(), eliminationTree, tentativeDistances),
-        reverseSearch(ch.getDownwardGraph(), eliminationTree, tentativeDistances) {}
-
-  // Ensures that the internal data structures fit the size of the graph.
-  void resize() {
-    forwardSearch.resize();
-    reverseSearch.resize();
-  }
+        forwardSearch(ch.upwardGraph(), eliminationTree, tentativeDistances),
+        reverseSearch(ch.downwardGraph(), eliminationTree, tentativeDistances) {}
 
   // Runs an elimination tree query from s to t.
   void run(const int s, const int t) {
@@ -56,40 +52,50 @@ class EliminationTreeQuery {
     return tentativeDistances[i];
   }
 
-  // Returns the vertices on the i-th packed shortest path.
-  std::vector<int> getPackedPath(const int i = 0) {
+  // Returns the vertices on the i-th up-down path.
+  std::vector<int> getUpDownPath(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
-    std::vector<int> subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
+    auto subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
+    auto subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
     std::reverse(subpath1.begin(), subpath1.end());
     subpath1.pop_back();
     subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
     return subpath1;
   }
 
-  // Returns the edges on the i-th packed shortest path.
-  std::vector<int> getPackedEdgePath(const int i = 0) {
+  // Returns the edges in the upward graph on the up part of the up-down path (in reverse order).
+  std::vector<int> getUpEdgePath(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
-    std::vector<int> subpath1 = forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
-    std::vector<int> subpath2 = reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
-    std::reverse(subpath1.begin(), subpath1.end());
-    subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
-    return subpath1;
+    return forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
-  // Returns the edges on the i-th shortest path.
+  // Returns the edges in the downward graph on the down part of the up-down path.
+  std::vector<int> getDownEdgePath(const int i = 0) {
+    assert(tentativeDistances[i] != INFTY);
+    return reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
+  }
+
+  // Returns the edges in the input graph on the i-th shortest path.
   std::vector<int> getEdgePath(const int i = 0) {
-    auto packedPath = getPackedEdgePath(i);
-    std::reverse(packedPath.begin(), packedPath.end());
+    auto upPath = getUpEdgePath(i);
+    auto downPath = getDownEdgePath(i);
+    std::reverse(downPath.begin(), downPath.end());
+    std::for_each(downPath.begin(), downPath.end(), [](int& e) { e = -e - 1; });
+    downPath.insert(downPath.end(), upPath.begin(), upPath.end());
+
     std::vector<int> fullPath;
-    while (!packedPath.empty()) {
-      const int e = packedPath.back();
-      packedPath.pop_back();
-      if (ch.isEdgeShortcut(e)) {
-        packedPath.push_back(ch.shortcutsSecondEdge(e));
-        packedPath.push_back(ch.shortcutsFirstEdge(e));
+    const auto& upGraph = ch.upwardGraph();
+    const auto& downGraph = ch.downwardGraph();
+
+    while (!downPath.empty()) {
+      const auto e = downPath.back();
+      downPath.pop_back();
+      const auto& unpackInfo = e >= 0 ? upGraph.unpackingInfo(e) : downGraph.unpackingInfo(-e - 1);
+      if (unpackInfo.second == INVALID_EDGE) {
+        fullPath.push_back(unpackInfo.first);
       } else {
-        fullPath.push_back(e);
+        downPath.push_back(unpackInfo.second);
+        downPath.push_back(-unpackInfo.first - 1);
       }
     }
     return fullPath;
@@ -99,16 +105,14 @@ class EliminationTreeQuery {
   using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
   using ParentLabel = typename LabelSetT::ParentLabel;     // The parent information for a vertex.
 
-  // Checks whether the path s-u-t improves the tentative distance for any search.
+  // Checks if the path s-u-t improves the tentative distance for any search.
   void updateTentativeDistances(const int u) {
     DistanceLabel dist = forwardSearch.getDistanceLabel(u) + reverseSearch.getDistanceLabel(u);
     meetingVertices.setVertex(u, dist < tentativeDistances);
     tentativeDistances.min(dist);
   }
 
-  using SearchGraph = typename CH::SearchGraph;
-  using Weight      = typename CH::Weight;
-  using UpwardSearch = EliminationTreeUpwardSearch<SearchGraph, Weight, LabelSetT>;
+  using UpwardSearch = EliminationTreeUpwardSearch<LabelSetT>;
 
   const CH& ch;                     // The CH on which we compute shortest paths.
   UpwardSearch forwardSearch;       // The forward search from the source vertices.

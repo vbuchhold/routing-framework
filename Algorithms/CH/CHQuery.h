@@ -5,43 +5,37 @@
 #include <type_traits>
 #include <vector>
 
+#include "Algorithms/CH/CH.h"
 #include "Algorithms/Dijkstra/BiDijkstra.h"
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
 #include "DataStructures/Queues/AddressableKHeap.h"
+#include "Tools/Constants.h"
 
 // Implementation of a CH query. Depending on the used label set, it keeps track of parent vertices
 // and/or edges, and computes multiple shortest paths simultaneously, possibly using SSE or AVX
 // instructions. The algorithm can be used with different distance label containers and queues.
 template <
-    typename CH, template <typename> class DistanceLabelContT, typename LabelSetT, typename QueueT,
+    template <typename> class DistanceLabelContT, typename LabelSetT, typename QueueT,
     bool useStallOnDemand = true>
 class CHQuery {
- private:
-  using Graph = typename CH::SearchGraph; // The graph type on which we compute shortest paths.
-  using Weight = typename CH::Weight;     // The attribute used as edge weight.
-
+ public:
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
- public:
   // Constructs a CH search instance that uses stall-on-demand.
   template <bool cond = useStallOnDemand>
   CHQuery(std::enable_if_t<cond, const CH&> ch)
       : ch(ch),
-        chSearch(ch.getUpwardGraph(), ch.getDownwardGraph(),
-                 CHQueryPruningCriterion(ch.getDownwardGraph()),
-                 CHQueryPruningCriterion(ch.getUpwardGraph())) {}
+        chSearch(
+            ch.upwardGraph(), ch.downwardGraph(),
+            CHQueryPruningCriterion(ch.downwardGraph()),
+            CHQueryPruningCriterion(ch.upwardGraph())) {}
 
   // Constructs a CH search instance that does not use stall-on-demand.
   template <bool cond = useStallOnDemand>
   CHQuery(std::enable_if_t<!cond, const CH&> ch)
-      : ch(ch), chSearch(ch.getUpwardGraph(), ch.getDownwardGraph()) {}
-
-  // Ensures that the internal data structures fit for the size of the graph.
-  void resize() {
-    chSearch.resize();
-  }
+      : ch(ch), chSearch(ch.upwardGraph(), ch.downwardGraph()) {}
 
   // Runs a CH search from s to t.
   void run(const int s, const int t) {
@@ -58,29 +52,42 @@ class CHQuery {
     return chSearch.getDistance(i);
   }
 
-  // Returns the vertices on the i-th packed shortest path.
-  std::vector<int> getPackedPath(const int i = 0) {
+  // Returns the vertices on the i-th up-down path.
+  std::vector<int> getUpDownPath(const int i = 0) {
     return chSearch.getPath(i);
   }
 
-  // Returns the edges on the i-th packed shortest path.
-  std::vector<int> getPackedEdgePath(const int i = 0) {
-    return chSearch.getEdgePath(i);
+  // Returns the edges in the upward graph on the up part of the up-down path (in reverse order).
+  std::vector<int> getUpEdgePath(const int i = 0) {
+    return chSearch.getEdgePathToMeetingVertex(i);
   }
 
-  // Returns the edges on the i-th shortest path.
+  // Returns the edges in the downward graph on the down part of the up-down path.
+  std::vector<int> getDownEdgePath(const int i = 0) {
+    return chSearch.getEdgePathFromMeetingVertex(i);
+  }
+
+  // Returns the edges in the input graph on the i-th shortest path.
   std::vector<int> getEdgePath(const int i = 0) {
-    auto packedPath = getPackedEdgePath(i);
-    std::reverse(packedPath.begin(), packedPath.end());
+    auto upPath = getUpEdgePath(i);
+    auto downPath = getDownEdgePath(i);
+    std::reverse(downPath.begin(), downPath.end());
+    std::for_each(downPath.begin(), downPath.end(), [](int& e) { e = -e - 1; });
+    downPath.insert(downPath.end(), upPath.begin(), upPath.end());
+
     std::vector<int> fullPath;
-    while (!packedPath.empty()) {
-      const int e = packedPath.back();
-      packedPath.pop_back();
-      if (ch.isEdgeShortcut(e)) {
-        packedPath.push_back(ch.shortcutsSecondEdge(e));
-        packedPath.push_back(ch.shortcutsFirstEdge(e));
+    const auto& upGraph = ch.upwardGraph();
+    const auto& downGraph = ch.downwardGraph();
+
+    while (!downPath.empty()) {
+      const auto e = downPath.back();
+      downPath.pop_back();
+      const auto& unpackInfo = e >= 0 ? upGraph.unpackingInfo(e) : downGraph.unpackingInfo(-e - 1);
+      if (unpackInfo.second == INVALID_EDGE) {
+        fullPath.push_back(unpackInfo.first);
       } else {
-        fullPath.push_back(e);
+        downPath.push_back(unpackInfo.second);
+        downPath.push_back(-unpackInfo.first - 1);
       }
     }
     return fullPath;
@@ -93,7 +100,7 @@ class CHQuery {
     using DistLabel = typename LabelSetT::DistanceLabel; // The distance label type we use.
 
     // Constructs a pruning criterion for a CH query.
-    CHQueryPruningCriterion(const Graph& oppositeGraph) : oppositeGraph(oppositeGraph) {}
+    CHQueryPruningCriterion(const CH::SearchGraph& oppositeGraph) : oppositeGraph(oppositeGraph) {}
 
     // Returns true if the search can be pruned at u.
     template <typename DistLabelContainerT>
@@ -101,11 +108,11 @@ class CHQuery {
       LabelMask continueSearch = true;
       FORALL_INCIDENT_EDGES(oppositeGraph, u, e)
         continueSearch &=
-            distToU < distLabels[oppositeGraph.edgeHead(e)] + oppositeGraph.template get<Weight>(e);
+            distToU < distLabels[oppositeGraph.edgeHead(e)] + oppositeGraph.traversalCost(e);
       return !continueSearch;
     }
 
-    const Graph& oppositeGraph; // The downward graph if we prune the upward search or vice versa.
+    const CH::SearchGraph& oppositeGraph; // The down graph if we prune the up search or vice versa.
   };
 
   // The stopping criterion for a CH query computing k shortest paths simultaneously. We can stop
@@ -135,16 +142,18 @@ class CHQuery {
     const int& maxTentativeDistance; // The largest of all k tentative distances.
   };
 
-  using CHDijkstra = std::conditional_t<
-      useStallOnDemand,
-      Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT, CHQueryPruningCriterion>,
-      Dijkstra<Graph, Weight, DistanceLabelContT, LabelSetT, QueueT>>;
+  using CHDijkstraStall = Dijkstra<
+      CH::SearchGraph, TraversalCostAttribute, DistanceLabelContT, LabelSetT, QueueT,
+      CHQueryPruningCriterion>;
+  using CHDijkstraNoStall = Dijkstra<
+      CH::SearchGraph, TraversalCostAttribute, DistanceLabelContT, LabelSetT, QueueT>;
+  using CHDijkstra = std::conditional_t<useStallOnDemand, CHDijkstraStall, CHDijkstraNoStall>;
 
-  const CH& ch;                                              // The CH on which we operate.
+  const CH& ch;                                              // The CH on which we work.
   BiDijkstra<CHDijkstra, CHQueryStoppingCriterion> chSearch; // The modified bidirectional search.
 };
 
 // An alias template for a standard CH search.
-template <typename CH, typename LabelSetT, bool useStallOnDemand = true>
-using StandardCHQuery = CHQuery<
-    CH, StampedDistanceLabelContainer, LabelSetT, AddressableQuadheap, useStallOnDemand>;
+template <typename LabelSetT, bool useStallOnDemand = true>
+using StandardCHQuery =
+    CHQuery<StampedDistanceLabelContainer, LabelSetT, AddressableQuadheap, useStallOnDemand>;

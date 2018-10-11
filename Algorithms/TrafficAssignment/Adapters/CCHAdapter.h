@@ -2,100 +2,103 @@
 
 #include <array>
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
-#include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
+#include "Algorithms/CCH/CCH.h"
+#include "Algorithms/CCH/CCHMetric.h"
 #include "Algorithms/CCH/EliminationTreeQuery.h"
-#include "Algorithms/CH/CHConversion.h"
-#include "Algorithms/CH/ContractionHierarchy.h"
-#include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
+#include "Algorithms/CH/CH.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Labels/SimdLabelSet.h"
-#include "Tools/Constants.h"
+#include "DataStructures/Partitioning/SeparatorDecomposition.h"
+#include "Tools/Simd/AlignedVector.h"
 
 namespace trafficassignment {
 
 // An adapter that makes CCHs usable in the all-or-nothing assignment procedure.
 template <typename InputGraphT, typename WeightT>
 class CCHAdapter {
- private:
-  // The type of the CH resulting from perfectly customizing the CCH.
-  using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, WeightT>>;
-  using CH = ContractionHierarchy<CHGraph, WeightT>;
-
  public:
-  // The label sets used by the standard and centralized CH search.
-  using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
 #if TA_LOG_K < 2 || defined(TA_NO_SIMD_SEARCH)
-  using CentralizedLabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+  using LabelSet = BasicLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
 #else
-  using CentralizedLabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
+  using LabelSet = SimdLabelSet<TA_LOG_K, ParentInfo::FULL_PARENT_INFO>;
 #endif
   using InputGraph = InputGraphT;
 
-  // The number of simultaneous shortest-path computations.
-  static constexpr int K = CentralizedLabelSet::K;
+  static constexpr int K = LabelSet::K; // The number of simultaneous shortest-path computations.
 
   // The search algorithm using the graph and possibly auxiliary data to compute shortest paths.
-  // Multiple instances may work on the same data concurrently.
+  // Multiple instances can work on the same data concurrently.
   class QueryAlgo {
    public:
     // Constructs a query algorithm instance working on the specified data.
-    QueryAlgo(const CH& perfectCH, const std::vector<int>& eliminationTree)
-        : search(perfectCH, eliminationTree),
-          centralizedSearch(perfectCH, eliminationTree),
-          perfectCH(perfectCH) {}
-
-    // Computes the shortest path from s to t.
-    void run(const int s, const int t) {
-      search.run(perfectCH.rank(s), perfectCH.rank(t));
+    QueryAlgo(
+        const CH& minimumWeightedCH, const std::vector<int32_t>& eliminationTree,
+        AlignedVector<int>& flowsOnUpEdges, AlignedVector<int>& flowsOnDownEdges)
+        : minimumWeightedCH(minimumWeightedCH),
+          search(minimumWeightedCH, eliminationTree),
+          flowsOnUpEdges(flowsOnUpEdges),
+          flowsOnDownEdges(flowsOnDownEdges),
+          localFlowsOnUpEdges(flowsOnUpEdges.size()),
+          localFlowsOnDownEdges(flowsOnDownEdges.size()) {
+      assert(minimumWeightedCH.upwardGraph().numEdges() == flowsOnUpEdges.size());
+      assert(minimumWeightedCH.downwardGraph().numEdges() == flowsOnDownEdges.size());
     }
 
     // Computes shortest paths from each source to its target simultaneously.
-    void run(std::array<int, K>& sources, std::array<int, K>& targets) {
-      for (int i = 0; i < K; ++i) {
-        sources[i] = perfectCH.rank(sources[i]);
-        targets[i] = perfectCH.rank(targets[i]);
+    void run(std::array<int, K>& sources, std::array<int, K>& targets, const int k) {
+      // Run a centralized CH search.
+      for (auto i = 0; i < K; ++i) {
+        sources[i] = minimumWeightedCH.rank(sources[i]);
+        targets[i] = minimumWeightedCH.rank(targets[i]);
       }
-      centralizedSearch.run(sources, targets);
+      search.run(sources, targets);
+
+      // Assign flow to the edges on the computed paths.
+      for (auto i = 0; i < k; ++i) {
+        for (const auto e : search.getUpEdgePath(i)) {
+          assert(e >= 0); assert(e < localFlowsOnUpEdges.size());
+          ++localFlowsOnUpEdges[e];
+        }
+        for (const auto e : search.getDownEdgePath(i)) {
+          assert(e >= 0); assert(e < localFlowsOnDownEdges.size());
+          ++localFlowsOnDownEdges[e];
+        }
+      }
     }
 
-    // Returns the length of the shortest path.
-    int getDistance(const int /*dst*/) {
-      return search.getDistance();
-    }
-
-    // Returns the length of the i-th centralized shortest path.
+    // Returns the length of the i-th shortest path.
     int getDistance(const int /*dst*/, const int i) {
-      return centralizedSearch.getDistance(i);
+      return search.getDistance(i);
     }
 
-    // Returns the edges on the (packed) shortest path.
-    std::vector<int> getPackedEdgePath(const int /*dst*/) {
-      return search.getPackedEdgePath();
-    }
-
-    // Return the edges on the i-th (packed) centralized shortest path.
-    std::vector<int> getPackedEdgePath(const int /*dst*/, const int i) {
-      return centralizedSearch.getPackedEdgePath(i);
+    // Adds the local flow counters to the global ones. Must be synchronized externally.
+    void addLocalToGlobalFlows() {
+      FORALL_EDGES(minimumWeightedCH.upwardGraph(), e)
+        flowsOnUpEdges[e] += localFlowsOnUpEdges[e];
+      FORALL_EDGES(minimumWeightedCH.downwardGraph(), e)
+        flowsOnDownEdges[e] += localFlowsOnDownEdges[e];
     }
 
    private:
-    using Search = EliminationTreeQuery<CH, LabelSet>;
-    using CentralizedSearch = EliminationTreeQuery<CH, CentralizedLabelSet>;
-
-    Search search;                       // CH search on the perfect CH for a single path.
-    CentralizedSearch centralizedSearch; // CH search on the perfect CH for multiple paths.
-    const CH& perfectCH;                 // The CH resulting from perfectly customizing the CCH.
+    const CH& minimumWeightedCH;            // The CH resulting from perfect customization.
+    EliminationTreeQuery<LabelSet> search;  // The CH search on the minimum weighted CH.
+    AlignedVector<int>& flowsOnUpEdges;     // The flows in the upward graph.
+    AlignedVector<int>& flowsOnDownEdges;   // The flows in the downward graph.
+    std::vector<int> localFlowsOnUpEdges;   // The local flows in the upward graph.
+    std::vector<int> localFlowsOnDownEdges; // The local flows in the downward graph.
   };
 
   // Constructs an adapter for CCHs.
-  explicit CCHAdapter(const InputGraph& graph) : inputGraph(graph) {
-    assert(graph.numEdges() > 0); assert(graph.isDefrag());
+  explicit CCHAdapter(const InputGraph& inputGraph)
+      : inputGraph(inputGraph), currentMetric(cch, &inputGraph.template get<WeightT>(0)) {
+    assert(inputGraph.numEdges() > 0); assert(inputGraph.isDefrag());
   }
 
   // Invoked before the first iteration.
@@ -114,59 +117,72 @@ class CCHAdapter {
       }
     }
 
-    // Compute a nested dissection order for the input graph.
+    // Compute a separator decomposition for the input graph.
     const auto graph = RoutingKit::make_graph_fragment(inputGraph.numVertices(), tails, heads);
-    auto computeSeparator = [&lats, &lngs](const RoutingKit::GraphFragment& fragment) {
+    auto computeSep = [&](const RoutingKit::GraphFragment& fragment) {
       const auto cut = inertial_flow(fragment, 30, lats, lngs);
       return derive_separator_from_cut(fragment, cut.is_node_on_side);
     };
-    const auto order = compute_nested_node_dissection_order(graph, computeSeparator);
+    const auto decomp = compute_separator_decomposition(graph, computeSep);
 
-    // Build the metric-independent CCH.
-    cch = RoutingKit::CustomizableContractionHierarchy(order, tails, heads);
-    eliminationTree.assign(cch.elimination_tree_parent.begin(), cch.elimination_tree_parent.end());
-    eliminationTree.back() = INVALID_VERTEX;
-    const int* const weights = &inputGraph.template get<WeightT>(0);
-    currentMetric = {cch, reinterpret_cast<const unsigned int*>(weights)};
+    // Convert the separator decomposition to our representation.
+    SeparatorDecomposition sepDecomp;
+    for (const auto& n : decomp.tree) {
+      SeparatorDecomposition::Node node;
+      node.leftChild = n.left_child;
+      node.rightSibling = n.right_sibling;
+      node.firstSeparatorVertex = n.first_separator_vertex;
+      node.lastSeparatorVertex = n.last_separator_vertex;
+      sepDecomp.tree.push_back(node);
+    }
+    sepDecomp.order.assign(decomp.order.begin(), decomp.order.end());
+
+    // Build the CCH.
+    cch.preprocess(inputGraph, sepDecomp);
   }
 
   // Invoked before each iteration.
   void customize() {
-    // Customize the CCH using perfect witness searches.
-    const int numEdges = inputGraph.numEdges();
-    perfectCH = convert<CH>(
-        currentMetric.build_contraction_hierarchy_using_perfect_witness_search(), numEdges);
+    minimumWeightedCH = currentMetric.buildMinimumWeightedCH();
+    flowsOnUpEdges.assign(minimumWeightedCH.upwardGraph().numEdges(), 0);
+    flowsOnDownEdges.assign(minimumWeightedCH.downwardGraph().numEdges(), 0);
   }
 
   // Returns an instance of the query algorithm.
-  QueryAlgo getQueryAlgoInstance() const {
-    return QueryAlgo(perfectCH, eliminationTree);
+  QueryAlgo getQueryAlgoInstance() {
+    return {minimumWeightedCH, cch.getEliminationTree(), flowsOnUpEdges, flowsOnDownEdges};
   }
 
-  // Returns the first constituent edge of shortcut s.
-  int getShortcutsFirstEdge(const int s) const {
-    return perfectCH.shortcutsFirstEdge(s);
-  }
-
-  // Returns the second constituent edge of shortcut s.
-  int getShortcutsSecondEdge(const int s) const {
-    return perfectCH.shortcutsSecondEdge(s);
-  }
-
-  // Returns the number of shortcut edges.
-  int getNumShortcuts() const {
-    return perfectCH.numShortcuts();
+  // Propagates the flows on the edges in the search graphs to the edges in the input graph.
+  void propagateFlowsToInputEdges(AlignedVector<int>& flowsOnInputEdges) {
+    const auto& upGraph = minimumWeightedCH.upwardGraph();
+    const auto& downGraph = minimumWeightedCH.downwardGraph();
+    for (auto u = inputGraph.numVertices() - 1; u >= 0; --u) {
+      FORALL_INCIDENT_EDGES(upGraph, u, e)
+        if (upGraph.unpackingInfo(e).second == INVALID_EDGE) {
+          flowsOnInputEdges[upGraph.unpackingInfo(e).first] = flowsOnUpEdges[e];
+        } else {
+          flowsOnDownEdges[upGraph.unpackingInfo(e).first] += flowsOnUpEdges[e];
+          flowsOnUpEdges[upGraph.unpackingInfo(e).second] += flowsOnUpEdges[e];
+        }
+      FORALL_INCIDENT_EDGES(downGraph, u, e)
+        if (downGraph.unpackingInfo(e).second == INVALID_EDGE) {
+          flowsOnInputEdges[downGraph.unpackingInfo(e).first] = flowsOnDownEdges[e];
+        } else {
+          flowsOnDownEdges[downGraph.unpackingInfo(e).first] += flowsOnDownEdges[e];
+          flowsOnUpEdges[downGraph.unpackingInfo(e).second] += flowsOnDownEdges[e];
+        }
+    }
   }
 
  private:
-  using CCH = RoutingKit::CustomizableContractionHierarchy;
-  using CCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
+  const InputGraph& inputGraph; // The input graph.
+  CCH cch;                      // The metric-independent CCH.
+  CCHMetric currentMetric;      // The current metric for the CCH.
+  CH minimumWeightedCH;         // The minimum weighted CH resulting from perfect customization.
 
-  const InputGraph& inputGraph;     // The input graph.
-  CCH cch;                          // The metric-independent CCH.
-  std::vector<int> eliminationTree; // eliminationTree[v] is the parent of v in the tree.
-  CCHMetric currentMetric;          // The current metric for the CCH.
-  CH perfectCH;                     // The CH resulting from perfectly customizing the CCH.
+  AlignedVector<int> flowsOnUpEdges;   // The flows on the edges in the upward graph.
+  AlignedVector<int> flowsOnDownEdges; // The flows on the edges in the downward graph.
 };
 
 }
