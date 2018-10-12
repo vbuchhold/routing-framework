@@ -1,4 +1,3 @@
-#include <cassert>
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
@@ -8,38 +7,34 @@
 #include <vector>
 
 #include <csv.h>
-#include <routingkit/contraction_hierarchy.h>
-#include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
+#include "Algorithms/CCH/CCH.h"
+#include "Algorithms/CCH/CCHMetric.h"
 #include "Algorithms/CCH/EliminationTreeQuery.h"
-#include "Algorithms/CH/CHConversion.h"
-#include "Algorithms/CH/CHPreprocessing.h"
+#include "Algorithms/CH/CH.h"
 #include "Algorithms/CH/CHQuery.h"
-#include "Algorithms/CH/ContractionHierarchy.h"
 #include "Algorithms/Dijkstra/BiDijkstra.h"
 #include "Algorithms/Dijkstra/Dijkstra.h"
-#include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
+#include "DataStructures/Partitioning/SeparatorDecomposition.h"
 #include "Tools/CommandLine/CommandLineParser.h"
-#include "Tools/BinaryIO.h"
-#include "Tools/Constants.h"
 #include "Tools/Timer.h"
 
 void printUsage() {
   std::cout <<
-      "Usage: RunP2PAlgo -a CH -g <file> [-ord <file>] -o <file>\n"
+      "Usage: RunP2PAlgo -a CH -g <file> -o <file>\n"
       "       RunP2PAlgo -a CCH [-b <balance>] -g <file> -o <file>\n"
       "       RunP2PAlgo -a Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a Bi-Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a CH [-s] -ch <file> -od <file> -o <file>\n"
-      "       RunP2PAlgo -a CCH-Dij [-s] -g <file> -ord <file> -od <file> -o <file>\n"
-      "       RunP2PAlgo -a CCH-tree -g <file> -ord <file> -od <file> -o <file>\n"
+      "       RunP2PAlgo -a CCH-Dij [-s] -g <file> -sep <file> -od <file> -o <file>\n"
+      "       RunP2PAlgo -a CCH-tree -g <file> -sep <file> -od <file> -o <file>\n"
       "This program runs the preprocessing or query phase of various point-to-point\n"
       "shortest-path algorithms, such as Dijkstra, bidirectional search, CH or CCH.\n"
       "  -l                use physical length as metric (default: travel time)\n"
@@ -47,8 +42,8 @@ void printUsage() {
       "  -a <algo>         algorithm to be run\n"
       "  -b <balance>      balance parameter in % for nested dissection (default: 30)\n"
       "  -g <file>         input graph in binary format\n"
-      "  -ord <file>       order in which vertices are contracted\n"
-      "  -ch <file>        metric-dependent CH\n"
+      "  -ch <file>        weighted CH\n"
+      "  -sep <file>       separator decomposition of the input graph\n"
       "  -od <file>        file containing OD-pairs (queries)\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
@@ -56,60 +51,32 @@ void printUsage() {
 
 // Some helper aliases.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
-using EdgeAttributes = EdgeAttrs<EdgeIdAttribute, LengthAttribute, TravelTimeAttribute>;
+using EdgeAttributes = EdgeAttrs<LengthAttribute, TravelTimeAttribute>;
 using InputGraph = StaticGraph<VertexAttributes, EdgeAttributes>;
-using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, TravelTimeAttribute>>;
-using CH = ContractionHierarchy<CHGraph, TravelTimeAttribute>;
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-using LabelSet = BasicLabelSet<0, ParentInfo::FULL_PARENT_INFO>;
-#else
 using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-#endif
 
 // The query algorithms.
 using Dij = StandardDijkstra<InputGraph, TravelTimeAttribute, LabelSet>;
 using BiDij = BiDijkstra<Dij>;
 template <bool useStalling>
-using CHSearch = StandardCHQuery<CH, LabelSet, useStalling>;
-using CCHTree = EliminationTreeQuery<CH, LabelSet>;
-
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-InputGraph inputGraph;
-#endif
+using CHSearch = StandardCHQuery<LabelSet, useStalling>;
+using CCHTree = EliminationTreeQuery<LabelSet>;
 
 // Writes the header line of the output CSV file.
 template <typename AlgoT>
 inline void writeHeaderLine(std::ofstream& out, AlgoT&) {
-  out << "query_time,distance";
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-  out << ",length";
-#endif
-  out << '\n';
+  out << "query_time,distance" << '\n';
 }
 
 // Writes a record line of the output CSV file, containing statistics about a single query.
 template <typename AlgoT>
 inline void writeRecordLine(std::ofstream& out, AlgoT& algo, const int, const int elapsed) {
-  out << elapsed << ',' << algo.getDistance();
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-  int len = 0;
-  for (const auto e : algo.getEdgePath())
-    len += inputGraph.length(e);
-  out << ',' << len;
-#endif
-  out << '\n';
+  out << elapsed << ',' << algo.getDistance() << '\n';
 }
 
 template <>
 inline void writeRecordLine(std::ofstream& out, Dij& algo, const int dst, const int elapsed) {
-  out << elapsed << ',' << algo.getDistance(dst);
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-  int len = 0;
-  for (const auto e : algo.getReverseEdgePath(dst))
-    len += inputGraph.length(e);
-  out << ',' << len;
-#endif
-  out << '\n';
+  out << elapsed << ',' << algo.getDistance(dst) << '\n';
 }
 
 // Runs the queries in the specified OD-file using the specified P2P algorithm.
@@ -132,7 +99,7 @@ inline void runQueries(AlgoT& algo, const std::string& od, std::ofstream& outfil
     destination = translate(destination);
     timer.restart();
     algo.run(origin, destination);
-    const int elapsed = timer.elapsed<std::chrono::microseconds>();
+    const auto elapsed = timer.elapsed<std::chrono::microseconds>();
     if (hasRanks) outfile << rank << ',';
     writeRecordLine(outfile, algo, destination, elapsed);
   }
@@ -144,22 +111,10 @@ inline void runQueries(const CommandLineParser& clp) {
   const bool noStalling = clp.isSet("s");
   const std::string algorithmName = clp.getValue<std::string>("a");
   const std::string graphFilename = clp.getValue<std::string>("g");
-  const std::string orderFilename = clp.getValue<std::string>("ord");
+  const std::string orderFilename = clp.getValue<std::string>("sep");
   const std::string chFilename = clp.getValue<std::string>("ch");
   const std::string odFilename = clp.getValue<std::string>("od");
   const std::string outfilename = clp.getValue<std::string>("o");
-
-#ifdef P2P_OUTPUT_PHYSICAL_PATH_LENGTHS
-  // Read the input graph.
-  std::ifstream graphFile(graphFilename, std::ios::binary);
-  if (!graphFile.good())
-    throw std::invalid_argument("file not found -- '" + graphFilename + "'");
-  inputGraph.readFrom(graphFile);
-  graphFile.close();
-  int id = 0;
-  FORALL_EDGES(inputGraph, v)
-    inputGraph.edgeId(v) = id++;
-#endif
 
   // Open the output CSV file.
   std::ofstream outfile(outfilename + ".csv");
@@ -230,37 +185,25 @@ inline void runQueries(const CommandLineParser& clp) {
     std::ifstream orderFile(orderFilename, std::ios::binary);
     if (!orderFile.good())
       throw std::invalid_argument("file not found -- '" + orderFilename + "'");
-    std::vector<unsigned int> order;
-    bio::read(orderFile, order);
+    SeparatorDecomposition sepDecomp;
+    sepDecomp.readFrom(orderFile);
     orderFile.close();
 
-    std::vector<unsigned int> tails(graph.numEdges());
-    std::vector<unsigned int> heads(graph.numEdges());
-    FORALL_VERTICES(graph, u)
-      FORALL_INCIDENT_EDGES(graph, u, e) {
-        tails[e] = u;
-        heads[e] = graph.edgeHead(e);
-      }
-
-    using RoutingKitCCH = RoutingKit::CustomizableContractionHierarchy;
-    using RoutingKitCCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
-    using RoutingKitCH = RoutingKit::ContractionHierarchy;
-    RoutingKitCCH cch(order, tails, heads);
-    const int* const weights = useLengths ? &graph.length(0) : &graph.travelTime(0);
-    RoutingKitCCHMetric metric(cch, reinterpret_cast<const unsigned int*>(weights));
-    RoutingKitCH ch = metric.build_contraction_hierarchy_using_perfect_witness_search();
-    CH perfectCH = convert<CH>(ch, graph.numEdges());
+    CCH cch;
+    cch.preprocess(graph, sepDecomp);
+    CCHMetric metric(cch, useLengths ? &graph.length(0) : &graph.travelTime(0));
+    const auto minWeightedCH = metric.buildMinimumWeightedCH();
 
     outfile << "# graph: " << graphFilename << '\n';
     outfile << "# order: " << orderFilename << '\n';
     outfile << "# OD-pairs: " << odFilename << '\n';
 
     if (noStalling) {
-      CHSearch<false> algo(perfectCH);
-      runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
+      CHSearch<false> algo(minWeightedCH);
+      runQueries(algo, odFilename, outfile, [&](const int v) { return minWeightedCH.rank(v); });
     } else {
-      CHSearch<true> algo(perfectCH);
-      runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
+      CHSearch<true> algo(minWeightedCH);
+      runQueries(algo, odFilename, outfile, [&](const int v) { return minWeightedCH.rank(v); });
     }
   } else if (algorithmName == "CCH-tree") {
     // Run the elimination-tree-based query phase of CCH.
@@ -273,35 +216,21 @@ inline void runQueries(const CommandLineParser& clp) {
     std::ifstream orderFile(orderFilename, std::ios::binary);
     if (!orderFile.good())
       throw std::invalid_argument("file not found -- '" + orderFilename + "'");
-    std::vector<unsigned int> order;
-    bio::read(orderFile, order);
+    SeparatorDecomposition sepDecomp;
+    sepDecomp.readFrom(orderFile);
     orderFile.close();
 
-    std::vector<unsigned int> tails(graph.numEdges());
-    std::vector<unsigned int> heads(graph.numEdges());
-    FORALL_VERTICES(graph, u)
-      FORALL_INCIDENT_EDGES(graph, u, e) {
-        tails[e] = u;
-        heads[e] = graph.edgeHead(e);
-      }
-
-    using RoutingKitCCH = RoutingKit::CustomizableContractionHierarchy;
-    using RoutingKitCCHMetric = RoutingKit::CustomizableContractionHierarchyMetric;
-    using RoutingKitCH = RoutingKit::ContractionHierarchy;
-    RoutingKitCCH cch(order, tails, heads);
-    std::vector<int> tree(cch.elimination_tree_parent.begin(), cch.elimination_tree_parent.end());
-    tree.back() = INVALID_VERTEX;
-    const int* const weights = useLengths ? &graph.length(0) : &graph.travelTime(0);
-    RoutingKitCCHMetric metric(cch, reinterpret_cast<const unsigned int*>(weights));
-    RoutingKitCH ch = metric.build_contraction_hierarchy_using_perfect_witness_search();
-    CH perfectCH = convert<CH>(ch, graph.numEdges());
+    CCH cch;
+    cch.preprocess(graph, sepDecomp);
+    CCHMetric metric(cch, useLengths ? &graph.length(0) : &graph.travelTime(0));
+    const auto minWeightedCH = metric.buildMinimumWeightedCH();
 
     outfile << "# graph: " << graphFilename << '\n';
     outfile << "# order: " << orderFilename << '\n';
     outfile << "# OD-pairs: " << odFilename << '\n';
 
-    CCHTree algo(perfectCH, tree);
-    runQueries(algo, odFilename, outfile, [&](const int v) { return perfectCH.rank(v); });
+    CCHTree algo(minWeightedCH, cch.getEliminationTree());
+    runQueries(algo, odFilename, outfile, [&](const int v) { return minWeightedCH.rank(v); });
   } else {
     throw std::invalid_argument("invalid P2P algorithm -- '" + algorithmName + "'");
   }
@@ -313,7 +242,6 @@ inline void runPreprocessing(const CommandLineParser& clp) {
   const int imbalance = clp.getValue<int>("i", 30);
   const std::string algorithmName = clp.getValue<std::string>("a");
   const std::string graphFilename = clp.getValue<std::string>("g");
-  const std::string orderFilename = clp.getValue<std::string>("ord");
   std::string outfilename = clp.getValue<std::string>("o");
 
   // Read the input graph.
@@ -334,13 +262,15 @@ inline void runPreprocessing(const CommandLineParser& clp) {
     if (!outfile.good())
       throw std::invalid_argument("file cannot be opened -- '" + outfilename);
 
-    CHPreprocessing<InputGraph, CHGraph, TravelTimeAttribute> algo(graph);
-    algo.run().writeTo(outfile);
+    CH ch;
+    ch.preprocess<TravelTimeAttribute>(graph);
+    ch.writeTo(outfile);
   } else if (algorithmName == "CCH") {
     // Run the preprocessing phase of CCH.
     if (imbalance < 0)
       throw std::invalid_argument("invalid imbalance -- '" + std::to_string(imbalance) + "'");
 
+    // Convert the input graph to RoutingKit's graph representation.
     std::vector<float> lats(graph.numVertices());
     std::vector<float> lngs(graph.numVertices());
     std::vector<unsigned int> tails(graph.numEdges());
@@ -354,19 +284,31 @@ inline void runPreprocessing(const CommandLineParser& clp) {
       }
     }
 
-    const RoutingKit::GraphFragment fragment =
-        RoutingKit::make_graph_fragment(graph.numVertices(), tails, heads);
-
-    auto computeSeparator = [&lats, &lngs, imbalance](const RoutingKit::GraphFragment& fragment) {
-      const RoutingKit::CutSide side = inertial_flow(fragment, imbalance, lats, lngs);
-      return derive_separator_from_cut(fragment, side.is_node_on_side);
+    // Compute a separator decomposition for the input graph.
+    const auto fragment = RoutingKit::make_graph_fragment(graph.numVertices(), tails, heads);
+    auto computeSep = [&](const RoutingKit::GraphFragment& fragment) {
+      const auto cut = inertial_flow(fragment, imbalance, lats, lngs);
+      return derive_separator_from_cut(fragment, cut.is_node_on_side);
     };
+    const auto decomp = compute_separator_decomposition(fragment, computeSep);
 
-    outfilename += ".nd" + std::to_string(imbalance) + ".ord.bin";
+    // Convert the separator decomposition to our representation.
+    SeparatorDecomposition sepDecomp;
+    for (const auto& n : decomp.tree) {
+      SeparatorDecomposition::Node node;
+      node.leftChild = n.left_child;
+      node.rightSibling = n.right_sibling;
+      node.firstSeparatorVertex = n.first_separator_vertex;
+      node.lastSeparatorVertex = n.last_separator_vertex;
+      sepDecomp.tree.push_back(node);
+    }
+    sepDecomp.order.assign(decomp.order.begin(), decomp.order.end());
+
+    outfilename += ".nd" + std::to_string(imbalance) + ".sep.bin";
     std::ofstream outfile(outfilename, std::ios::binary);
     if (!outfile.good())
       throw std::invalid_argument("file cannot be opened -- '" + outfilename);
-    bio::write(outfile, compute_nested_node_dissection_order(fragment, computeSeparator));
+    sepDecomp.writeTo(outfile);
   } else {
     throw std::invalid_argument("invalid P2P algorithm -- '" + algorithmName + "'");
   }
