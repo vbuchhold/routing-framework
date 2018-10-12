@@ -7,8 +7,8 @@
 
 #include <csv.h>
 
+#include "Algorithms/CH/CH.h"
 #include "Algorithms/CH/CHQuery.h"
-#include "Algorithms/CH/ContractionHierarchy.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
@@ -51,8 +51,6 @@ int main(int argc, char* argv[]) {
     graphFile.close();
 
     // Read the CH from file.
-    using CHGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<EdgeIdAttribute, TravelTimeAttribute>>;
-    using CH = ContractionHierarchy<CHGraph, TravelTimeAttribute>;
     std::ifstream chFile(chFilename, std::ios::binary);
     if (!chFile.good())
       throw std::invalid_argument("file not found -- '" + chFilename + "'");
@@ -113,7 +111,7 @@ int main(int argc, char* argv[]) {
     out << '\n';
 
     // Compute the distance for each OD-pair.
-    StandardCHQuery<CH, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
+    StandardCHQuery<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
     int origin, destination, originZone, destinationZone, dep, rank;
     while (csv.read_row(origin, destination, originZone, destinationZone, dep, rank)) {
       chSearch.run(ch.rank(origToLocalId[origin]), ch.rank(origToLocalId[destination]));
