@@ -22,6 +22,12 @@ $PROG -p 2   -n 12 -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stu
 $PROG -p 24  -n 6  -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/Dij_rand_Tue24h
 $PROG -p 168 -n 6  -a dijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/Dij_rand_MonSun
 
+$PROG -p 0.5 -n 12 -a bidijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/BiDij_rand_Tue30m
+$PROG -p 1   -n 12 -a bidijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/BiDij_rand_Tue01h
+$PROG -p 2   -n 12 -a bidijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/BiDij_rand_Tue02h
+$PROG -p 24  -n 6  -a bidijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/BiDij_rand_Tue24h
+$PROG -p 168 -n 6  -a bidijkstra -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/BiDij_rand_MonSun
+
 $PROG -p 0.5 -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_rand_Tue30m
 $PROG -p 1   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_rand_Tue01h
 $PROG -p 2   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_rand_Tue02h
