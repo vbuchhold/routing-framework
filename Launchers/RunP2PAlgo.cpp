@@ -30,6 +30,7 @@ void printUsage() {
   std::cout <<
       "Usage: RunP2PAlgo -a CH -g <file> -o <file>\n"
       "       RunP2PAlgo -a CCH [-b <balance>] -g <file> -o <file>\n"
+      "       RunP2PAlgo -a CCH-custom -n <num> -g <file> -sep <file> -o <file>\n"
       "       RunP2PAlgo -a Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a Bi-Dij -g <file> -od <file> -o <file>\n"
       "       RunP2PAlgo -a CH [-s] -ch <file> -od <file> -o <file>\n"
@@ -41,6 +42,7 @@ void printUsage() {
       "  -s                do not use the stall-on-demand technique\n"
       "  -a <algo>         algorithm to be run\n"
       "  -b <balance>      balance parameter in % for nested dissection (default: 30)\n"
+      "  -n <num>          run the customization <num> times (defaults to 100)\n"
       "  -g <file>         input graph in binary format\n"
       "  -ch <file>        weighted CH\n"
       "  -sep <file>       separator decomposition of the input graph\n"
@@ -238,11 +240,13 @@ inline void runQueries(const CommandLineParser& clp) {
 
 // Invoked when the user wants to run the preprocessing phase of a P2P algorithm.
 inline void runPreprocessing(const CommandLineParser& clp) {
-  const bool useLengths = clp.isSet("l");
-  const int imbalance = clp.getValue<int>("i", 30);
-  const std::string algorithmName = clp.getValue<std::string>("a");
-  const std::string graphFilename = clp.getValue<std::string>("g");
-  std::string outfilename = clp.getValue<std::string>("o");
+  const auto useLengths = clp.isSet("l");
+  const auto imbalance = clp.getValue<int>("i", 30);
+  const auto numCustomRuns = clp.getValue<int>("n", 100);
+  const auto algorithmName = clp.getValue<std::string>("a");
+  const auto graphFilename = clp.getValue<std::string>("g");
+  const auto orderFilename = clp.getValue<std::string>("sep");
+  auto outfilename = clp.getValue<std::string>("o");
 
   // Read the input graph.
   std::ifstream graphFile(graphFilename, std::ios::binary);
@@ -309,6 +313,46 @@ inline void runPreprocessing(const CommandLineParser& clp) {
     if (!outfile.good())
       throw std::invalid_argument("file cannot be opened -- '" + outfilename);
     sepDecomp.writeTo(outfile);
+  } else if (algorithmName == "CCH-custom") {
+    // Run the customization phase of CCH.
+    std::ifstream orderFile(orderFilename, std::ios::binary);
+    if (!orderFile.good())
+      throw std::invalid_argument("file not found -- '" + orderFilename + "'");
+    SeparatorDecomposition decomp;
+    decomp.readFrom(orderFile);
+    orderFile.close();
+
+    std::ofstream outfile(outfilename + ".csv");
+    if (!outfile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + outfilename + ".csv'");
+    outfile << "# graph: " << graphFilename << '\n';
+    outfile << "# order: " << orderFilename << '\n';
+    outfile << "basic_customization,perfect_customization,construction,total_time\n";
+
+    CCH cch;
+    cch.preprocess(graph, decomp);
+
+    Timer timer;
+    int basicCustom, perfectCustom, construction, total;
+    for (auto i = 0; i < numCustomRuns; ++i) {
+      {
+        CCHMetric metric(cch, &graph.travelTime(0));
+        timer.restart();
+        metric.customize();
+        basicCustom = timer.elapsed<std::chrono::microseconds>();
+        timer.restart();
+        metric.runPerfectCustomization();
+        perfectCustom = timer.elapsed<std::chrono::microseconds>();
+      }
+      {
+        CCHMetric metric(cch, &graph.travelTime(0));
+        timer.restart();
+        metric.buildMinimumWeightedCH();
+        total = timer.elapsed<std::chrono::microseconds>();
+      }
+      construction = total - basicCustom - perfectCustom;
+      outfile << basicCustom << ',' << perfectCustom << ',' << construction << ',' << total << '\n';
+    }
   } else {
     throw std::invalid_argument("invalid P2P algorithm -- '" + algorithmName + "'");
   }
