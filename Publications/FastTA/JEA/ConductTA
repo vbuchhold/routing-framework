@@ -168,18 +168,18 @@ $PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgar
 for ((numCores = 2; numCores <= 4; ++numCores)); do
   export OMP_NUM_THREADS=$numCores
   scons variant=Release def=TA_LOG_K=0 AssignTraffic
-  $PROG -p 0.5 -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_rand_Tue30m_${numCores}cores
-  $PROG -p 1   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_rand_Tue01h_${numCores}cores
-  $PROG -p 2   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_rand_Tue02h_${numCores}cores
-  $PROG -p 24  -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_rand_Tue24h_${numCores}cores
-  $PROG -p 168 -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_rand_MonSun_${numCores}cores
+  $PROG -p 0.5 -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CH_rand_Tue30m_M1-4_${numCores}cores
+  $PROG -p 1   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CH_rand_Tue01h_M1-4_${numCores}cores
+  $PROG -p 2   -n 12 -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CH_rand_Tue02h_M1-4_${numCores}cores
+  $PROG -p 24  -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CH_rand_Tue24h_M1-4_${numCores}cores
+  $PROG -p 168 -n 6  -a ch -ord random -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CH_rand_MonSun_M1-4_${numCores}cores
 
   scons variant=Release simd=avx AssignTraffic
-  $PROG -p 0.5 -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue30m_${numCores}cores
-  $PROG -p 1   -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue01h_${numCores}cores
-  $PROG -p 2   -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue02h_${numCores}cores
-  $PROG -p 24  -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue24h_${numCores}cores
-  $PROG -p 168 -n 30 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k32_AVX_MonSun_${numCores}cores
+  $PROG -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue30m_M1-4_${numCores}cores
+  $PROG -p 1   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue01h_M1-4_${numCores}cores
+  $PROG -p 2   -n 12 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue02h_M1-4_${numCores}cores
+  $PROG -p 24  -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/CCH_k32_AVX_Tue24h_M1-4_${numCores}cores
+  $PROG -p 168 -n 6  -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/CCH_k32_AVX_MonSun_M1-4_${numCores}cores
 done
 
 $PROG -p 0.5 -n 300 -a cch -ord sorted -i $INPUT_GRAPH -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -dist $DIST_DIR/Tue30m

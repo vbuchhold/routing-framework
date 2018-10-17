@@ -1,0 +1,34 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+BUILD_DIR=Build/Release/Launchers
+INPUT_DIR=$1/Inputs
+OD_DIR=$1/Inputs/ODPairs/TA
+OUTPUT_DIR=$1/Experiments/FastTA/JEA
+mkdir --parents $OUTPUT_DIR/P2P
+mkdir --parents $OUTPUT_DIR/TA
+
+export OMP_NUM_THREADS=1
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+for ((numCores = 1; numCores <= 16; numCores *= 2)); do
+  export OMP_NUM_THREADS=$numCores
+  scons variant=Release RunP2PAlgo
+  $BUILD_DIR/RunP2PAlgo -a CCH-custom -g $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -sep $INPUT_DIR/Partitions/Visum_Stuttgart.nd30.sep.bin -o $OUTPUT_DIR/P2P/Customization_Stuttgart_${numCores}cores
+  $BUILD_DIR/RunP2PAlgo -a CCH-custom -g $INPUT_DIR/Graphs/DIMACS_eur.gr.bin      -sep $INPUT_DIR/Partitions/DIMACS_eur.nd30.sep.bin      -o $OUTPUT_DIR/P2P/Customization_Europe_${numCores}cores
+
+  scons variant=Release def=TA_LOG_K=0 AssignTraffic
+  $BUILD_DIR/AssignTraffic -p 0.5 -n 12 -a ch -ord random -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/TA/CH_rand_Tue30m_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 1   -n 12 -a ch -ord random -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/TA/CH_rand_Tue01h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 2   -n 12 -a ch -ord random -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/TA/CH_rand_Tue02h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 24  -n 6  -a ch -ord random -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/TA/CH_rand_Tue24h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 168 -n 6  -a ch -ord random -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/TA/CH_rand_MonSun_M2-16_${numCores}cores
+
+  scons variant=Release AssignTraffic
+  $BUILD_DIR/AssignTraffic -p 0.5 -n 12 -a cch -ord sorted -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue30m.csv -o $OUTPUT_DIR/TA/CCH_k32_SSE_Tue30m_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 1   -n 12 -a cch -ord sorted -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue01h.csv -o $OUTPUT_DIR/TA/CCH_k32_SSE_Tue01h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 2   -n 16 -a cch -ord sorted -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue02h.csv -o $OUTPUT_DIR/TA/CCH_k32_SSE_Tue02h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 24  -n 6  -a cch -ord sorted -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_Tue24h.csv -o $OUTPUT_DIR/TA/CCH_k32_SSE_Tue24h_M2-16_${numCores}cores
+  $BUILD_DIR/AssignTraffic -p 168 -n 6  -a cch -ord sorted -i $INPUT_DIR/Graphs/Visum_Stuttgart.gr.bin -od $OD_DIR/Visum_Stuttgart_MonSun.csv -o $OUTPUT_DIR/TA/CCH_k32_SSE_MonSun_M2-16_${numCores}cores
+done
