@@ -16,7 +16,7 @@
 
 #include "Algorithms/GraphTraversal/StronglyConnectedComponents.h"
 #include "DataStructures/Geometry/Area.h"
-#include "DataStructures/Geometry/CoordinateConversion.h"
+#include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "DataStructures/Geometry/LatLng.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Polygon.h"
@@ -30,6 +30,7 @@
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/Constants.h"
+#include "Tools/Math.h"
 #include "Visualization/Graphics/PdfGraphic.h"
 #include "Visualization/Graphics/PngGraphic.h"
 #include "Visualization/Graphics/SvgGraphic.h"
@@ -191,13 +192,19 @@ int main(int argc, char* argv[]) {
       if (clp.isSet("b")) {
         // Draw the boundary.
         pd.setColor(KIT_BLACK);
-        CoordinateConversion conv(CoordinateConversion::DHDN_GAUSS_KRUGER_ZONE_3);
+        const auto primaryCrs = CoordinateTransformation::WGS_84;
+        const auto secondaryCrs = CoordinateTransformation::DHDN_GAUSS_KRUGER_ZONE_3;
+        CoordinateTransformation trans(primaryCrs, secondaryCrs);
         Area area;
         area.importFromOsmPolyFile(clp.getValue<std::string>("b"));
         for (auto& face : area) {
           Polygon polygon;
-          for (const auto& vertex : face)
-            polygon.add(conv.convert(LatLng(vertex.getY(), vertex.getX())));
+          for (const auto& vertex : face) {
+            LatLng ll(vertex.getY(), vertex.getX());
+            double easting, northing;
+            trans.forward(toRadians(ll.lngInDeg()), toRadians(ll.latInDeg()), easting, northing);
+            polygon.add(Point(std::round(easting), std::round(northing)));
+          }
           assert(polygon.simple());
           pd.drawPolygon(polygon);
         }

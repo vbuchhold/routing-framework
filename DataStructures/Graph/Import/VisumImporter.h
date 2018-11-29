@@ -9,7 +9,7 @@
 
 #include <csv.h>
 
-#include "DataStructures/Geometry/CoordinateConversion.h"
+#include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "DataStructures/Geometry/LatLng.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
@@ -21,6 +21,7 @@
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "Tools/LexicalCast.h"
+#include "Tools/Math.h"
 #include "Tools/StringHelpers.h"
 
 // An importer to read graphs in Visum network file format. The transport system (e.g. pedestrian,
@@ -37,7 +38,7 @@ class VisumImporter {
         edgeFile(filename + "/STRECKE.csv"),
         transportSystem(system),
         analysisPeriod(analysisPeriod),
-        conversion(epsgCode),
+        trans(epsgCode, CoordinateTransformation::WGS_84),
         nextVertexId(0) {
     assert(analysisPeriod > 0);
   }
@@ -48,7 +49,7 @@ class VisumImporter {
         edgeFile(im.edgeFile.get_truncated_file_name()),
         transportSystem(im.transportSystem),
         analysisPeriod(im.analysisPeriod),
-        conversion(im.conversion),
+        trans(im.trans),
         nextVertexId(0) {}
 
   // Opens the input file(s) and reads the header line(s).
@@ -94,7 +95,10 @@ class VisumImporter {
 
     assert(origToNewIds.find(currentVertex.id) == origToNewIds.end());
     origToNewIds[currentVertex.id] = nextVertexId++;
-    currentVertex.latLng = conversion.convert(currentVertex.coordinate);
+
+    double lng, lat;
+    trans.forward(currentVertex.coordinate.getX(), currentVertex.coordinate.getY(), lng, lat);
+    currentVertex.latLng = {toDegrees(lat), toDegrees(lng)};
     return true;
   }
 
@@ -200,7 +204,7 @@ class VisumImporter {
   CsvDialect<8> edgeFile;            // The CSV file containing the edge records.
   const std::string transportSystem; // The system (bicycle, car) whose network is to be imported.
   const int analysisPeriod;          // The analysis period in hours (capacity is in vehicles/AP).
-  CoordinateConversion conversion;   // Conversion between the input coordinate system and WGS84.
+  CoordinateTransformation trans;    // Transformation from the input coordinate system to WGS 84.
 
   int maxSpeed[100];  // The maximum speed of the selected system for each of the 100 edge types.
   IdMap origToNewIds; // A map from original vertex IDs to new sequential IDs.

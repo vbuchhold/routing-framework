@@ -15,7 +15,7 @@
 
 #include "DataStructures/Geometry/SummedAreaTables/OctagonalSummedAreaTable.h"
 #include "DataStructures/Geometry/Area.h"
-#include "DataStructures/Geometry/CoordinateConversion.h"
+#include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
@@ -25,6 +25,7 @@
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/CommandLine/ProgressBar.h"
 #include "Tools/Constants.h"
+#include "Tools/Math.h"
 #include "Tools/Timer.h"
 
 namespace bg = boost::geometry;
@@ -110,20 +111,30 @@ int main(int argc, char* argv[]) {
     bgi::rtree<RoadSegment, bgi::quadratic<16>> rTree(roadSegments);
 
     // Map each cell C inside the area under study to the road segment nearest to the center of C.
-    CoordinateConversion conv(3035);
+    const auto primaryCrs = CoordinateTransformation::WGS_84;
+    const auto secondaryCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
+    CoordinateTransformation trans(primaryCrs, secondaryCrs);
     Area area;
     area.importFromOsmPolyFile(areaFilename);
-    auto box = area.boundingBox();
-    auto min = conv.convert(LatLng(box.getNorthEast().getY(), box.getSouthWest().getX())) - minCell;
-    auto max = conv.convert(LatLng(box.getSouthWest().getY(), box.getNorthEast().getX())) - minCell;
-    ::Point minCoveredCell((min.getX() + 50) / 100, numRows - (min.getY() + 50) / 100 - 1);
-    ::Point maxCoveredCell((max.getX() + 50) / 100, numRows - (max.getY() + 50) / 100 - 1);
+    const auto box = area.boundingBox();
+    LatLng nw(box.getNorthEast().getY(), box.getSouthWest().getX());
+    LatLng se(box.getSouthWest().getY(), box.getNorthEast().getX());
+    double easting, northing;
+    trans.forward(toRadians(nw.lngInDeg()), toRadians(nw.latInDeg()), easting, northing);
+    const auto min = ::Point(std::round(easting), std::round(northing)) - minCell;
+    trans.forward(toRadians(se.lngInDeg()), toRadians(se.latInDeg()), easting, northing);
+    const auto max = ::Point(std::round(easting), std::round(northing)) - minCell;
+    const ::Point minCoveredCell((min.getX() + 50) / 100, numRows - (min.getY() + 50) / 100 - 1);
+    const ::Point maxCoveredCell((max.getX() + 50) / 100, numRows - (max.getY() + 50) / 100 - 1);
     Matrix<int> representative(numRows, numCols, INVALID_VERTEX);
     int population = 0;
     int numUnmappedCells = 0;
     for (int x = minCoveredCell.getX(); x <= maxCoveredCell.getX(); ++x)
       for (int y = minCoveredCell.getY(); y <= maxCoveredCell.getY(); ++y) {
-        const auto center = conv.convert(::Point(x * 100, (numRows - y - 1) * 100) + minCell);
+        const auto c = ::Point(x * 100, (numRows - y - 1) * 100) + minCell;
+        double lng, lat;
+        trans.reverse(c.getX(), c.getY(), lng, lat);
+        const LatLng center(toDegrees(lat), toDegrees(lng));
         if (area.contains({center.longitude(), center.latitude()})) {
           population += populationGrid(y, x);
           const Point queryPoint(center.lngInDeg(), center.latInDeg());
