@@ -43,11 +43,8 @@ class PointSet {
 
   // Inserts the point p into this set.
   void insert(const Point& p) {
-    if (points.empty())
-      boundingBox = Rectangle(p);
-    else
-      boundingBox.extend(p);
     points.push_back(p);
+    boundingBox.extend(p);
   }
 
   // Removes all points from this set.

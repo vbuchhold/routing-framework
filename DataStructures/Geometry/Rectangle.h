@@ -8,8 +8,11 @@
 // A rectangle on a two-dimensional plane with sides parallel to the x- and y-axis.
 class Rectangle {
  public:
+  // Constructs an empty bounding box that can be gradually extended.
+  Rectangle() noexcept : southWest(INFTY, INFTY), northEast(-INFTY, -INFTY) {}
+
   // Constructs a rectangle from a single point.
-  explicit Rectangle(const Point& p = Point()) : southWest(p), northEast(p) {}
+  explicit Rectangle(const Point& p) : southWest(p), northEast(p) {}
 
   // Constructs a rectangle from the points at its south-west and north-east corners.
   Rectangle(const Point& southWest, const Point& northEast)
@@ -26,12 +29,6 @@ class Rectangle {
       northEast = *first;
     }
     extend(++first, last);
-  }
-
-  // Writes a character representation to the specified output stream.
-  friend std::ostream& operator<<(std::ostream& os, const Rectangle& rect) {
-    os << "(SW=" << rect.southWest << ", NE=" << rect.northEast << ")";
-    return os;
   }
 
   // Returns the south-west corner.
@@ -67,6 +64,12 @@ class Rectangle {
   void extend(PointIteratorT first, PointIteratorT last) {
     for (; first != last; ++first)
       extend(*first);
+  }
+
+  // Writes a character representation to the specified output stream.
+  friend std::ostream& operator<<(std::ostream& os, const Rectangle& rect) {
+    os << "(SW=" << rect.southWest << ", NE=" << rect.northEast << ")";
+    return os;
   }
 
  private:
