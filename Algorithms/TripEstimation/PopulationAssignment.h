@@ -111,16 +111,21 @@ class PopulationAssignment {
   // Assigns the population in each grid cell to surrounding vertices.
   void assignPopulationToVertices() {
     std::minstd_rand rand(omp_get_thread_num() + 1);
-    #pragma omp for collapse(2) nowait
+    std::vector<int> neighborhood;
+    std::vector<int> popByVertex(graph.numVertices());
+    int assignedPop = 0;
+    int unassignedPop = 0;
+
+    #pragma omp for schedule(static, 1024) collapse(2) nowait
     for (auto i = maxRange; i < populationGrid.numRows() - maxRange; ++i) {
       for (auto j = maxRange; j < populationGrid.numCols() - maxRange; ++j) {
         if (populationGrid(i, j) > 0) {
           auto first = verticesByCell.begin() + firstVertexInCell[cellId(i, j)];
           auto last = verticesByCell.begin() + firstVertexInCell[cellId(i, j) + 1];
-          std::vector<int> neighborhood(first, last);
+          neighborhood.assign(first, last);
 
           // Construct the Moore neighborhood of cell (i, j) for increasingly larger ranges.
-          for (auto r = 1; neighborhood.empty() && r <= maxRange; ++r) {
+          for (auto r = 1; r <= maxRange && neighborhood.empty(); ++r) {
             auto first = verticesByCell.begin() + firstVertexInCell[cellId(i - r, j - r)];
             auto last = verticesByCell.begin() + firstVertexInCell[cellId(i - r, j + r) + 1];
             neighborhood.insert(neighborhood.end(), first, last);
@@ -142,16 +147,21 @@ class PopulationAssignment {
             // Assign each individual in cell (i, j) to a uniform random vertex in the neighborhood.
             std::uniform_int_distribution<> dist(0, neighborhood.size() - 1);
             for (auto k = 0; k < populationGrid(i, j); ++k)
-              #pragma omp atomic
-              ++graph.population(neighborhood[dist(rand)]);
-            #pragma omp atomic
-            assignedPopulation += populationGrid(i, j);
+              ++popByVertex[neighborhood[dist(rand)]];
+            assignedPop += populationGrid(i, j);
           } else {
-            #pragma omp atomic
-            unassignedPopulation += populationGrid(i, j);
+            unassignedPop += populationGrid(i, j);
           }
         }
       }
+    }
+
+    #pragma omp critical (mergeResults)
+    {
+      FORALL_VERTICES(graph, v)
+        graph.population(v) += popByVertex[v];
+      assignedPopulation += assignedPop;
+      unassignedPopulation += unassignedPop;
     }
   }
 
