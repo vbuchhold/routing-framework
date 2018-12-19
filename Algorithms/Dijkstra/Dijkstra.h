@@ -36,6 +36,8 @@ class Dijkstra {
   friend class BiDijkstra;
   template <typename, typename, typename>
   friend class ODPairGenerator;
+  template <typename>
+  friend class DijkstraOpportunityChooser;
 
  private:
   using Graph    = GraphT;                    // The graph type on which we compute shortest paths.
