@@ -484,6 +484,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   // belongs to the subgraph.
   void extractVertexInducedSubgraph(const boost::dynamic_bitset<> bitmask) {
     assert(bitmask.size() == numVertices());
+    using std::swap;
     int nextId = 0;
     std::vector<int> origToNewIds(numVertices(), -1);
     for (int v = bitmask.find_first(); v != boost::dynamic_bitset<>::npos; v = bitmask.find_next(v))
@@ -493,14 +494,16 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     for (int i = 0, u = bitmask.find_first(); i != nextId; ++i, u = bitmask.find_next(u)) {
       // Copy the current vertex belonging to the subgraph.
       const int first = edgeCount; // The index of the first edge out of u.
-      RUN_FORALL(VertexAttributes::values[i] = std::move(VertexAttributes::values[u]));
+      if (i != u)
+        RUN_FORALL(VertexAttributes::values[i] = std::move(VertexAttributes::values[u]));
 
       // Copy the edges out of u going to vertices belonging to the subgraph.
       for (int e = firstEdge(u); e != lastEdge(u); ++e) {
         const int v = origToNewIds[edgeHeads[e]];
         if (v != -1) {
           edgeHeads[edgeCount] = v;
-          RUN_FORALL(EdgeAttributes::values[edgeCount] = std::move(EdgeAttributes::values[e]));
+          if (edgeCount != e)
+            RUN_FORALL(EdgeAttributes::values[edgeCount] = std::move(EdgeAttributes::values[e]));
           ++edgeCount;
         }
       }
