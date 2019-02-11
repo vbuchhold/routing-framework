@@ -3,29 +3,28 @@
 #include <cassert>
 #include <iostream>
 #include <random>
-#include <string>
 #include <vector>
-
-#include <csv.h>
 
 #include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Rectangle.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/Matrix.h"
+#include "Tools/LexicalCast.h"
+#include "Tools/Math.h"
 #include "Tools/OpenMP.h"
 #include "Tools/Timer.h"
 
-// This class is used to assign a population grid to a graph covering the grid. Each individual in
+// This class is used to assign a population grid to a graph covering the grid. Each inhabitant in
 // a grid cell is assigned to a uniform random vertex in this cell. If the cell does not contain
-// vertices, each individual is assigned to a uniform random vertex in the Moore neighborhood of
+// vertices, each inhabitant is assigned to a uniform random vertex in the Moore neighborhood of
 // range r. The parameter r is increased until the neighborhood is not empty.
-template <typename GraphT>
+template <typename GraphT, typename GridReaderT>
 class PopulationAssignment {
  public:
   // Constructs a population assignment procedure with the specified graph and population grid.
-  PopulationAssignment(GraphT& graph, const std::string& gridFileName, const int maxRange = 1)
-      : graph(graph), gridFileName(gridFileName), maxRange(maxRange) {
+  PopulationAssignment(GraphT& graph, GridReaderT& gridReader, int gridResolution, int maxRange = 1)
+      : graph(graph), gridReader(gridReader), gridResolution(gridResolution), maxRange(maxRange) {
     assert(maxRange >= 0);
   }
 
@@ -55,15 +54,16 @@ class PopulationAssignment {
  private:
   // Assigns each vertex to the grid cell containing it.
   void assignVerticesToCells() {
-    const auto primaryCrs = CoordinateTransformation::DHDN_GAUSS_KRUGER_ZONE_3;
+    const auto primaryCrs = CoordinateTransformation::WGS_84;
     const auto secondaryCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
     CoordinateTransformation trans(primaryCrs, secondaryCrs);
     double easting, northing;
     std::vector<Point> cellsByVertex;
 
     FORALL_VERTICES(graph, v) {
-      trans.forward(graph.coordinate(v).getX(), graph.coordinate(v).getY(), easting, northing);
-      cellsByVertex.emplace_back(easting / 100, northing / 100);
+      const auto& latLng = graph.latLng(v);
+      trans.forward(toRadians(latLng.lngInDeg()), toRadians(latLng.latInDeg()), easting, northing);
+      cellsByVertex.emplace_back(easting / gridResolution, northing / gridResolution);
       boundingBox.extend(cellsByVertex.back());
     }
 
@@ -93,13 +93,34 @@ class PopulationAssignment {
 
   // Reads the population grid from file.
   void fillPopulationGrid() {
+    // Set the starting positions of the easting and northing value in an INSPIRE cell code.
+    int eastingPos = 0, northingPos = 0;
+    switch (gridResolution) {
+      case 100:
+        eastingPos = 11;
+        northingPos = 5;
+        break;
+      case 1000:
+        eastingPos = 9;
+        northingPos = 4;
+        break;
+      default:
+        assert(false);
+    }
+
+    char* cellCode = nullptr;
     Point cell;
     int pop;
-    io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<';'>> gridFile(gridFileName);
-    gridFile.read_header(io::ignore_extra_column, "x_mp_100m", "y_mp_100m", "Einwohner");
-    while (gridFile.read_row(cell.getX(), cell.getY(), pop)) {
-      cell.getX() = cell.getX() / 100;
-      cell.getY() = cell.getY() / 100;
+
+    while (gridReader.read_row(cellCode, pop)) {
+      // Decode INSPIRE cell identifier.
+      assert(std::strlen(cellCode) > eastingPos);
+      assert(cellCode[eastingPos - 1] == 'E');
+      assert(cellCode[northingPos - 1] == 'N');
+      cellCode[eastingPos - 1] = '\0';
+      cell.getX() = lexicalCast<int>(cellCode + eastingPos);
+      cell.getY() = lexicalCast<int>(cellCode + northingPos);
+
       if (pop != -1 && boundingBox.contains(cell)) {
         cell = cell - boundingBox.getSouthWest();
         assert(populationGrid(cell.getY(), cell.getX()) == 0);
@@ -172,9 +193,10 @@ class PopulationAssignment {
     return i * populationGrid.numCols() + j;
   }
 
-  GraphT& graph;                  // The graph.
-  const std::string gridFileName; // The name of the grid file.
-  const int maxRange;             // The upper bound for the range of the Moore neighborhood.
+  GraphT& graph;            // The network of interest.
+  GridReaderT& gridReader;  // A CSV reader to read the file containing the population grid.
+  const int gridResolution; // The resolution of the population grid (cell width in meters).
+  const int maxRange;       // The upper bound for the range of the Moore neighborhood.
 
   Rectangle boundingBox;              // A bounding box containing all covered grid cells.
   std::vector<int> firstVertexInCell; // Stores the index of the first vertex in the following list.
