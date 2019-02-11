@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <ostream>
 #include <vector>
 
@@ -107,6 +108,14 @@ class Polygon {
     return vertices.erase(pos);
   }
 
+  // Removes from this polygon all of the vertices between first, inclusive, and last, exclusive.
+  VertexIterator removeRange(ConstVertexIterator first, ConstVertexIterator last) {
+    assert(first >= vertices.begin());
+    assert(last <= vertices.end());
+    assert(first <= last);
+    return vertices.erase(first, last);
+  }
+
   // Returns the index of a lowest of the leftmost vertices.
   // Precondition: The polygon must not be empty.
   int leftmostVertex() const {
@@ -162,6 +171,19 @@ class Polygon {
         }
     }
     return true;
+  }
+
+  // Returns the signed doubled area of this polygon.
+  int64_t doubledArea() const noexcept {
+    const auto n = vertices.size();
+    if (n < 3)
+      return 0;
+    int64_t area = 0;
+    for (auto i = 0; i < n - 2; ++i)
+      area += vertices[i + 1].getX() * int64_t{vertices[i + 2].getY() - vertices[i].getY()};
+    area += vertices[n - 1].getX() * int64_t{vertices[0].getY() - vertices[n - 2].getY()};
+    area += vertices[0].getX() * int64_t{vertices[1].getY() - vertices[n - 1].getY()};
+    return area;
   }
 
   // Returns true if r is inside the boundary of this polygon.

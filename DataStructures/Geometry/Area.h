@@ -83,18 +83,21 @@ class Area {
       faces.emplace_back(face.rbegin(), face.rend());
   }
 
-  // Reads an area from an OSM POLY file.
-  void importFromOsmPolyFile(const std::string& filename) {
+  // Reads the area from the specified OSM POLY file.
+  void importFromOsmPolyFile(const std::string& fileName) {
     faces.clear();
-    std::ifstream in(filename);
+    std::ifstream in(fileName);
     assert(in.good());
     std::string line;
     getline(in, line);
+    trim(line);
+    assert(!line.empty());
     bool inPolygon = false;
     bool addToArea = false;
     while (getline(in, line)) {
       trim(line);
-      assert(!line.empty());
+      if (line.empty())
+        continue;
       if (!inPolygon && line == "END") {
         // End-of-file occurred.
         return;
@@ -107,11 +110,11 @@ class Area {
         // End-of-section occurred.
         inPolygon = false;
         assert(faces.back().size() >= 2);
-        if (faces.back()[1] == faces.back().back()) {
+        if (faces.back()[0] == faces.back().back()) {
+          faces.back().removeBack();
+        } else if (faces.back()[1] == faces.back().back()) {
           faces.back().removeBack();
           faces.back().remove(faces.back().begin());
-        } else if (faces.back()[0] == faces.back().back()) {
-          faces.back().removeBack();
         }
         if ((faces.back().orientation() > 0) != addToArea)
           faces.back().reverseOrientation();
@@ -130,22 +133,18 @@ class Area {
     assert(false);
   }
 
-  // Writes an area to an OSM POLY file.
-  void exportToOsmPolyFile(const std::string& filename) const {
-    std::ofstream out(filename);
+  // Writes the area to the specified OSM POLY file.
+  void exportToOsmPolyFile(const std::string& fileName) const noexcept {
+    std::ofstream out(fileName);
     assert(out.good());
-    out << std::uppercase << std::scientific;
+    out << std::fixed;
     out << "none\n";
     for (int i = 0; i < faces.size(); ++i) {
       if (faces[i].orientation() < 0)
         out << '!';
       out << i + 1 << '\n';
-      for (const auto& v : faces[i]) {
-        LatLng latLng(v.getY(), v.getX());
-        out << "  " << latLng.lngInDeg() << "  " << latLng.latInDeg() << '\n';
-      }
-      if (faces[i].size() > 0) {
-        LatLng latLng(faces[i][0].getY(), faces[i][0].getX());
+      for (const auto& vertex : faces[i]) {
+        LatLng latLng(vertex.getY(), vertex.getX());
         out << "  " << latLng.lngInDeg() << "  " << latLng.latInDeg() << '\n';
       }
       out << "END\n";

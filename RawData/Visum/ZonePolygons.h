@@ -1,7 +1,10 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
+#include <cstdlib>
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -14,13 +17,14 @@
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Polygon.h"
 #include "Tools/Constants.h"
+#include "Tools/ContainerHelpers.h"
 #include "Tools/Workarounds.h"
 
 namespace visum {
 
 // The CSV dialect used by Visum.
 template <int numFields>
-using CsvDialect = io::CSVReader<numFields, io::trim_chars<>, io::no_quote_escape<';'>>;
+using VisumFileReader = io::CSVReader<numFields, io::trim_chars<>, io::no_quote_escape<';'>>;
 
 // Follows the boundary of p until encountering a vertex a second time and splits p at the cycle
 // found. The edges forming the cycle are stored in p2, the other edges in p1.
@@ -42,29 +46,36 @@ inline void splitPolygon(const Polygon& p, Polygon& p1, Polygon& p2) {
 }
 
 // Returns all zone polygons (and their IDs) from the specified Visum network file.
-inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
-  // Read all vertices from the Visum network file.
+inline std::map<int, Area> readZonePolygonsFrom(
+    const std::string& fileName, const int precision = 1, const std::string& colName = "CODE",
+    const std::vector<std::string>& permittedVals = {}, const bool verbose = true) {
+  // Read all vertices from the Visum network files.
   std::unordered_map<int, Point> vertex;
   {
-    int id, x, y;
-    CsvDialect<3> vertexFile(filename + "/PUNKT.csv");
-    vertexFile.read_header(io::ignore_no_column, "ID", "XKOORD", "YKOORD");
-    while (vertexFile.read_row(id, x, y)) {
+    if (verbose) std::cout << "Reading vertices..." << std::flush;
+    int id;
+    double x, y;
+    VisumFileReader<3> vertexReader(fileName + "/PUNKT.csv");
+    vertexReader.read_header(io::ignore_no_column, "ID", "XKOORD", "YKOORD");
+    while (vertexReader.read_row(id, x, y)) {
       assert(vertex.find(id) == vertex.end());
-      vertex.emplace(id, Point(x, y));
+      vertex.emplace(id, Point(std::round(x * precision), std::round(y * precision)));
     }
+    if (verbose) std::cout << " done.\n";
   }
 
-  // Read all edges from the Visum network file.
+  // Read all edges from the Visum network files.
   std::unordered_map<int, std::vector<Point>> edge;
   {
-    int id, tail, head, edgeId = INVALID_ID, idx, x, y;
-    CsvDialect<3> edgeFile(filename + "/KANTE.csv");
-    CsvDialect<4> middleVertexFile(filename + "/ZWISCHENPUNKT.csv");
-    edgeFile.read_header(io::ignore_no_column, "ID", "VONPUNKTID", "NACHPUNKTID");
-    middleVertexFile.read_header(io::ignore_no_column, "KANTEID", "INDEX", "XKOORD", "YKOORD");
-    middleVertexFile.read_row(edgeId, idx, x, y);
-    while (edgeFile.read_row(id, tail, head)) {
+    if (verbose) std::cout << "Reading edges..." << std::flush;
+    int id, tail, head, edgeId = INVALID_ID, idx;
+    double x, y;
+    VisumFileReader<3> edgeReader(fileName + "/KANTE.csv");
+    VisumFileReader<4> middleVertexReader(fileName + "/ZWISCHENPUNKT.csv");
+    edgeReader.read_header(io::ignore_no_column, "ID", "VONPUNKTID", "NACHPUNKTID");
+    middleVertexReader.read_header(io::ignore_no_column, "KANTEID", "INDEX", "XKOORD", "YKOORD");
+    middleVertexReader.read_row(edgeId, idx, x, y);
+    while (edgeReader.read_row(id, tail, head)) {
       assert(id >= 0);
       assert(vertex.find(tail) != vertex.end());
       assert(vertex.find(head) != vertex.end());
@@ -77,13 +88,13 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
         edgeId = INVALID_ID;
         assert(idx == prevIdx + 1);
         const int len = currentEdge.size();
-        Point p(x, y);
+        Point p(std::round(x * precision), std::round(y * precision));
         if (len > 1 && p == currentEdge[len - 2])
           currentEdge.pop_back();
         else if (p != currentEdge[len - 1])
           currentEdge.push_back(p);
         prevIdx = idx;
-        middleVertexFile.read_row(edgeId, idx, x, y);
+        middleVertexReader.read_row(edgeId, idx, x, y);
       }
       const int len = currentEdge.size();
       Point p = vertex[head];
@@ -95,17 +106,20 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
     assert(edgeId == INVALID_ID);
     std::unordered_map<int, Point> tmp;
     vertex.swap(tmp);
+    if (verbose) std::cout << " done.\n";
   }
 
-  // Read all polygons from the Visum network file.
+  // Read all polygons from the Visum network files.
   std::unordered_map<int, Polygon> polygon;
+  std::set<int> polygonsRemovedSinceTooSmall;
   {
+    if (verbose) std::cout << "Reading polygons..." << std::flush;
     int id, idx, edgeId, dir;
     int prevId = INVALID_ID, prevIdx = INVALID_INDEX;
     unused(prevIdx);
-    CsvDialect<4> polygonFile(filename + "/TEILFLAECHENELEMENT.csv");
-    polygonFile.read_header(io::ignore_no_column, "TFLAECHEID", "INDEX", "KANTEID", "RICHTUNG");
-    while (polygonFile.read_row(id, idx, edgeId, dir)) {
+    VisumFileReader<4> polygonReader(fileName + "/TEILFLAECHENELEMENT.csv");
+    polygonReader.read_header(io::ignore_no_column, "TFLAECHEID", "INDEX", "KANTEID", "RICHTUNG");
+    while (polygonReader.read_row(id, idx, edgeId, dir)) {
       assert(id >= 0);
       assert(edge.find(edgeId) != edge.end());
       assert(dir == 0 || dir == 1);
@@ -116,24 +130,30 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
         assert(idx == 1);
         if (prevId != INVALID_ID) {
           const auto prevPolygon = polygon.find(prevId);
-          assert(prevPolygon->second.front() == prevPolygon->second.back());
-          prevPolygon->second.removeBack();
-          if (!prevPolygon->second.simple()) {
-            Polygon p1, p2;
-            splitPolygon(prevPolygon->second, p1, p2);
-            bool good = false;
-            if (!p2.empty()) {
-              good = true;
-              for (int i = p1.size() - 1, j = 0; j < p1.size(); i = j++)
-                for (int k = p2.size() - 1, l = 0; l < p2.size(); k = l++)
-                  if (j > 1 || l > 1)
-                    good &= !intersection(p1[i], p1[j], p2[k], p2[l]);
-              const bool nested = p1.contains(p2.back()) || p2.contains(p1.back());
-              good &= p1.simple() && p2.simple() &&
-                  (p1.orientation() != p2.orientation()) == nested;
+          if (prevPolygon->second.front() != prevPolygon->second.back()) {
+            polygon.erase(prevPolygon);
+          } else if (std::abs(prevPolygon->second.doubledArea()) < 1000 * precision * precision) {
+            polygonsRemovedSinceTooSmall.insert(prevId);
+            polygon.erase(prevPolygon);
+          } else {
+            prevPolygon->second.removeBack();
+            if (!prevPolygon->second.simple()) {
+              Polygon p1, p2;
+              splitPolygon(prevPolygon->second, p1, p2);
+              bool good = false;
+              if (!p2.empty()) {
+                good = true;
+                for (int i = p1.size() - 1, j = 0; j < p1.size(); i = j++)
+                  for (int k = p2.size() - 1, l = 0; l < p2.size(); k = l++)
+                    if (j > 1 || l > 1)
+                      good &= !intersection(p1[i], p1[j], p2[k], p2[l]);
+                const bool nested = p1.contains(p2.back()) || p2.contains(p1.back());
+                good &= p1.simple() && p2.simple() &&
+                    (p1.orientation() != p2.orientation()) == nested;
+              }
+              if (!good)
+                polygon.erase(prevPolygon);
             }
-            if (!good)
-              polygon.erase(prevPolygon);
           }
         }
         if (dir == 0)
@@ -154,22 +174,22 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
       prevId = id;
       prevIdx = idx;
     }
-    assert(polygon[prevId].front() == polygon[prevId].back());
-    polygon[prevId].removeBack();
-    assert(polygon[prevId].simple());
+    polygon.erase(prevId);
     std::unordered_map<int, std::vector<Point>> tmp;
     edge.swap(tmp);
+  if (verbose) std::cout << " done.\n";
   }
 
-  // Read all surfaces from the Visum network file.
+  // Read all surfaces from the Visum network files.
   std::unordered_map<int, Area> surface;
   {
+    if (verbose) std::cout << "Reading areas..." << std::flush;
     int id, polygonId, hole;
     int prevId = INVALID_ID;
     bool broken = false;
-    CsvDialect<3> surfaceFile(filename + "/FLAECHENELEMENT.csv");
-    surfaceFile.read_header(io::ignore_no_column, "FLAECHEID", "TFLAECHEID", "ENKLAVE");
-    while (surfaceFile.read_row(id, polygonId, hole)) {
+    VisumFileReader<3> surfaceReader(fileName + "/FLAECHENELEMENT.csv");
+    surfaceReader.read_header(io::ignore_no_column, "FLAECHEID", "TFLAECHEID", "ENKLAVE");
+    while (surfaceReader.read_row(id, polygonId, hole)) {
       assert(id >= 0);
       assert(id >= prevId);
       assert(hole == 0 || hole == 1);
@@ -179,7 +199,7 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
         continue;
       const auto currentPolygon = polygon.find(polygonId);
       if (currentPolygon == polygon.end()) {
-        broken = true;
+        broken = polygonsRemovedSinceTooSmall.find(polygonId) == polygonsRemovedSinceTooSmall.end();
       } else if (currentPolygon->second.simple()) {
         if ((currentPolygon->second.orientation() > 0) == (hole == 0))
           surface[id].combine(currentPolygon->second);
@@ -206,22 +226,36 @@ inline std::map<int, Area> readZonePolygonsFrom(const std::string& filename) {
     }
     std::unordered_map<int, Polygon> tmp;
     polygon.swap(tmp);
+    if (verbose) std::cout << " done.\n";
   }
 
-  // Read all zones from the Visum network file.
+  // Read all zones from the Visum network files.
   std::map<int, Area> zone;
   {
+    if (verbose) std::cout << "Reading zones..." << std::flush;
     int id, surfaceId;
+    const char* colCont;
     int prevId = INVALID_ID;
+    int numBrokenZones = 0;
     unused(prevId);
-    CsvDialect<2> zoneFile(filename + "/BEZIRK.csv");
-    zoneFile.read_header(io::ignore_extra_column, "NR", "FLAECHEID");
-    while (zoneFile.read_row(id, surfaceId)) {
+    VisumFileReader<3> zoneReader(fileName + "/BEZIRK.csv");
+    zoneReader.read_header(io::ignore_extra_column, "NR", "FLAECHEID", colName);
+    while (zoneReader.read_row(id, surfaceId, colCont)) {
       assert(id > prevId);
-      assert(surface.find(surfaceId) != surface.end());
-      zone[id] = surface[surfaceId];
+      if (permittedVals.empty() || contains(permittedVals.begin(), permittedVals.end(), colCont)) {
+        const auto surfaceIter = surface.find(surfaceId);
+        if (surfaceIter != surface.end())
+          zone[id] = surfaceIter->second;
+        else
+          ++numBrokenZones;
+      }
       prevId = id;
     }
+    const auto numPolygons = polygonsRemovedSinceTooSmall.size();
+    const auto total = zone.size() + numBrokenZones;
+    if (verbose) std::cout << " done.\n";
+    if (verbose) std::cout << "  # polygons removed since too small: " << numPolygons << '\n';
+    if (verbose) std::cout << "  # broken zones: " << numBrokenZones << '/' << total << std::endl;
   }
   return zone;
 }
