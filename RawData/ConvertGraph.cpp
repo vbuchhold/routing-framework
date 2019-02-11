@@ -32,16 +32,7 @@
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/ContainerHelpers.h"
 
-// A graph data structure encompassing all vertex and edge attributes available for output.
-using VertexAttributes = VertexAttrs<
-    CoordinateAttribute, LatLngAttribute, SequentialVertexIdAttribute, VertexIdAttribute>;
-using EdgeAttributes = EdgeAttrs<
-    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
-    NumLanesAttribute, OsmRoadCategoryAttribute, RoadGeometryAttribute, SpeedLimitAttribute,
-    TravelTimeAttribute, XatfRoadCategoryAttribute>;
-using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
-
-void printUsage() {
+inline void printUsage() {
   std::cout <<
       "Usage: ConvertGraph -s <fmt> -d <fmt> [-c] [-scc] -a <attrs> -i <file> -o <file>\n"
       "This program converts a graph from a source file format to a destination format,\n"
@@ -54,7 +45,8 @@ void printUsage() {
       "  -p <file>         extract a region given as an OSM POLY file\n"
       "  -scc              extract the largest strongly connected component\n"
       "  -ts <sys>         the system whose network is to be imported (Visum only)\n"
-      "  -cs <epsg-code>   input coordinate system (Visum only)\n"
+      "  -cs <epsg-code>   coordinate reference system used in files (Visum only)\n"
+      "  -cp <factor>      multiply coordinates in files by <factor> (Visum only)\n"
       "  -ap <hrs>         analysis period, capacity is in vehicles/AP (Visum only)\n"
       "  -a <attrs>        blank-separated list of vertex/edge attributes to be output\n"
       "                      possible values:\n"
@@ -67,40 +59,54 @@ void printUsage() {
       "  -help             display this help and exit\n";
 }
 
-// Imports a graph according to the input file format specified on the command line and returns it.
-GraphT importGraph(const CommandLineParser& clp) {
-  const std::string fmt = clp.getValue<std::string>("s");
-  const std::string infile = clp.getValue<std::string>("i");
+// A graph data structure encompassing all vertex and edge attributes available for output.
+using VertexAttributes = VertexAttrs<
+    CoordinateAttribute, LatLngAttribute, SequentialVertexIdAttribute, VertexIdAttribute>;
+using EdgeAttributes = EdgeAttrs<
+    CapacityAttribute, FreeFlowSpeedAttribute, LengthAttribute,
+    NumLanesAttribute, OsmRoadCategoryAttribute, RoadGeometryAttribute, SpeedLimitAttribute,
+    TravelTimeAttribute, XatfRoadCategoryAttribute>;
+using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
 
-  // Pick the appropriate import procedure.
-  if (fmt == "binary") {
+// Imports a graph according to the input file format specified on the command line and returns it.
+inline GraphT importGraph(const CommandLineParser& clp) {
+  const auto format = clp.getValue<std::string>("s");
+  const auto infile = clp.getValue<std::string>("i");
+
+  // Choose the corresponding import procedure.
+  if (format == "binary") {
     std::ifstream in(infile + ".gr.bin", std::ios::binary);
     if (!in.good())
       throw std::invalid_argument("file not found -- '" + infile + ".gr.bin'");
     return GraphT(in);
-  } else if (fmt == "osm") {
+  } else if (format == "osm") {
     return GraphT(infile, OsmImporter());
-  } else if (fmt == "visum") {
-    const std::string sys = clp.getValue<std::string>("ts", "P");
-    const int crs = clp.getValue<int>("cs", 31467);
-    const int ap = clp.getValue<int>("ap", 24);
-    if (ap <= 0) {
-      const auto what = "analysis period not strictly positive -- '" + std::to_string(ap) + "'";
+  } else if (format == "visum") {
+    const auto sys = clp.getValue<std::string>("ts", "P");
+    const auto crs = clp.getValue<int>("cs", 31467);
+    const auto precision = clp.getValue<double>("cp", 1.0);
+    const auto period = clp.getValue<int>("ap", 24);
+    if (precision <= 0) {
+      const auto what = "precision not strictly positive -- '" + std::to_string(precision) + "'";
       throw std::invalid_argument(what);
     }
-    return GraphT(infile, VisumImporter(infile, sys, crs, ap));
-  } else if (fmt == "xatf") {
+    if (period <= 0) {
+      const auto what = "analysis period not strictly positive -- '" + std::to_string(period) + "'";
+      throw std::invalid_argument(what);
+    }
+    return GraphT(infile, VisumImporter(infile, sys, crs, precision, period));
+  } else if (format == "xatf") {
     return GraphT(infile, XatfImporter());
   } else {
-    throw std::invalid_argument("unrecognized input file format -- '" + fmt + "'");
+    throw std::invalid_argument("unrecognized input file format -- '" + format + "'");
   }
 }
 
 // Executes a graph export using the specified exporter.
 template <typename ExporterT>
-void doExport(const CommandLineParser& clp, const GraphT& graph, ExporterT ex) {
+inline void doExport(const CommandLineParser& clp, const GraphT& graph, ExporterT ex) {
   // Output only those attributes specified on the command line.
-  std::vector<std::string> attrsToOutput = clp.getValues<std::string>("a");
+  auto attrsToOutput = clp.getValues<std::string>("a");
   for (const auto& attr : GraphT::getAttributeNames())
     if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
       ex.ignoreAttribute(attr);
@@ -108,13 +114,13 @@ void doExport(const CommandLineParser& clp, const GraphT& graph, ExporterT ex) {
 }
 
 // Exports the specified graph according to the output file format specified on the command line.
-void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
-  const std::string fmt = clp.getValue<std::string>("d");
-  const bool compress = clp.isSet("c");
+inline void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
+  const auto format = clp.getValue<std::string>("d");
+  const auto compress = clp.isSet("c");
 
-  // Pick the appropriate export procedure.
-  if (fmt == "binary") {
-    const std::string outfile = clp.getValue<std::string>("o");
+  // Choose the corresponding export procedure.
+  if (format == "binary") {
+    const auto outfile = clp.getValue<std::string>("o");
     std::ofstream out(outfile + ".gr.bin", std::ios::binary);
     if (!out.good())
       throw std::invalid_argument("file cannot be opened -- '" + outfile + ".gr.bin'");
@@ -125,10 +131,10 @@ void exportGraph(const CommandLineParser& clp, const GraphT& graph) {
       if (!contains(attrsToOutput.begin(), attrsToOutput.end(), attr))
         attrsToIgnore.push_back(attr);
     graph.writeTo(out, attrsToIgnore);
-  } else if (fmt == "default") {
+  } else if (format == "default") {
     doExport(clp, graph, DefaultExporter(compress));
   } else {
-    throw std::invalid_argument("unrecognized output file format -- '" + fmt + "'");
+    throw std::invalid_argument("unrecognized output file format -- '" + format + "'");
   }
 }
 

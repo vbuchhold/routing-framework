@@ -12,6 +12,7 @@ class CoordinateTransformation {
   // EPSG codes for some widely used coordinate systems.
   static constexpr int ETRS89_LAEA_EUROPE = 3035;
   static constexpr int WGS_84 = 4326;
+  static constexpr int OSGB_1936_BRITISH_NATIONAL_GRID = 27700;
   static constexpr int DHDN_GAUSS_KRUGER_ZONE_3 = 31467;
 
   // Constructs a transformation between the two coordinate systems specified as EPSG codes.
