@@ -3,6 +3,7 @@
 #include <cassert>
 #include <vector>
 
+#include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Rectangle.h"
 
 // A set of points on a two-dimensional plane.
