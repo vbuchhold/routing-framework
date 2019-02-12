@@ -26,10 +26,10 @@ class DijkstraOpportunityChooser {
     assert(numOpportunities > 0);
   }
 
-  // Returns the vertex with the closest opportunity with high fitness.
-  int findClosestOpportunityWithHighFitness(int source, int numOpportunitiesWithHighFitness) {
-    assert(numOpportunitiesWithHighFitness > 0);
-    std::geometric_distribution<> dist(1.0 * numOpportunitiesWithHighFitness / numOpportunities);
+  // Returns the vertex with the closest opportunity with sufficiently high fitness.
+  int findClosestOpportunityWithHighFitness(const int source, const int numFitOpportunities) {
+    assert(numFitOpportunities > 0);
+    std::geometric_distribution<> dist(1.0 * numFitOpportunities / numOpportunities);
     int u = INVALID_VERTEX, numInterveningOpportunities = numOpportunities;
     while (numInterveningOpportunities >= numOpportunities)
       numInterveningOpportunities = dist(rand);
@@ -43,7 +43,7 @@ class DijkstraOpportunityChooser {
   }
 
   // Returns the cumulative number of opportunities between source and target.
-  int computeInterveningOpportunities(int source, int target) noexcept {
+  int computeInterveningOpportunities(const int source, const int target) noexcept {
     int u = INVALID_VERTEX;
     int numInterveningOpportunities = -graph.population(source) - graph.population(target);
     dijkstra.init({{source}});

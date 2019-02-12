@@ -34,10 +34,12 @@ class Dijkstra {
   // Some classes are allowed to execute a Dijkstra search step by step.
   template <typename, template <typename> class>
   friend class BiDijkstra;
-  template <typename, typename, typename>
-  friend class ODPairGenerator;
   template <typename>
   friend class DijkstraOpportunityChooser;
+  template <typename>
+  friend class FormulaDemandCalculator;
+  template <typename, typename, typename>
+  friend class ODPairGenerator;
 
  private:
   using Graph    = GraphT;                    // The graph type on which we compute shortest paths.
