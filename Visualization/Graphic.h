@@ -38,8 +38,8 @@ class Graphic {
   // Sets the user space according to the specified rectangle.
   void setUserSpace(const Rectangle& uspace) {
     assert(isOpen());
-    const double uspaceWidth = uspace.getNorthEast().getX() - uspace.getSouthWest().getX();
-    const double uspaceHeight = uspace.getNorthEast().getY() - uspace.getSouthWest().getY();
+    const double uspaceWidth = uspace.northEast().x() - uspace.southWest().x();
+    const double uspaceHeight = uspace.northEast().y() - uspace.southWest().y();
     assert(uspaceWidth > 0);
     assert(uspaceHeight > 0);
     double scale, offsetX = 0, offsetY = 0;
@@ -53,7 +53,7 @@ class Graphic {
     cairo_identity_matrix(cairoContext);
     cairo_translate(cairoContext, offsetX, offsetY);
     cairo_scale(cairoContext, scale, scale);
-    cairo_translate(cairoContext, -uspace.getSouthWest().getX(), uspace.getNorthEast().getY());
+    cairo_translate(cairoContext, -uspace.southWest().x(), uspace.northEast().y());
     cairo_scale(cairoContext, 1, -1);
     userSpace = uspace;
   }

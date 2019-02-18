@@ -55,7 +55,7 @@ class PointSubsetAdapter {
   int kdtree_get_pt(const int idx, const int coordinate) const {
     assert(coordinate >= 0); assert(coordinate < 2);
     const int idxInPointSet = getIndexInPointSet(idx);
-    return coordinate == 0 ? pointSet[idxInPointSet].getX() : pointSet[idxInPointSet].getY();
+    return coordinate == 0 ? pointSet[idxInPointSet].x() : pointSet[idxInPointSet].y();
   }
 
   // Returns the squared Euclidean distance between the point p1 and the point with index p2Idx.

@@ -71,8 +71,8 @@ class PrimitiveDrawer {
   void drawLine(const Point& from, const Point& to) {
     assert(currentGraphic != nullptr); assert(currentGraphic->isOpen());
     cairo_t* const ctx = currentGraphic->getCairoContext();
-    cairo_move_to(ctx, from.getX(), from.getY());
-    cairo_line_to(ctx, to.getX(), to.getY());
+    cairo_move_to(ctx, from.x(), from.y());
+    cairo_line_to(ctx, to.x(), to.y());
     cairo_stroke(ctx);
   }
   void drawLine(const Point& from, const Point& to, const Color& color) {
@@ -95,9 +95,9 @@ class PrimitiveDrawer {
     if (polygon.empty())
       return;
     cairo_t* const ctx = currentGraphic->getCairoContext();
-    cairo_move_to(ctx, polygon[0].getX(), polygon[0].getY());
+    cairo_move_to(ctx, polygon[0].x(), polygon[0].y());
     for (int i = 1; i < polygon.size(); ++i)
-      cairo_line_to(ctx, polygon[i].getX(), polygon[i].getY());
+      cairo_line_to(ctx, polygon[i].x(), polygon[i].y());
     cairo_close_path(ctx);
     cairo_stroke(ctx);
   }
@@ -119,7 +119,7 @@ class PrimitiveDrawer {
   void fillCircle(const Point& center, const double radius) {
     assert(currentGraphic != nullptr); assert(currentGraphic->isOpen());
     cairo_t* const ctx = currentGraphic->getCairoContext();
-    cairo_arc(ctx, center.getX(), center.getY(), radius, 0, 2 * PI);
+    cairo_arc(ctx, center.x(), center.y(), radius, 0, 2 * PI);
     cairo_fill(ctx);
   }
   void fillCircle(const Point& center, const double radius, const Color& color) {
@@ -133,8 +133,8 @@ class PrimitiveDrawer {
     cairo_t* const ctx = currentGraphic->getCairoContext();
     cairo_text_extents_t strMetrics;
     cairo_text_extents(ctx, str.c_str(), &strMetrics);
-    const auto x = pos.getX() - strMetrics.width / 2 - strMetrics.x_bearing;
-    const auto y = pos.getY() + strMetrics.height / 2 + strMetrics.y_bearing;
+    const auto x = pos.x() - strMetrics.width / 2 - strMetrics.x_bearing;
+    const auto y = pos.y() + strMetrics.height / 2 + strMetrics.y_bearing;
     cairo_move_to(ctx, x, y);
     cairo_scale(ctx, 1, -1);
     cairo_show_text(ctx, str.c_str());

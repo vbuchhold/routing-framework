@@ -144,7 +144,7 @@ class Area {
         out << '!';
       out << i + 1 << '\n';
       for (const auto& vertex : faces[i]) {
-        LatLng latLng(vertex.getY(), vertex.getX());
+        LatLng latLng(vertex.y(), vertex.x());
         out << "  " << latLng.lngInDeg() << "  " << latLng.latInDeg() << '\n';
       }
       out << "END\n";

@@ -123,8 +123,7 @@ class Polygon {
     int minIdx = 0;
     Point min = vertices[0];
     for (int i = 1; i < size(); ++i)
-      if (vertices[i].getX() < min.getX() ||
-          (vertices[i].getX() == min.getX() && vertices[i].getY() < min.getY())) {
+      if (vertices[i].x() < min.x() || (vertices[i].x() == min.x() && vertices[i].y() < min.y())) {
         minIdx = i;
         min = vertices[i];
       }
@@ -180,9 +179,9 @@ class Polygon {
       return 0;
     int64_t area = 0;
     for (auto i = 0; i < n - 2; ++i)
-      area += vertices[i + 1].getX() * int64_t{vertices[i + 2].getY() - vertices[i].getY()};
-    area += vertices[n - 1].getX() * int64_t{vertices[0].getY() - vertices[n - 2].getY()};
-    area += vertices[0].getX() * int64_t{vertices[1].getY() - vertices[n - 1].getY()};
+      area += vertices[i + 1].x() * int64_t{vertices[i + 2].y() - vertices[i].y()};
+    area += vertices[n - 1].x() * int64_t{vertices[0].y() - vertices[n - 2].y()};
+    area += vertices[0].x() * int64_t{vertices[1].y() - vertices[n - 1].y()};
     return area;
   }
 
@@ -190,8 +189,8 @@ class Polygon {
   bool contains(const Point& r) const {
     bool inside = false;
     for (int i = size() - 1, j = 0; j < size(); i = j++)
-      if ((r.getY() < vertices[i].getY()) != (r.getY() < vertices[j].getY()) &&
-          ::orientation(vertices[i], vertices[j], r) * (vertices[j].getY()-vertices[i].getY()) > 0)
+      if ((r.y() < vertices[i].y()) != (r.y() < vertices[j].y()) &&
+          ::orientation(vertices[i], vertices[j], r) * (vertices[j].y()-vertices[i].y()) > 0)
         inside = !inside;
     return inside;
   }

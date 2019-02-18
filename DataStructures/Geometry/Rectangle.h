@@ -10,54 +10,74 @@
 class Rectangle {
  public:
   // Constructs an empty bounding box that can be gradually extended.
-  Rectangle() noexcept : southWest(INFTY, INFTY), northEast(-INFTY, -INFTY) {}
+  Rectangle() noexcept : sw(INFTY, INFTY), ne(-INFTY, -INFTY) {}
 
   // Constructs a rectangle from a single point.
-  explicit Rectangle(const Point& p) : southWest(p), northEast(p) {}
+  explicit Rectangle(const Point& p) noexcept : sw(p), ne(p) {}
 
   // Constructs a rectangle from the points at its south-west and north-east corners.
-  Rectangle(const Point& southWest, const Point& northEast)
-      : southWest(southWest), northEast(northEast) {
-    assert(southWest.getX() <= northEast.getX());
-    assert(southWest.getY() <= northEast.getY());
+  Rectangle(const Point& sw, const Point& ne) noexcept : sw(sw), ne(ne) {
+    assert(sw.x() <= ne.x());
+    assert(sw.y() <= ne.y());
   }
 
   // Constructs a bounding box containing all specified points.
   template <typename PointIteratorT>
-  Rectangle(PointIteratorT first, PointIteratorT last) {
-    if (first != last) {
-      southWest = *first;
-      northEast = *first;
-    }
-    extend(++first, last);
+  Rectangle(PointIteratorT first, PointIteratorT last) : Rectangle() {
+    extend(first, last);
+  }
+
+  // Returns a reference to the south-west corner.
+  Point& southWest() noexcept {
+    return sw;
   }
 
   // Returns the south-west corner.
-  const Point& getSouthWest() const {
-    return southWest;
+  const Point& southWest() const noexcept {
+    return sw;
+  }
+
+  // Returns a reference to the north-east corner.
+  Point& northEast() noexcept {
+    return ne;
   }
 
   // Returns the north-east corner.
-  const Point& getNorthEast() const {
-    return northEast;
+  const Point& northEast() const noexcept {
+    return ne;
   }
 
   // Returns true if p is inside the boundary of this rectangle.
   bool contains(const Point& p) const {
-    return southWest.getX() <= p.getX() && p.getX() <= northEast.getX() &&
-        southWest.getY() <= p.getY() && p.getY() <= northEast.getY();
+    return sw.x() <= p.x() && p.x() <= ne.x() && sw.y() <= p.y() && p.y() <= ne.y();
   }
 
-  // Returns true if this rectangle and the specified rectangle intersect.
+  // Returns true if this and the specified rectangle intersect.
   bool intersects(const Rectangle& rect) const {
-    return northEast.getX() >= rect.southWest.getX() && southWest.getX() <= rect.northEast.getX() &&
-        northEast.getY() >= rect.southWest.getY() && southWest.getY() <= rect.northEast.getY();
+    return ne.x() >= rect.sw.x() && sw.x() <= rect.ne.x() &&
+        ne.y() >= rect.sw.y() && sw.y() <= rect.ne.y();
+  }
+
+  // Writes a character representation to the specified output stream.
+  friend std::ostream& operator<<(std::ostream& os, const Rectangle& rect) {
+    os << "(SW=" << rect.sw << ", NE=" << rect.ne << ")";
+    return os;
+  }
+
+  // Returns true if all corners of lhs and rhs coincide.
+  friend bool operator==(const Rectangle& lhs, const Rectangle& rhs) {
+    return lhs.sw == rhs.sw && lhs.ne == rhs.ne;
+  }
+
+  // Returns true if at least one corner of lhs and rhs does not coincide.
+  friend bool operator!=(const Rectangle& lhs, const Rectangle& rhs) {
+    return !(lhs == rhs);
   }
 
   // Extends this rectangle to contain the point p.
   void extend(const Point& p) {
-    southWest.min(p);
-    northEast.max(p);
+    sw.min(p);
+    ne.max(p);
   }
 
   // Extends this rectangle to contain the specified points.
@@ -67,13 +87,7 @@ class Rectangle {
       extend(*first);
   }
 
-  // Writes a character representation to the specified output stream.
-  friend std::ostream& operator<<(std::ostream& os, const Rectangle& rect) {
-    os << "(SW=" << rect.southWest << ", NE=" << rect.northEast << ")";
-    return os;
-  }
-
  private:
-  Point southWest; // The south-west corner.
-  Point northEast; // The north-east corner.
+  Point sw; // The south-west corner.
+  Point ne; // The north-east corner.
 };

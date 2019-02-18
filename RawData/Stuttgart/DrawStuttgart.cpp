@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     io::CSVReader<5, io::trim_chars<>, io::no_quote_escape<';'>> visumFile(visumFilename);
     const auto ignore = io::ignore_extra_column;
     visumFile.read_header(ignore, "VONKNOTNR", "NACHKNOTNR", "INDEX", "XKOORD", "YKOORD");
-    while (visumFile.read_row(edge.first, edge.second, idx, coordinate.getX(), coordinate.getY())) {
+    while (visumFile.read_row(edge.first, edge.second, idx, coordinate.x(), coordinate.y())) {
       if (edge.first < 0 || edge.second < 0)
         throw std::invalid_argument("Visum file corrupt");
       if (edge != prevEdge) {
@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
         for (auto& face : area) {
           Polygon polygon;
           for (const auto& vertex : face) {
-            LatLng ll(vertex.getY(), vertex.getX());
+            LatLng ll(vertex.y(), vertex.x());
             double easting, northing;
             trans.forward(toRadians(ll.lngInDeg()), toRadians(ll.latInDeg()), easting, northing);
             polygon.add(Point(std::round(easting), std::round(northing)));

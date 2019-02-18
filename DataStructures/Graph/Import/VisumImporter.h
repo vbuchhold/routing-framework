@@ -113,13 +113,13 @@ class VisumImporter {
     assert(origToNewId.find(currentVertex.id) == origToNewId.end());
     origToNewId[currentVertex.id] = nextVertexId++;
 
-    currentVertex.coordinate.getX() = std::round(easting * coordinatePrecision);
-    currentVertex.coordinate.getY() = std::round(northing * coordinatePrecision);
+    currentVertex.coordinate.x() = std::round(easting * coordinatePrecision);
+    currentVertex.coordinate.y() = std::round(northing * coordinatePrecision);
 
     double lng, lat;
     trans.forward(
-        currentVertex.coordinate.getX() / coordinatePrecision,
-        currentVertex.coordinate.getY() / coordinatePrecision, lng, lat);
+        currentVertex.coordinate.x() / coordinatePrecision,
+        currentVertex.coordinate.y() / coordinatePrecision, lng, lat);
     currentVertex.latLng = {toDegrees(lat), toDegrees(lng)};
     return true;
   }

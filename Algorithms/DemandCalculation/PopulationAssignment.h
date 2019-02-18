@@ -68,21 +68,21 @@ class PopulationAssignment {
     }
 
     // Compute the dimension of the subgrid covered by the graph.
-    boundingBox.extend(boundingBox.getSouthWest() - Point(2 * maxRange, 2 * maxRange));
-    boundingBox.extend(boundingBox.getNorthEast() + Point(2 * maxRange, 2 * maxRange));
-    const auto dim = boundingBox.getNorthEast() - boundingBox.getSouthWest() + Point(1, 1);
-    firstVertexInCell.assign(dim.getX() * dim.getY() + 1, 0);
+    boundingBox.extend(boundingBox.southWest() - Point(2 * maxRange, 2 * maxRange));
+    boundingBox.extend(boundingBox.northEast() + Point(2 * maxRange, 2 * maxRange));
+    const auto dim = boundingBox.northEast() - boundingBox.southWest() + Point(1, 1);
+    firstVertexInCell.assign(dim.x() * dim.y() + 1, 0);
     verticesByCell.assign(graph.numVertices(), 0);
-    populationGrid.assign(dim.getY(), dim.getX(), 0);
+    populationGrid.assign(dim.y(), dim.x(), 0);
 
     FORALL_VERTICES(graph, v) {
-      cellsByVertex[v] = cellsByVertex[v] - boundingBox.getSouthWest();
-      ++firstVertexInCell[cellId(cellsByVertex[v].getY(), cellsByVertex[v].getX()) + 1];
+      cellsByVertex[v] = cellsByVertex[v] - boundingBox.southWest();
+      ++firstVertexInCell[cellId(cellsByVertex[v].y(), cellsByVertex[v].x()) + 1];
     }
     std::partial_sum(firstVertexInCell.begin(), firstVertexInCell.end(), firstVertexInCell.begin());
 
     FORALL_VERTICES(graph, v) {
-      const auto id = cellId(cellsByVertex[v].getY(), cellsByVertex[v].getX());
+      const auto id = cellId(cellsByVertex[v].y(), cellsByVertex[v].x());
       verticesByCell[firstVertexInCell[id]++] = v;
     }
 
@@ -118,13 +118,13 @@ class PopulationAssignment {
       assert(cellCode[eastingPos - 1] == 'E');
       assert(cellCode[northingPos - 1] == 'N');
       cellCode[eastingPos - 1] = '\0';
-      cell.getX() = lexicalCast<int>(cellCode + eastingPos);
-      cell.getY() = lexicalCast<int>(cellCode + northingPos);
+      cell.x() = lexicalCast<int>(cellCode + eastingPos);
+      cell.y() = lexicalCast<int>(cellCode + northingPos);
 
       if (pop != -1 && boundingBox.contains(cell)) {
-        cell = cell - boundingBox.getSouthWest();
-        assert(populationGrid(cell.getY(), cell.getX()) == 0);
-        populationGrid(cell.getY(), cell.getX()) = pop;
+        cell = cell - boundingBox.southWest();
+        assert(populationGrid(cell.y(), cell.x()) == 0);
+        populationGrid(cell.y(), cell.x()) = pop;
       }
     }
   }

@@ -29,8 +29,8 @@ class OctagonalSummedAreaTable {
 
   // Returns the sum over the octagonal area inscribed in the specified circle.
   int sumOverOctagon(const Point& center, const double radius) const {
-    const int x = center.getX();
-    const int y = center.getY();
+    const int x = center.x();
+    const int y = center.y();
     const int height = std::round(0.92387953251128675613 * radius); // h = r * cos(pi / 8)
     const int side = std::round(0.38268343236508977173 * radius);   // a = r * sin(pi / 8)
     const Point a(x + side, y + height);
@@ -55,8 +55,8 @@ class OctagonalSummedAreaTable {
  private:
   // Returns the entry at pos of the type 1 triangular SAT.
   int triangular1SatEntry(const Point& pos) const {
-    const int x = pos.getX();
-    const int y = pos.getY();
+    const int x = pos.x();
+    const int y = pos.y();
     const int numRows = triangular1Sat.numRows();
     const int numCols = triangular1Sat.numCols();
     if (0 <= x && x < numCols && 0 <= y && y < numRows)
@@ -75,8 +75,8 @@ class OctagonalSummedAreaTable {
 
   // Returns the entry at pos of the type 2 triangular SAT.
   int triangular2SatEntry(const Point& pos) const {
-    const int x = pos.getX();
-    const int y = pos.getY();
+    const int x = pos.x();
+    const int y = pos.y();
     const int numRows = triangular1Sat.numRows();
     const int numCols = triangular1Sat.numCols();
     if (0 <= x && x < numCols && 0 <= y && y < numRows)
@@ -94,8 +94,8 @@ class OctagonalSummedAreaTable {
 
   // Returns the entry at pos of the rectangular SAT.
   int rectangularSatEntry(const Point& pos) const {
-    const int x = pos.getX();
-    const int y = pos.getY();
+    const int x = pos.x();
+    const int y = pos.y();
     const int numRows = triangular1Sat.numRows();
     const int numCols = triangular1Sat.numCols();
     if (0 <= x && 0 <= y)

@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     int numInhabitants;
     io::CSVReader<3, io::trim_chars<>, io::no_quote_escape<';'>> gridFile(gridFilename);
     gridFile.read_header(io::ignore_extra_column, "x_mp_100m", "y_mp_100m", "Einwohner");
-    while (gridFile.read_row(cell.getX(), cell.getY(), numInhabitants))
+    while (gridFile.read_row(cell.x(), cell.y(), numInhabitants))
       if (numInhabitants > 0) {
         gridCells.emplace_back(cell, numInhabitants);
         minCell.min(cell);
@@ -89,12 +89,12 @@ int main(int argc, char* argv[]) {
 
     // Allocate and fill the population matrix.
     const auto gridBounds = maxCell - minCell;
-    const int numRows = gridBounds.getY() / 100 + 1;
-    const int numCols = gridBounds.getX() / 100 + 1;
+    const int numRows = gridBounds.y() / 100 + 1;
+    const int numCols = gridBounds.x() / 100 + 1;
     Matrix<int> populationGrid(numRows, numCols, 0);
     for (const auto& cell : gridCells) {
       const auto pos = cell.first - minCell;
-      populationGrid(numRows - pos.getY() / 100 - 1, pos.getX() / 100) = cell.second;
+      populationGrid(numRows - pos.y() / 100 - 1, pos.x() / 100) = cell.second;
     }
 
     // Build an R-tree storing the road segments.
@@ -117,23 +117,23 @@ int main(int argc, char* argv[]) {
     Area area;
     area.importFromOsmPolyFile(areaFilename);
     const auto box = area.boundingBox();
-    LatLng nw(box.getNorthEast().getY(), box.getSouthWest().getX());
-    LatLng se(box.getSouthWest().getY(), box.getNorthEast().getX());
+    LatLng nw(box.northEast().y(), box.southWest().x());
+    LatLng se(box.southWest().y(), box.northEast().x());
     double easting, northing;
     trans.forward(toRadians(nw.lngInDeg()), toRadians(nw.latInDeg()), easting, northing);
     const auto min = ::Point(std::round(easting), std::round(northing)) - minCell;
     trans.forward(toRadians(se.lngInDeg()), toRadians(se.latInDeg()), easting, northing);
     const auto max = ::Point(std::round(easting), std::round(northing)) - minCell;
-    const ::Point minCoveredCell((min.getX() + 50) / 100, numRows - (min.getY() + 50) / 100 - 1);
-    const ::Point maxCoveredCell((max.getX() + 50) / 100, numRows - (max.getY() + 50) / 100 - 1);
+    const ::Point minCoveredCell((min.x() + 50) / 100, numRows - (min.y() + 50) / 100 - 1);
+    const ::Point maxCoveredCell((max.x() + 50) / 100, numRows - (max.y() + 50) / 100 - 1);
     Matrix<int> representative(numRows, numCols, INVALID_VERTEX);
     int population = 0;
     int numUnmappedCells = 0;
-    for (int x = minCoveredCell.getX(); x <= maxCoveredCell.getX(); ++x)
-      for (int y = minCoveredCell.getY(); y <= maxCoveredCell.getY(); ++y) {
+    for (int x = minCoveredCell.x(); x <= maxCoveredCell.x(); ++x)
+      for (int y = minCoveredCell.y(); y <= maxCoveredCell.y(); ++y) {
         const auto c = ::Point(x * 100, (numRows - y - 1) * 100) + minCell;
         double lng, lat;
-        trans.reverse(c.getX(), c.getY(), lng, lat);
+        trans.reverse(c.x(), c.y(), lng, lat);
         const LatLng center(toDegrees(lat), toDegrees(lng));
         if (area.contains({center.longitude(), center.latitude()})) {
           population += populationGrid(y, x);
@@ -165,15 +165,15 @@ int main(int argc, char* argv[]) {
     Timer timer;
     std::cout << "Generating trips: ";
     const auto coveredGridBounds = maxCoveredCell - minCoveredCell;
-    ProgressBar bar((coveredGridBounds.getX() + 1) * (coveredGridBounds.getY() + 1));
+    ProgressBar bar((coveredGridBounds.x() + 1) * (coveredGridBounds.y() + 1));
     OctagonalSummedAreaTable sat(populationGrid);
     std::vector<OriginDestination> result;
     std::default_random_engine rand(clp.getValue<int>("seed", 19900325));
-    for (int srcX = minCoveredCell.getX(); srcX <= maxCoveredCell.getX(); ++srcX)
-      for (int srcY = minCoveredCell.getY(); srcY <= maxCoveredCell.getY(); ++srcY) {
+    for (int srcX = minCoveredCell.x(); srcX <= maxCoveredCell.x(); ++srcX)
+      for (int srcY = minCoveredCell.y(); srcY <= maxCoveredCell.y(); ++srcY) {
         if (representative(srcY, srcX) != INVALID_VERTEX && populationGrid(srcY, srcX) > 0)
-          for (int dstX = minCoveredCell.getX(); dstX <= maxCoveredCell.getX(); ++dstX)
-            for (int dstY = minCoveredCell.getY(); dstY <= maxCoveredCell.getY(); ++dstY)
+          for (int dstX = minCoveredCell.x(); dstX <= maxCoveredCell.x(); ++dstX)
+            for (int dstY = minCoveredCell.y(); dstY <= maxCoveredCell.y(); ++dstY)
               if (representative(dstY, dstX) != INVALID_VERTEX && populationGrid(dstY, dstX) > 0) {
                 if (srcX == dstX && srcY == dstY)
                   continue;

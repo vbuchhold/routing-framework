@@ -36,14 +36,14 @@ class StaticKdTree {
   void circularRangeQuery(const Point& p, const Distance radius, PointFoundT pointFound) const {
     using ResultSet = kdtree::CircularRangeResultSet<PointSetAdapterT, Distance, PointFoundT>;
     ResultSet res(pointSet, radius, pointFound);
-    const int queryPoint[] = {p.getX(), p.getY()};
+    const int queryPoint[] = {p.x(), p.y()};
     kdTree.findNeighbors(res, queryPoint, nanoflann::SearchParams());
   }
 
   // Locates the k points closest to the query point p.
   void nearestNeighborQuery(const Point& p, const int k, int* indices, Distance* distances) const {
     assert(k > 0);
-    const int queryPoint[] = {p.getX(), p.getY()};
+    const int queryPoint[] = {p.x(), p.y()};
     const int numFound = kdTree.knnSearch(queryPoint, k, indices, distances);
     for (int i = 0; i < numFound; ++i)
       indices[i] = pointSet.getIndexInPointSet(indices[i]);

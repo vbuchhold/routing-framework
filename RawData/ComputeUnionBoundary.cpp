@@ -57,12 +57,12 @@ inline CgalPolygonSet areaToCgalPolygonSet(const Area& area) {
       }
       // ... and construct new outer boundary.
       for (const auto& vertex : face)
-        cgalPolygonWithHoles.outer_boundary().push_back({vertex.getX(), vertex.getY()});
+        cgalPolygonWithHoles.outer_boundary().push_back({vertex.x(), vertex.y()});
     } else {
       // Negative face, construct new hole.
       cgalPolygonWithHoles.add_hole({});
       for (const auto& vertex : face)
-        (--cgalPolygonWithHoles.holes_end())->push_back({vertex.getX(), vertex.getY()});
+        (--cgalPolygonWithHoles.holes_end())->push_back({vertex.x(), vertex.y()});
     }
   }
   if (!cgalPolygonWithHoles.is_unbounded())
@@ -202,7 +202,7 @@ int main(int argc, char* argv[]) {
     Polygon latLngFace;
     for (const auto& vertex : *union_.begin()) {
       double lng, lat;
-      trans.forward(vertex.getX() / precision, vertex.getY() / precision, lng, lat);
+      trans.forward(vertex.x() / precision, vertex.y() / precision, lng, lat);
       LatLng latLng(toDegrees(lat), toDegrees(lng));
       Point latLngPoint(latLng.longitude(), latLng.latitude());
       if (latLngFace.size() >= 2 && *(latLngFace.end() - 2) == latLngPoint)

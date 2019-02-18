@@ -6,7 +6,7 @@
 
 // Returns the normal vector for the line l through p and q, oriented towards the left of l.
 inline Point normal(const Point& p, const Point& q) {
-  return {p.getY() - q.getY(), q.getX() - p.getX()};
+  return {p.y() - q.y(), q.x() - p.x()};
 }
 
 // Returns 1, -1, or 0 as r lies to the left of, to the right of, or on the line through p and q.

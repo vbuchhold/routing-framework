@@ -34,7 +34,7 @@ class PointSetAdapter {
   int kdtree_get_pt(const int idx, const int coordinate) const {
     assert(coordinate >= 0); assert(coordinate < 2);
     const int idxInPointSet = getIndexInPointSet(idx);
-    return coordinate == 0 ? pointSet[idxInPointSet].getX() : pointSet[idxInPointSet].getY();
+    return coordinate == 0 ? pointSet[idxInPointSet].x() : pointSet[idxInPointSet].y();
   }
 
   // Returns the squared Euclidean distance between the point p1 and the point with index p2Idx.
@@ -46,10 +46,10 @@ class PointSetAdapter {
   template <typename BoundingBoxT>
   bool kdtree_get_bbox(BoundingBoxT& bb) const {
     const Rectangle& boundingBox = pointSet.getBoundingBox();
-    bb[0].low = boundingBox.getSouthWest().getX();
-    bb[1].low = boundingBox.getSouthWest().getY();
-    bb[0].high = boundingBox.getNorthEast().getX();
-    bb[1].high = boundingBox.getNorthEast().getY();
+    bb[0].low = boundingBox.southWest().x();
+    bb[1].low = boundingBox.southWest().y();
+    bb[0].high = boundingBox.northEast().x();
+    bb[1].high = boundingBox.northEast().y();
     return true;
   }
 
