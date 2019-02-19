@@ -27,13 +27,13 @@ class DijkstraOpportunityChooser {
   }
 
   // Returns the vertex with the closest opportunity with sufficiently high fitness.
-  int findClosestOpportunityWithHighFitness(const int source, const int numFitOpportunities) {
+  int findClosestOpportunityWithHighFitness(const int src, const int numFitOpportunities) {
     assert(numFitOpportunities > 0);
     std::geometric_distribution<> dist(1.0 * numFitOpportunities / numOpportunities);
     int u = INVALID_VERTEX, numInterveningOpportunities = numOpportunities;
     while (numInterveningOpportunities >= numOpportunities)
       numInterveningOpportunities = dist(rand);
-    dijkstra.init({{source}});
+    dijkstra.init({{src}});
     while (numInterveningOpportunities >= 0) {
       assert(!dijkstra.queue.empty());
       u = dijkstra.settleNextVertex();

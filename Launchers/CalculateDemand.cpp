@@ -11,6 +11,7 @@
 #include "Algorithms/DemandCalculation/ChooserDemandCalculator.h"
 #include "Algorithms/DemandCalculation/DijkstraOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/FormulaDemandCalculator.h"
+#include "Algorithms/DemandCalculation/KDTreeOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/PopulationAssignment.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/PopulationAttribute.h"
@@ -32,7 +33,7 @@ inline void printUsage() {
       "  -f <fmt>          format of the population grid file\n"
       "                      possible values: DE EU\n"
       "  -a <algo>         use algorithm <algo> to calculate travel demand\n"
-      "                      possible values: formula Dij (default)\n"
+      "                      possible values: formula Dij (default) kd-tree\n"
       "  -g <file>         network of interest\n"
       "  -p <file>         population grid\n"
       "  -o <file>         place output in <file>\n"
@@ -110,6 +111,9 @@ int main(int argc, char* argv[]) {
       calculator.calculateDemand(numODPairs, lambda, outputFileName);
     } else if (algo == "Dij") {
       ChooserDemandCalculator<GraphT, DijkstraOpportunityChooser> calculator(graph, true);
+      calculator.calculateDemand(numODPairs, lambda, outputFileName);
+    } else if (algo == "kd-tree") {
+      ChooserDemandCalculator<GraphT, KDTreeOpportunityChooser> calculator(graph, true);
       calculator.calculateDemand(numODPairs, lambda, outputFileName);
     } else {
       throw std::invalid_argument("invalid algorithm -- '" + algo + "'");
