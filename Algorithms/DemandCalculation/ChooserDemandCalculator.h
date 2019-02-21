@@ -5,7 +5,6 @@
 #include <iostream>
 #include <random>
 #include <string>
-#include <vector>
 
 #include "DataStructures/Graph/Graph.h"
 #include "Tools/CommandLine/ProgressBar.h"
@@ -32,26 +31,22 @@ class ChooserDemandCalculator {
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(numODPairs, verbose);
 
-    // We will choose the source uniformly at random from the following box.
-    // The number of objects representing a particular source is proportional to its population.
-    std::vector<int> boxContainingSources(totalPop);
-    for (auto v = 0, i = 0; v < graph.numVertices(); ++v)
-      for (auto j = 0; j < graph.population(v); ++j)
-        boxContainingSources[i++] = v;
+    const auto firstWeight = &graph.population(0);
+    const auto lastWeight = &graph.population(graph.numVertices() - 1) + 1;
 
     #pragma omp parallel
     {
       OpportunityChooserT<GraphT> chooser(graph);
       std::minstd_rand rand(omp_get_thread_num() + 1);
+      std::discrete_distribution<> sourceDist(firstWeight, lastWeight);
       std::uniform_int_distribution<> rankDist(1, totalPop);
-      std::uniform_int_distribution<> sourceDist(0, totalPop - 1);
 
       std::ofstream out(fileName + ".part" + std::to_string(omp_get_thread_num()));
       assert(out.good());
 
       #pragma omp for schedule(static, 1) nowait
       for (auto i = 0; i < numODPairs; ++i) {
-        const auto src = boxContainingSources[sourceDist(rand)];
+        const auto src = sourceDist(rand);
         auto dst = src;
         while (src == dst) {
           auto numFitOpportunities = 0;
