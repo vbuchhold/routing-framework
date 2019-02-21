@@ -59,6 +59,7 @@ int main(int argc, char* argv[]) {
     auto outputFileName = clp.getValue<std::string>("o");
     if (!endsWith(outputFileName, ".csv"))
       outputFileName += ".csv";
+    const auto partFileStem = "/tmp/" + outputFileName.substr(outputFileName.rfind('/') + 1);
 
     // Validate command-line options.
     if (numODPairs <= 0)
@@ -108,13 +109,13 @@ int main(int argc, char* argv[]) {
     // Calculate travel demand using the specified algorithm.
     if (algo == "formula") {
       FormulaDemandCalculator<GraphT> calculator(graph, true);
-      calculator.calculateDemand(numODPairs, lambda, outputFileName);
+      calculator.calculateDemand(numODPairs, lambda, partFileStem);
     } else if (algo == "Dij") {
       ChooserDemandCalculator<GraphT, DijkstraOpportunityChooser> calculator(graph, true);
-      calculator.calculateDemand(numODPairs, lambda, outputFileName);
+      calculator.calculateDemand(numODPairs, lambda, partFileStem);
     } else if (algo == "kd-tree") {
       ChooserDemandCalculator<GraphT, KDTreeOpportunityChooser> calculator(graph, true);
-      calculator.calculateDemand(numODPairs, lambda, outputFileName);
+      calculator.calculateDemand(numODPairs, lambda, partFileStem);
     } else {
       throw std::invalid_argument("invalid algorithm -- '" + algo + "'");
     }
@@ -130,7 +131,7 @@ int main(int argc, char* argv[]) {
     outputFile << "origin,destination\n";
     int src, dst;
     for (auto i = 0; true; ++i) {
-      const auto partFileName = outputFileName + ".part" + std::to_string(i);
+      const auto partFileName = partFileStem + ".part" + std::to_string(i);
       std::ifstream partFile(partFileName);
       if (!partFile.good())
         break;
