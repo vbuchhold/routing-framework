@@ -37,10 +37,7 @@ class FormulaDemandCalculator {
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(graph.numVertices(), verbose);
 
-    auto gamma = numODPairs / totPop;
-    assert(gamma >= 0); assert(gamma <= 1);
     assert(lambda >= 0); assert(lambda <= 1);
-
     using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
     using Dijkstra = StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet>;
 
@@ -57,6 +54,7 @@ class FormulaDemandCalculator {
         auto srcPop = graph.population(src); // The source population.
         auto intPop = 0;                     // The intervening population.
 
+        auto outflow = std::binomial_distribution<>(numODPairs, srcPop / totPop)(rand);
         auto normConst = 1 / (1 -
             (1 - std::pow(lambda, totPop)) / (1 - std::pow(lambda, srcPop)) * (srcPop / totPop));
         auto m = (1 - std::pow(lambda, srcPop)) / srcPop;
@@ -73,7 +71,7 @@ class FormulaDemandCalculator {
           auto ms = (1 - std::pow(lambda, srcPop + intPop)) / (srcPop + intPop);
           auto mms = (1 - std::pow(lambda, srcPop + dstPop + intPop)) / (srcPop + dstPop + intPop);
           auto prob = (ms - mms) / m;
-          auto numTravelers = std::binomial_distribution<>(srcPop, gamma * normConst * prob)(rand);
+          auto numTravelers = std::binomial_distribution<>(outflow, normConst * prob)(rand);
 
           for (auto i = 0; i < numTravelers; ++i)
             out << src << ',' << dst << '\n';

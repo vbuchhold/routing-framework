@@ -51,13 +51,16 @@ class ChooserDemandCalculator {
 
       #pragma omp for schedule(static, 1) nowait
       for (auto i = 0; i < numODPairs; ++i) {
-        auto numFitOpportunities = 0;
-        while (numFitOpportunities == 0) {
-          const auto rank = rankDist(rand);
-          numFitOpportunities = std::binomial_distribution<>(rank, 1 - lambda)(rand);
-        }
         const auto src = boxContainingSources[sourceDist(rand)];
-        const auto dst = chooser.findClosestOpportunityWithHighFitness(src, numFitOpportunities);
+        auto dst = src;
+        while (src == dst) {
+          auto numFitOpportunities = 0;
+          while (numFitOpportunities == 0) {
+            const auto rank = rankDist(rand);
+            numFitOpportunities = std::binomial_distribution<>(rank, 1 - lambda)(rand);
+          }
+          dst = chooser.findClosestOpportunityWithHighFitness(src, numFitOpportunities);
+        }
         out << src << ',' << dst << '\n';
         ++bar;
       }
