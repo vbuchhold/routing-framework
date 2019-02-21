@@ -24,11 +24,12 @@ template <typename GraphT>
 class FormulaDemandCalculator {
  public:
   // Constructs a travel demand calculator for the specified network.
-  explicit FormulaDemandCalculator(const GraphT& graph, const bool verbose = false) noexcept
-      : graph(graph), totPop(0), verbose(verbose) {
+  explicit FormulaDemandCalculator(const GraphT& graph, const int seed, const bool verbose) noexcept
+      : graph(graph), totPop(0), seed(seed), verbose(verbose) {
     FORALL_VERTICES(graph, v)
       totPop += graph.population(v);
     assert(totPop > 0);
+    assert(seed >= 0);
   }
 
   // Generates OD pairs and writes them to the specified file.
@@ -44,7 +45,7 @@ class FormulaDemandCalculator {
     #pragma omp parallel
     {
       Dijkstra dijkstra(graph);
-      std::minstd_rand rand(omp_get_thread_num() + 1);
+      std::minstd_rand rand(seed + omp_get_thread_num() + 1);
 
       std::ofstream out(fileName + ".part" + std::to_string(omp_get_thread_num()));
       assert(out.good());
@@ -88,5 +89,6 @@ class FormulaDemandCalculator {
  private:
   const GraphT& graph; // The network we work on.
   double totPop;       // The total number of inhabitants living in the network.
+  const int seed;      // The seed with which the random number generator will be started.
   const bool verbose;  // Should we display informative messages?
 };

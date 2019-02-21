@@ -18,11 +18,12 @@ template <typename GraphT, template <typename> class OpportunityChooserT>
 class ChooserDemandCalculator {
  public:
   // Constructs a travel demand calculator for the specified network.
-  explicit ChooserDemandCalculator(const GraphT& graph, const bool verbose = false) noexcept
-      : graph(graph), totalPop(0), verbose(verbose) {
+  explicit ChooserDemandCalculator(const GraphT& graph, const int seed, const bool verbose) noexcept
+      : graph(graph), totalPop(0), seed(seed), verbose(verbose) {
     FORALL_VERTICES(graph, v)
       totalPop += graph.population(v);
     assert(totalPop > 0);
+    assert(seed >= 0);
   }
 
   // Generates OD pairs and writes them to the specified file.
@@ -36,8 +37,8 @@ class ChooserDemandCalculator {
 
     #pragma omp parallel
     {
-      OpportunityChooserT<GraphT> chooser(graph);
-      std::minstd_rand rand(omp_get_thread_num() + 1);
+      OpportunityChooserT<GraphT> chooser(graph, seed);
+      std::minstd_rand rand(seed + omp_get_thread_num() + 1);
       std::discrete_distribution<> sourceDist(firstWeight, lastWeight);
       std::uniform_int_distribution<> rankDist(1, totalPop);
 
@@ -68,5 +69,6 @@ class ChooserDemandCalculator {
  private:
   const GraphT& graph; // The network we work on.
   int totalPop;        // The total number of inhabitants living in the network.
+  const int seed;      // The seed with which the random number generators will be started.
   const bool verbose;  // Should we display informative messages?
 };

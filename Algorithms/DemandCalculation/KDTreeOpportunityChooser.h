@@ -27,8 +27,9 @@ template <typename GraphT>
 class KDTreeOpportunityChooser {
  public:
   // Constructs an opportunity chooser based on a kd-tree.
-  explicit KDTreeOpportunityChooser(const GraphT& graph)
-      : graph(graph), urbg(omp_get_thread_num() + 1), nrng(omp_get_thread_num()) {
+  explicit KDTreeOpportunityChooser(const GraphT& graph, const int seed)
+      : graph(graph), urbg(seed + omp_get_thread_num() + 1), nrng(seed + omp_get_thread_num()) {
+    assert(seed >= 0);
     buildKDTree();
   }
 

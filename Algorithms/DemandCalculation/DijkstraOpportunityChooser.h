@@ -19,11 +19,12 @@ template <typename GraphT>
 class DijkstraOpportunityChooser {
  public:
   // Constructs an opportunity chooser based on Dijkstra's algorithm.
-  explicit DijkstraOpportunityChooser(const GraphT& graph)
-      : graph(graph), numOpportunities(0), rand(omp_get_thread_num() + 1), dijkstra(graph) {
+  explicit DijkstraOpportunityChooser(const GraphT& graph, const int seed)
+      : graph(graph), numOpportunities(0), rand(seed + omp_get_thread_num() + 1), dijkstra(graph) {
     FORALL_VERTICES(graph, u)
       numOpportunities += graph.population(u);
     assert(numOpportunities > 0);
+    assert(seed >= 0);
   }
 
   // Returns the vertex with the closest opportunity with sufficiently high fitness.
