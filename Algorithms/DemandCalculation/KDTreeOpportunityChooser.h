@@ -190,7 +190,7 @@ class KDTreeOpportunityChooser {
   void findClosestOpportunityWithHighFitness(const Node& node, const int numFitOpportunities) {
     assert(numFitOpportunities > 0);
     if (node.isLeaf ||
-        numFitOpportunities * (node.lastRecord - node.firstRecord) <= RECURSION_THRESHOLD) {
+        numFitOpportunities * int64_t{node.lastRecord - node.firstRecord} <= RECURSION_THRESHOLD) {
       handleBaseCase(node, numFitOpportunities);
       return;
     }
