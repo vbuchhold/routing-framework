@@ -22,6 +22,11 @@ class SystemOptimum {
     return sum;
   }
 
+  // Returns the second order partial derivative with respect to the e-th variable x_e at x_e = x.
+  double secondDerivative(const int e, const double x) const {
+    return 2 * travelCostFunction.derivative(e, x) + x * travelCostFunction.secondDerivative(e, x);
+  }
+
   // Returns the weight of edge e, given the flow x on e.
   double getEdgeWeight(const int e, const double x) const {
     return travelCostFunction(e, x) + x * travelCostFunction.derivative(e, x);

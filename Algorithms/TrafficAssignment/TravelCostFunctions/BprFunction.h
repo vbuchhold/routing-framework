@@ -21,6 +21,11 @@ class BprFunction {
     return graph.travelTime(e) * 1 * 2 * tmp / graph.capacity(e);
   }
 
+  // Returns the second derivative of e's travel cost function at x.
+  double secondDerivative(const int e, const double /*x*/) const {
+    return graph.travelTime(e) * 1 * 2 * (2 - 1.0) / (graph.capacity(e) * graph.capacity(e));
+  }
+
   // Returns the antiderivative of e's travel cost function at x.
   double antiderivative(const int e, const double x) const {
     const double tmp = x / graph.capacity(e);

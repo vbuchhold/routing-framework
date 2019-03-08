@@ -25,6 +25,13 @@ class DavidsonFunction {
     return graph.travelTime(e) * 0.01 * graph.capacity(e) / (tmp * tmp);
   }
 
+  // Returns the second derivative of e's travel cost function at x.
+  double secondDerivative(const int e, const double x) const {
+    assert(x >= 0); assert(x < graph.capacity(e));
+    const double tmp = graph.capacity(e) - x;
+    return graph.travelTime(e) * 0.01 * 2 * graph.capacity(e) / (tmp * tmp * tmp);
+  }
+
   // Returns the antiderivative of e's travel cost function at x.
   double antiderivative(const int e, const double x) const {
     assert(x >= 0); assert(x < graph.capacity(e));

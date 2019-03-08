@@ -29,6 +29,13 @@ class InverseFunction {
     return 1.0 * graph.length(e) * -155 / (tmp * tmp);
   }
 
+  // Returns the second derivative of e's travel cost function at x.
+  double secondDerivative(const int e, const double x) const {
+    assert(x >= 0);
+    const double tmp = x + 1;
+    return 1.0 * graph.length(e) * 2 * 155 / (tmp * tmp * tmp);
+  }
+
   // Returns the antiderivative of e's travel cost function at x.
   double antiderivative(const int e, const double x) const {
     assert(x >= 0);

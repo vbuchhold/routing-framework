@@ -30,6 +30,15 @@ class ModifiedDavidsonFunction {
       return davidson.derivative(e, pt);
   }
 
+  // Returns the second derivative of e's travel cost function at x.
+  double secondDerivative(const int e, const double x) const {
+    const double pt = 0.95 * graph.capacity(e); // The point at which we linearize.
+    if (x <= pt)
+      return davidson.secondDerivative(e, x);
+    else
+      return 0;
+  }
+
   // Returns the integral of e's travel cost function from 0 to b.
   double integral(const int e, const double b) const {
     const double pt = 0.95 * graph.capacity(e); // The point at which we linearize.
