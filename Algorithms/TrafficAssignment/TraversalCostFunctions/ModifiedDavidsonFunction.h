@@ -2,7 +2,7 @@
 
 #include <vectorclass/vectorclass.h>
 
-#include "Algorithms/TrafficAssignment/TravelCostFunctions/DavidsonFunction.h"
+#include "Algorithms/TrafficAssignment/TraversalCostFunctions/DavidsonFunction.h"
 
 // The modified Davidson travel cost function. It relates the travel time on an edge to the flow on
 // this edge.

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -7,9 +8,9 @@
 #include <stack>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <boost/dynamic_bitset.hpp>
 #include <routingkit/customizable_contraction_hierarchy.h>
 #include <routingkit/nested_dissection.h>
 
@@ -19,45 +20,44 @@
 #include "Algorithms/TrafficAssignment/Adapters/DijkstraAdapter.h"
 #include "Algorithms/TrafficAssignment/ObjectiveFunctions/SystemOptimum.h"
 #include "Algorithms/TrafficAssignment/ObjectiveFunctions/UserEquilibrium.h"
-#include "Algorithms/TrafficAssignment/TravelCostFunctions/BprFunction.h"
-#include "Algorithms/TrafficAssignment/TravelCostFunctions/DavidsonFunction.h"
-#include "Algorithms/TrafficAssignment/TravelCostFunctions/InverseFunction.h"
-#include "Algorithms/TrafficAssignment/TravelCostFunctions/ModifiedDavidsonFunction.h"
+#include "Algorithms/TrafficAssignment/TraversalCostFunctions/BprFunction.h"
+#include "Algorithms/TrafficAssignment/TraversalCostFunctions/DavidsonFunction.h"
+#include "Algorithms/TrafficAssignment/TraversalCostFunctions/InverseFunction.h"
+#include "Algorithms/TrafficAssignment/TraversalCostFunctions/ModifiedDavidsonFunction.h"
 #include "Algorithms/TrafficAssignment/FrankWolfeAssignment.h"
+#include "DataStructures/Containers/BitVector.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
-#include "DataStructures/Graph/Attributes/TravelCostAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
+#include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/StringHelpers.h"
 
-void printUsage() {
+inline void printUsage() {
   std::cout <<
-      "Usage: AssignTraffic [-f <func>] [-a <algo>] -i <file> -od <file> [-o <file>]\n"
-      "This program assigns OD-pairs onto a network using the Frank-Wolfe method. It\n"
-      "supports different objectives, travel cost functions and shortest-path algos.\n"
+      "Usage: AssignTraffic [-so] [-v] [-f <func>] [-a <algo>] -g <file> -d <file>\n"
+      "Assigns OD pairs onto a network using the (conjugate) Frank-Wolfe algorithm. It\n"
+      "supports different objectives, traversal cost functions and shortest-path algos.\n"
       "  -so               find the system optimum (default: user equilibrium)\n"
       "  -v                display informative messages\n"
-      "  -p <hrs>          the period of analysis in hours (default: 1)\n"
-      "  -n <num>          the number of iterations (0 means use stopping criterion)\n"
-      "  -f <func>         the travel cost function\n"
-      "                      possible values:\n"
-      "                        bpr davidson modified_davidson (default) inverse\n"
-      "  -a <algo>         the shortest-path algorithm\n"
-      "                      possible values: dijkstra (default) bidijkstra ch cch\n"
-      "  -ord <order>      the order of the OD-pairs\n"
-      "                      possible values: random input (default) sorted\n"
-      "  -s <seed>         start the random number generator with <seed>\n"
-      "  -U <num>          the maximum diameter of a cell (used for ordering OD-pairs)\n"
-      "  -si <intervals>   a blank-separated list of sampling intervals\n"
-      "  -i <file>         the input graph in binary format\n"
-      "  -od <file>        the OD-pairs to be assigned\n"
-      "  -o <file>         the output CSV file without file extension\n"
-      "  -dist <file>      output the OD-distances after each iteration in <file>\n"
-      "  -fp <file>        output the flow pattern after each iteration in <file>\n"
+      "  -p <hrs>          period of analysis in hours (default: 1)\n"
+      "  -n <num>          number of iterations (0 means to use the stopping criterion)\n"
+      "  -f <func>         traversal cost function\n"
+      "                      possible values: BPR (default) Davidson M-Davidson inverse\n"
+      "  -a <algo>         shortest-path algorithm\n"
+      "                      possible values: Dijkstra Bi-Dijkstra CH CCH (default)\n"
+      "  -o <ord>          order in which the OD pairs are processed\n"
+      "                      possible values: random input sorted (default)\n"
+      "  -U <num>          maximum diameter of a cell (used for ordering OD pairs)\n"
+      "  -g <file>         network in binary format\n"
+      "  -d <file>         OD pairs to be assigned onto the network\n"
+      "  -flow <file>      place the flow pattern after each iteration in <file>\n"
+      "  -dist <file>      place the OD distances after each iteration in <file>\n"
+      "  -stat <file>      place statistics about the execution in <file>\n"
       "  -help             display this help and exit\n";
 }
 
@@ -67,26 +67,26 @@ struct ActiveVertex {
   ActiveVertex(const int id, const int nextUnexploredEdge)
       : id(id), nextUnexploredEdge(nextUnexploredEdge) {}
 
-  int id;                 // The ID of this active vertex.
+  int id;                 // The ID of the active vertex.
   int nextUnexploredEdge; // The next unexplored incident edge.
 };
 
-// Assigns origin and destination zones to OD-pairs based on a partition of the elimination tree.
+// Assigns origin and destination zones to OD pairs based on a partition of the elimination tree.
 template <typename GraphT>
 inline void assignZonesToODPairs(
-    std::vector<ClusteredOriginDestination>& odPairs, const GraphT& inGraph, const int maxDiam) {
+    const GraphT& inputGraph, std::vector<ClusteredOriginDestination>& odPairs, const int maxDiam) {
   // Convert the input graph to RoutingKit's graph representation.
-  const int numVertices = inGraph.numVertices();
+  const int numVertices = inputGraph.numVertices();
   std::vector<float> lats(numVertices);
   std::vector<float> lngs(numVertices);
-  std::vector<unsigned int> tails(inGraph.numEdges());
-  std::vector<unsigned int> heads(inGraph.numEdges());
-  FORALL_VERTICES(inGraph, u) {
-    lats[u] = inGraph.latLng(u).latInDeg();
-    lngs[u] = inGraph.latLng(u).lngInDeg();
-    FORALL_INCIDENT_EDGES(inGraph, u, e) {
+  std::vector<unsigned int> tails(inputGraph.numEdges());
+  std::vector<unsigned int> heads(inputGraph.numEdges());
+  FORALL_VERTICES(inputGraph, u) {
+    lats[u] = inputGraph.latLng(u).latInDeg();
+    lngs[u] = inputGraph.latLng(u).lngInDeg();
+    FORALL_INCIDENT_EDGES(inputGraph, u, e) {
       tails[e] = u;
-      heads[e] = inGraph.edgeHead(e);
+      heads[e] = inputGraph.edgeHead(e);
     }
   }
 
@@ -102,31 +102,31 @@ inline void assignZonesToODPairs(
   // Build the elimination out-tree from the elimination in-tree.
   std::vector<int> firstChild(numVertices + 1);
   std::vector<int> children(numVertices - 1);
-  for (int v = 0; v < numVertices - 1; ++v)
+  for (auto v = 0; v < numVertices - 1; ++v)
     ++firstChild[tree[v]];
-  int first = 0; // The index of the first edge out of the current/next vertex.
-  for (int v = 0; v <= numVertices; ++v) {
-    std::swap(first, firstChild[v]);
-    first += firstChild[v];
+  auto firstEdge = 0; // The index of the first edge out of the current/next vertex.
+  for (auto v = 0; v <= numVertices; ++v) {
+    std::swap(firstEdge, firstChild[v]);
+    firstEdge += firstChild[v];
   }
-  for (int v = 0; v < numVertices - 1; ++v)
+  for (auto v = 0; v < numVertices - 1; ++v)
     children[firstChild[tree[v]]++] = v;
-  for (int v = numVertices - 1; v > 0; --v)
+  for (auto v = numVertices - 1; v > 0; --v)
     firstChild[v] = firstChild[v - 1];
-  firstChild.front() = 0;
+  firstChild[0] = 0;
 
   // Decompose the elimination tree into as few cells with bounded diameter as possible.
-  boost::dynamic_bitset<> isRoot(numVertices);
+  BitVector isRoot(numVertices);
   std::vector<int> height(numVertices); // height[v] is the height of the subtree rooted at v.
-  for (int v = 0; v < numVertices; ++v) {
-    const int first = firstChild[v];
-    const int last = firstChild[v + 1];
-    std::sort(children.begin() + first, children.begin() + last, [&](const int u, const int v) {
+  for (auto v = 0; v < numVertices; ++v) {
+    const auto first = firstChild[v];
+    const auto last = firstChild[v + 1];
+    std::sort(children.begin() + first, children.begin() + last, [&](const auto u, const auto v) {
       assert(u >= 0); assert(u < height.size());
       assert(v >= 0); assert(v < height.size());
       return height[u] < height[v];
     });
-    for (int i = first; i < last; ++i)
+    for (auto i = first; i < last; ++i)
       if (height[v] + 1 + height[children[i]] <= maxDiam)
         height[v] = 1 + height[children[i]];
       else
@@ -135,188 +135,170 @@ inline void assignZonesToODPairs(
 
   // Number the cells in the order in which they are discovered during a DFS from the root.
   int freeCellId = 1; // The next free cell ID.
-  std::vector<int> cellId(numVertices);
+  std::vector<int> cellIds(numVertices);
   std::stack<ActiveVertex, std::vector<ActiveVertex>> activeVertices;
   activeVertices.emplace(numVertices - 1, firstChild[numVertices - 1]);
   while (!activeVertices.empty()) {
     auto &v = activeVertices.top();
-    const int head = children[v.nextUnexploredEdge];
+    const auto head = children[v.nextUnexploredEdge];
     ++v.nextUnexploredEdge;
-    cellId[order[head]] = isRoot[head] ? freeCellId++ : cellId[order[v.id]];
+    cellIds[order[head]] = isRoot[head] ? freeCellId++ : cellIds[order[v.id]];
     if (v.nextUnexploredEdge == firstChild[v.id + 1])
       activeVertices.pop();
     if (firstChild[head] != firstChild[head + 1])
       activeVertices.emplace(head, firstChild[head]);
   }
 
-  // Assign origin and destination zones to OD-pairs.
+  // Assign origin and destination zones to OD pairs.
   for (auto& od : odPairs) {
-    od.originZone = cellId[od.origin];
-    od.destinationZone = cellId[od.destination];
+    od.originZone = cellIds[od.origin];
+    od.destinationZone = cellIds[od.destination];
   }
 }
 
-// Assigns all OD-flows onto the input graph.
-template <typename FrankWolfeAssignmentT>
-void assignTraffic(const CommandLineParser& clp) {
-  const std::string infilename = clp.getValue<std::string>("i");
-  const std::string odFilename = clp.getValue<std::string>("od");
-  const std::string csvFilename = clp.getValue<std::string>("o");
-  const std::string distanceFilename = clp.getValue<std::string>("dist");
-  const std::string patternFilename = clp.getValue<std::string>("fp");
-  const std::string ord = clp.getValue<std::string>("ord", "input");
-  const int maxDiam = clp.getValue<int>("U", 40);
-  const double period = clp.getValue<double>("p", 1);
+// Assigns all OD flows onto the graph.
+template <typename FWAssignmentT>
+inline void assignTraffic(const CommandLineParser& clp) {
+  // Parse the command-line options.
+  const auto findSO = clp.isSet("so");
+  const auto verbose = clp.isSet("v");
+  const auto analysisPeriod = clp.getValue<double>("p", 0);
+  const auto numIterations = clp.getValue<int>("n", 0);
+  const auto traversalCostFunction = clp.getValue<std::string>("f", "BPR");
+  const auto shortestPathAlgorithm = clp.getValue<std::string>("a", "CCH");
+  const auto ord = clp.getValue<std::string>("o", "sorted");
+  const auto maxDiam = clp.getValue<int>("U", 40);
+  const auto graphFileName = clp.getValue<std::string>("g");
+  const auto demandFileName = clp.getValue<std::string>("d");
+  auto flowFileName = clp.getValue<std::string>("flow");
+  auto distFileName = clp.getValue<std::string>("dist");
+  auto statFileName = clp.getValue<std::string>("stat");
+  if (!flowFileName.empty() && !endsWith(flowFileName, ".csv"))
+    flowFileName += ".csv";
+  if (!distFileName.empty() && !endsWith(distFileName, ".csv"))
+    distFileName += ".csv";
+  if (!statFileName.empty() && !endsWith(statFileName, ".csv"))
+    statFileName += ".csv";
 
-  std::ifstream in(infilename, std::ios::binary);
-  if (!in.good())
-    throw std::invalid_argument("file not found -- '" + infilename + "'");
-  typename FrankWolfeAssignmentT::InputGraph graph(in);
-  in.close();
-
-  int id = 0;
+  // Read the graph from file.
+  std::ifstream graphFile(graphFileName, std::ios::binary);
+  if (!graphFile.good())
+    throw std::invalid_argument("file not found -- '" + graphFileName + "'");
+  typename FWAssignmentT::Graph graph(graphFile);
+  graphFile.close();
+  auto id = 0;
   FORALL_EDGES(graph, e) {
-    graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0);
+    graph.capacity(e) = std::max(std::round(analysisPeriod * graph.capacity(e)), 1.0);
     graph.edgeId(e) = id++;
   }
 
-  std::vector<ClusteredOriginDestination> odPairs = importClusteredODPairsFrom(odFilename);
+  // Read the OD pairs from file and reorder them if necessary.
+  auto odPairs = importClusteredODPairsFrom(demandFileName);
   if (ord == "random") {
-    std::default_random_engine rand(clp.getValue<int>("s", 19900325));
-    std::shuffle(odPairs.begin(), odPairs.end(), rand);
+    std::shuffle(odPairs.begin(), odPairs.end(), std::minstd_rand());
   } else if (ord == "sorted") {
-    assignZonesToODPairs(odPairs, graph, maxDiam);
+    assignZonesToODPairs(graph, odPairs, maxDiam);
     std::sort(odPairs.begin(), odPairs.end());
   } else if (ord != "input") {
-    throw std::invalid_argument("invalid order -- '" + ord + "'");
+    throw std::invalid_argument("unrecognized order -- '" + ord + "'");
   }
 
-  const int numIterations = clp.getValue<int>("n");
-  if (numIterations < 0) {
-    const std::string msg("negative number of iterations");
-    throw std::invalid_argument(msg + " -- " + std::to_string(numIterations));
+  std::ofstream flowFile;
+  if (!flowFileName.empty()) {
+    flowFile.open(flowFileName);
+    if (!flowFile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + flowFileName + "'");
+    if (!statFileName.empty())
+      flowFile << "# Stat file: " << statFileName << "\n";
+    flowFile << "iteration,edge_flow\n";
   }
 
-  const auto intervals = clp.getValues<int>("si");
-  if (!intervals.empty() && intervals[0] < 2) {
-    const std::string msg("sampling interval is less than 2");
-    throw std::invalid_argument(msg + " -- " + std::to_string(intervals[0]));
-  }
-  for (int i = 1; i < intervals.size(); ++i) {
-    if (intervals[i] < 2) {
-      const std::string msg("sampling interval is less than 2");
-      throw std::invalid_argument(msg + " -- " + std::to_string(intervals[i]));
-    }
-    if (intervals[i - 1] % intervals[i] != 0) {
-      const std::string msg("sampling interval is no divisor of its predecessor");
-      throw std::invalid_argument(msg + " -- " + std::to_string(intervals[i]));
-    }
+  std::ofstream distFile;
+  if (!distFileName.empty()) {
+    distFile.open(distFileName);
+    if (!distFile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + distFileName + "'");
+    if (!statFileName.empty())
+      distFile << "# Stat file: " << statFileName << "\n";
+    distFile << "iteration,traversal_cost\n";
   }
 
-  std::ofstream csv;
-  if (!csvFilename.empty()) {
-    csv.open(csvFilename + ".csv");
-    if (!csv.good())
-      throw std::invalid_argument("file cannot be opened -- '" + csvFilename + ".csv'");
-    csv << "# Input graph: " << infilename << "\n";
-    csv << "# OD-pairs: " << odFilename << "\n";
-    csv << "# Objective: " << (clp.isSet("so") ? "SO" : "UE") << "\n";
-    csv << "# Function: " << clp.getValue<std::string>("f", "modified_davidson") << "\n";
-    csv << "# Shortest-path algo: " << clp.getValue<std::string>("a", "dijkstra") << "\n";
-    csv << "# Period of analysis: " << period << "h\n";
-    csv << "# Sampling intervals: [";
-    for (int i = 0, prevInterval = -1; i < intervals.size(); prevInterval = intervals[i++])
-      if (intervals[i] != prevInterval)
-        csv << intervals[i] << '@' << i + 1 << ':';
-    csv << "1@" << intervals.size() + 1 << "]\n";
-    csv << std::flush;
+  std::ofstream statFile;
+  if (!statFileName.empty()) {
+    statFile.open(statFileName);
+    if (!statFile.good())
+      throw std::invalid_argument("file cannot be opened -- '" + statFileName + "'");
+    statFile << "# Graph: " << graphFileName << "\n";
+    statFile << "# Demand: " << demandFileName << "\n";
+    statFile << "# Objective function: " << (findSO ? "SO" : "UE") << "\n";
+    statFile << "# Traversal cost function: " << traversalCostFunction << "\n";
+    statFile << "# Shortest-path algorithm: " << shortestPathAlgorithm << "\n";
+    statFile << "# Period of analysis: " << analysisPeriod << "\n";
+    statFile << std::flush;
   }
-
-  std::ofstream distanceFile;
-  if (!distanceFilename.empty()) {
-    distanceFile.open(distanceFilename + ".csv");
-    if (!distanceFile.good())
-      throw std::invalid_argument("file cannot be opened -- '" + distanceFilename + ".csv'");
-    if (!csvFilename.empty())
-      distanceFile << "# Main file: " << csvFilename << ".csv\n";
-    distanceFile << "iteration,travel_cost\n";
+  FWAssignmentT fwAssignment(graph, odPairs, verbose);
+  if (statFile.is_open()) {
+    statFile << "# Preprocessing time: " << fwAssignment.stats.totalRunningTime << "ms\n";
+    statFile << "iteration,customization_time,query_time,line_search_time,total_time,";
+    statFile << "prev_total_traversal_cost,prev_relative_gap,checksum\n";
+    statFile << std::flush;
   }
-
-  std::ofstream patternFile;
-  if (!patternFilename.empty()) {
-    patternFile.open(patternFilename + ".csv");
-    if (!patternFile.good())
-      throw std::invalid_argument("file cannot be opened -- '" + patternFilename + ".csv'");
-    if (!csvFilename.empty())
-      patternFile << "# Main file: " << csvFilename << ".csv\n";
-    patternFile << "iteration,edge_flow\n";
-  }
-
-  FrankWolfeAssignmentT assign(graph, odPairs, csv, distanceFile, patternFile, clp.isSet("v"));
-
-  if (csv.is_open()) {
-    csv << "# Preprocessing time: " << assign.stats.totalRunningTime << "ms\n";
-    csv << "iteration,sampling_interval,customization_time,query_time,line_search_time,total_time,";
-    csv << "avg_change,max_change,obj_function_value,total_travel_cost,checksum\n";
-    csv << std::flush;
-  }
-
-  assign.run(numIterations, intervals);
+  fwAssignment.run(flowFile, distFile, statFile, numIterations);
 }
 
 // Picks the shortest-path algorithm according to the command line options.
-template <template <typename> class ObjFunctionT, template <typename> class TravelCostFunctionT>
+template <template <typename> class ObjFunctionT, template <typename> class TraversalCostFunctionT>
 void chooseShortestPathAlgo(const CommandLineParser& clp) {
   using VertexAttributes = VertexAttrs<LatLngAttribute>;
   using EdgeAttributes = EdgeAttrs<
-      CapacityAttribute, EdgeIdAttribute, LengthAttribute, TravelCostAttribute,
-      TravelTimeAttribute>;
+      CapacityAttribute, EdgeIdAttribute, LengthAttribute, TravelTimeAttribute,
+      TraversalCostAttribute>;
   using Graph = StaticGraph<VertexAttributes, EdgeAttributes>;
 
-  const std::string algo = clp.getValue<std::string>("a", "dijkstra");
-  if (algo == "dijkstra") {
-    using Assignment = FrankWolfeAssignment<
-        ObjFunctionT, TravelCostFunctionT, trafficassignment::DijkstraAdapter, Graph>;
-    assignTraffic<Assignment>(clp);
-  } else if (algo == "bidijkstra") {
-    using Assignment = FrankWolfeAssignment<
-        ObjFunctionT, TravelCostFunctionT, trafficassignment::BiDijkstraAdapter, Graph>;
-    assignTraffic<Assignment>(clp);
-  } else if (algo == "ch") {
-    using Assignment = FrankWolfeAssignment<
-        ObjFunctionT, TravelCostFunctionT, trafficassignment::CHAdapter, Graph>;
-    assignTraffic<Assignment>(clp);
-  } else if (algo == "cch") {
-    using Assignment = FrankWolfeAssignment<
-        ObjFunctionT, TravelCostFunctionT, trafficassignment::CCHAdapter, Graph>;
-    assignTraffic<Assignment>(clp);
+  const auto algo = clp.getValue<std::string>("a", "CCH");
+  if (algo == "Dijkstra") {
+    using FWAssignment = FrankWolfeAssignment<
+        ObjFunctionT, TraversalCostFunctionT, trafficassignment::DijkstraAdapter, Graph>;
+    assignTraffic<FWAssignment>(clp);
+  } else if (algo == "Bi-Dijkstra") {
+    using FWAssignment = FrankWolfeAssignment<
+        ObjFunctionT, TraversalCostFunctionT, trafficassignment::BiDijkstraAdapter, Graph>;
+    assignTraffic<FWAssignment>(clp);
+  } else if (algo == "CH") {
+    using FWAssignment = FrankWolfeAssignment<
+        ObjFunctionT, TraversalCostFunctionT, trafficassignment::CHAdapter, Graph>;
+    assignTraffic<FWAssignment>(clp);
+  } else if (algo == "CCH") {
+    using FWAssignment = FrankWolfeAssignment<
+        ObjFunctionT, TraversalCostFunctionT, trafficassignment::CCHAdapter, Graph>;
+    assignTraffic<FWAssignment>(clp);
   } else {
     throw std::invalid_argument("unrecognized shortest-path algorithm -- '" + algo + "'");
   }
 }
 
-// Picks the travel cost function according to the command line options.
+// Picks the traversal cost function according to the command line options.
 template <template <typename> class ObjFunctionT>
-void chooseTravelCostFunction(const CommandLineParser& clp) {
-  const std::string func = clp.getValue<std::string>("f", "modified_davidson");
-  if (func == "bpr")
+void chooseTraversalCostFunction(const CommandLineParser& clp) {
+  const auto func = clp.getValue<std::string>("f", "BPR");
+  if (func == "BPR")
     chooseShortestPathAlgo<ObjFunctionT, BprFunction>(clp);
-  else if (func == "davidson")
+  else if (func == "Davidson")
     chooseShortestPathAlgo<ObjFunctionT, DavidsonFunction>(clp);
-  else if (func == "modified_davidson")
+  else if (func == "M-Davidson")
     chooseShortestPathAlgo<ObjFunctionT, ModifiedDavidsonFunction>(clp);
   else if (func == "inverse")
     chooseShortestPathAlgo<ObjFunctionT, InverseFunction>(clp);
   else
-    throw std::invalid_argument("unrecognized travel cost function -- '" + func + "'");
+    throw std::invalid_argument("unrecognized traversal cost function -- '" + func + "'");
 }
 
 // Picks the objective function according to the command line options.
 void chooseObjFunction(const CommandLineParser& clp) {
   if (clp.isSet("so"))
-    chooseTravelCostFunction<SystemOptimum>(clp);
+    chooseTraversalCostFunction<SystemOptimum>(clp);
   else
-    chooseTravelCostFunction<UserEquilibrium>(clp);
+    chooseTraversalCostFunction<UserEquilibrium>(clp);
 }
 
 int main(int argc, char* argv[]) {

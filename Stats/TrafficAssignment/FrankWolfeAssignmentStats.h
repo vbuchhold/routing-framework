@@ -1,11 +1,14 @@
 #pragma once
 
+#include <limits>
+
 // Statistics about a Frank-Wolfe assignment, including times and measures of solution quality.
 struct FrankWolfeAssignmentStats {
   // Constructs a struct collecting statistics about a Frank-Wolfe assignment.
   FrankWolfeAssignmentStats()
-      : objFunctionValue(0),
-        totalTravelCost(0),
+      : prevTotalTraversalCost(0),
+        prevTotalPathCost(0),
+        prevRelGap(std::numeric_limits<double>::infinity()),
         lastLineSearchTime(0),
         lastRunningTime(0),
         totalLineSearchTime(0),
@@ -13,7 +16,8 @@ struct FrankWolfeAssignmentStats {
 
   // Resets the values from the last iteration.
   void startIteration() {
-    totalTravelCost = 0;
+    prevTotalTraversalCost = 0;
+    prevTotalPathCost = 0;
   }
 
   // Adds the values from the last iteration to the totals.
@@ -22,8 +26,9 @@ struct FrankWolfeAssignmentStats {
     totalRunningTime += lastRunningTime;
   }
 
-  double objFunctionValue; // The value of the objective function resulting from current edge flows.
-  double totalTravelCost;  // The total travel cost resulting from current edge flows.
+  double prevTotalTraversalCost; // The total traversal cost after the previous iteration.
+  double prevTotalPathCost;      // The total path cost after the previous iteration.
+  double prevRelGap;             // The relative gap after the previous iteration.
 
   int lastLineSearchTime; // The time spent on the line search in the last iteration.
   int lastRunningTime;    // The running time for the last iteration.
