@@ -90,64 +90,64 @@ class Color {
 
 // Some predefined colors.
 constexpr Color KIT_GREEN    = Color(  0, 150, 130);
-constexpr Color KIT_GREEN_70 = Color( 77, 182, 168);
-constexpr Color KIT_GREEN_50 = Color(127, 202, 192);
-constexpr Color KIT_GREEN_30 = Color(178, 223, 217);
-constexpr Color KIT_GREEN_15 = Color(217, 239, 236);
+constexpr Color KIT_GREEN_70 = Color( 76, 182, 168);
+constexpr Color KIT_GREEN_50 = Color(128, 203, 193);
+constexpr Color KIT_GREEN_30 = Color(179, 224, 218);
+constexpr Color KIT_GREEN_15 = Color(217, 240, 237);
 
 constexpr Color KIT_BLUE    = Color( 70, 100, 170);
-constexpr Color KIT_BLUE_70 = Color(126, 147, 196);
-constexpr Color KIT_BLUE_50 = Color(162, 177, 212);
-constexpr Color KIT_BLUE_30 = Color(199, 208, 229);
-constexpr Color KIT_BLUE_15 = Color(227, 232, 242);
+constexpr Color KIT_BLUE_70 = Color(125, 147, 196);
+constexpr Color KIT_BLUE_50 = Color(163, 178, 213);
+constexpr Color KIT_BLUE_30 = Color(200, 209, 230);
+constexpr Color KIT_BLUE_15 = Color(228, 232, 243);
 
 constexpr Color KIT_BLACK    = Color(  0,   0,   0);
-constexpr Color KIT_BLACK_70 = Color( 77,  77,  77);
-constexpr Color KIT_BLACK_50 = Color(127, 127, 127);
-constexpr Color KIT_BLACK_30 = Color(178, 178, 178);
+constexpr Color KIT_BLACK_70 = Color( 76,  76,  76);
+constexpr Color KIT_BLACK_50 = Color(128, 128, 128);
+constexpr Color KIT_BLACK_30 = Color(179, 179, 179);
 constexpr Color KIT_BLACK_15 = Color(217, 217, 217);
 
 constexpr Color KIT_PALEGREEN    = Color(140, 182,  60);
-constexpr Color KIT_PALEGREEN_70 = Color(174, 204, 118);
-constexpr Color KIT_PALEGREEN_50 = Color(197, 218, 157);
-constexpr Color KIT_PALEGREEN_30 = Color(220, 233, 196);
-constexpr Color KIT_PALEGREEN_15 = Color(238, 244, 226);
+constexpr Color KIT_PALEGREEN_70 = Color(176, 204, 118);
+constexpr Color KIT_PALEGREEN_50 = Color(198, 219, 158);
+constexpr Color KIT_PALEGREEN_30 = Color(221, 234, 197);
+constexpr Color KIT_PALEGREEN_15 = Color(238, 245, 226);
 
 constexpr Color KIT_YELLOW    = Color(252, 229,   0);
-constexpr Color KIT_YELLOW_70 = Color(253, 237,  77);
-constexpr Color KIT_YELLOW_50 = Color(253, 242, 127);
-constexpr Color KIT_YELLOW_30 = Color(254, 247, 178);
-constexpr Color KIT_YELLOW_15 = Color(155, 251, 217);
+constexpr Color KIT_YELLOW_70 = Color(253, 237,  76);
+constexpr Color KIT_YELLOW_50 = Color(254, 242, 128);
+constexpr Color KIT_YELLOW_30 = Color(255, 248, 179);
+constexpr Color KIT_YELLOW_15 = Color(255, 252, 217);
 
 constexpr Color KIT_ORANGE    = Color(223, 155,  27);
 constexpr Color KIT_ORANGE_70 = Color(233, 185,  95);
 constexpr Color KIT_ORANGE_50 = Color(239, 205, 141);
-constexpr Color KIT_ORANGE_30 = Color(245, 225, 186);
-constexpr Color KIT_ORANGE_15 = Color(250, 240, 221);
+constexpr Color KIT_ORANGE_30 = Color(246, 225, 187);
+constexpr Color KIT_ORANGE_15 = Color(251, 240, 221);
 
 constexpr Color KIT_BROWN    = Color(167, 130,  46);
-constexpr Color KIT_BROWN_70 = Color(193, 167, 108);
-constexpr Color KIT_BROWN_50 = Color(211, 192, 150);
-constexpr Color KIT_BROWN_30 = Color(228, 217, 192);
-constexpr Color KIT_BROWN_15 = Color(242, 236, 224);
+constexpr Color KIT_BROWN_70 = Color(194, 168, 109);
+constexpr Color KIT_BROWN_50 = Color(211, 193, 151);
+constexpr Color KIT_BROWN_30 = Color(229, 218, 193);
+constexpr Color KIT_BROWN_15 = Color(242, 237, 224);
 
 constexpr Color KIT_RED    = Color(162,  34,  35);
 constexpr Color KIT_RED_70 = Color(190, 100, 101);
-constexpr Color KIT_RED_50 = Color(208, 144, 145);
-constexpr Color KIT_RED_30 = Color(227, 188, 189);
+constexpr Color KIT_RED_50 = Color(209, 145, 145);
+constexpr Color KIT_RED_30 = Color(227, 189, 189);
 constexpr Color KIT_RED_15 = Color(241, 222, 222);
 
 constexpr Color KIT_LILAC    = Color(163,  16, 124);
-constexpr Color KIT_LILAC_70 = Color(190,  87, 163);
-constexpr Color KIT_LILAC_50 = Color(209, 135, 189);
-constexpr Color KIT_LILAC_30 = Color(227, 183, 215);
-constexpr Color KIT_LILAC_15 = Color(241, 219, 235);
+constexpr Color KIT_LILAC_70 = Color(191,  88, 163);
+constexpr Color KIT_LILAC_50 = Color(209, 136, 190);
+constexpr Color KIT_LILAC_30 = Color(228, 184, 216);
+constexpr Color KIT_LILAC_15 = Color(242, 220, 236);
 
 constexpr Color KIT_CYANBLUE    = Color( 35, 161, 224);
-constexpr Color KIT_CYANBLUE_70 = Color(101, 189, 233);
-constexpr Color KIT_CYANBLUE_50 = Color(145, 208, 239);
+constexpr Color KIT_CYANBLUE_70 = Color(101, 189, 234);
+constexpr Color KIT_CYANBLUE_50 = Color(145, 208, 240);
 constexpr Color KIT_CYANBLUE_30 = Color(189, 227, 246);
-constexpr Color KIT_CYANBLUE_15 = Color(222, 241, 250);
+constexpr Color KIT_CYANBLUE_15 = Color(222, 241, 251);
 
 // Some predefined color schemes.
 constexpr std::array<Color, 10> KIT_SCHEME = {{

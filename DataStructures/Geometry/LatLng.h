@@ -116,9 +116,9 @@ class LatLng {
   // Coordinates increase in the x (y) direction towards the east (north).
   // For more details, see: www.math.ubc.ca/~israel/m103/mercator/mercator.html
   Point webMercatorProjection() const {
-    const double lat = toRadians(latInDeg());
+    const auto sinLat = std::sin(toRadians(latInDeg()));
     const int x = lng + DEG_180;
-    const int y = std::round((std::log(std::tan(lat / 2 + PI / 4)) / (2 * PI) + 0.5) * DEG_360);
+    const int y = std::round(DEG_360 * (0.5 + std::log((1 + sinLat) / (1 - sinLat)) / (4 * PI)));
     return {x, y};
   }
 

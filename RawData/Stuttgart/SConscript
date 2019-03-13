@@ -1,5 +1,0 @@
-p1 = Program(source=['DrawStuttgart.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['cairo', 'proj'])
-
-Alias('DrawStuttgart', p1)
-
-Return('p1')

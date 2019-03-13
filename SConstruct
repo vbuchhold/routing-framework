@@ -1,7 +1,7 @@
 import os
 
 # Directories containing .cpp source files.
-srcDirs = ['Launchers', 'RawData', 'RawData/Stuttgart']
+srcDirs = ['Launchers', 'RawData']
 
 # Common compiler options.
 cflags = '-std=c99'
