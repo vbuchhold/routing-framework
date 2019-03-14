@@ -9,7 +9,7 @@ p05 = Program(
 p06 = Program(source=['DrawNetwork.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['cairo'])
 p07 = Program(source=['GenerateMatchingODPairs.cpp'], LIBS=['routingkit'])
 p08 = Program(source=['GenerateODPairs.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
-p09 = Program(source=['ParseMobiTopp.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
+p09 = Program(source=['ParseMobiToppFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p10 = Program(source=['ParseMtxFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p11 = Program(source=['RadiationModel.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj'])
 
@@ -21,7 +21,7 @@ Alias('ConvertGraph', p05)
 Alias('DrawNetwork', p06)
 Alias('GenerateMatchingODPairs', p07)
 Alias('GenerateODPairs', p08)
-Alias('ParseMobiTopp', p09)
+Alias('ParseMobiToppFile', p09)
 Alias('ParseMtxFile', p10)
 Alias('RadiationModel', p11)
 
