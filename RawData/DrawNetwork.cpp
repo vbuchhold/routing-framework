@@ -42,6 +42,7 @@ inline void printUsage() {
       "       DrawNetwork [-c <file>] -o <file> -g <file> -f <file>\n"
       "Visualizes networks, flow patterns throughout networks and travel demand data.\n"
       "  -stuttgart        remove outliers in the network of Stuttgart\n"
+      "  -n                hide the network\n"
       "  -i                draw all intermediate flow patterns\n"
       "  -p <hrs>          analysis period in hours (defaults to 1.0)\n"
       "  -w <cm>           width in centimeters of the graphic (defaults to 14.0)\n"
@@ -88,6 +89,7 @@ int main(int argc, char* argv[]) {
 
     // Parse the command-line options.
     const auto isStuttgartGraph = clp.isSet("stuttgart");
+    const auto hideNetwork = clp.isSet("n");
     const auto drawIntermediates = clp.isSet("i");
     const auto period = clp.getValue<double>("p", 1.0);
     const auto width = clp.getValue<double>("w", 14.0);
@@ -159,14 +161,16 @@ int main(int argc, char* argv[]) {
 
     PrimitiveDrawer pd(graphic.get());
     if (flowFileName.empty()) {
-      // Draw the network.
-      std::cout << "Drawing network..." << std::flush;
-      if (!boundFileName.empty() || !demandFileName.empty())
-        pd.setColor(KIT_BLACK_15);
-      FORALL_VALID_EDGES(graph, u, e)
-        drawEdge(pd, LineWidth::VERY_THIN, graph, u, e);
-      pd.setLineWidth(LineWidth::THIN);
-      std::cout << " done.\n";
+      if (!hideNetwork) {
+        // Draw the network.
+        std::cout << "Drawing network..." << std::flush;
+        if (!boundFileName.empty() || !demandFileName.empty())
+          pd.setColor(KIT_BLACK_15);
+        FORALL_VALID_EDGES(graph, u, e)
+          drawEdge(pd, LineWidth::VERY_THIN, graph, u, e);
+        pd.setLineWidth(LineWidth::THIN);
+        std::cout << " done.\n";
+      }
 
       if (!boundFileName.empty()) {
         // Draw the boundaries.
@@ -187,9 +191,10 @@ int main(int argc, char* argv[]) {
         // Draw the travel demand data, each OD pair as a straight line.
         std::cout << "Drawing travel demand..." << std::flush;
         const auto odPairs = importODPairsFrom(demandFileName);
+        const auto step = std::round(odPairs.size() / 131072.0);
         pd.setColor({KIT_GREEN.red(), KIT_GREEN.green(), KIT_GREEN.blue(), 3});
-        for (const auto& odPair : odPairs)
-          pd.drawLine(origCoordinates[odPair.origin], origCoordinates[odPair.destination]);
+        for (auto i = 0; i < odPairs.size(); i += step)
+          pd.drawLine(origCoordinates[odPairs[i].origin], origCoordinates[odPairs[i].destination]);
         std::cout << " done.\n";
       }
     } else {
