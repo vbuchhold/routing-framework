@@ -14,9 +14,9 @@
 #include "Algorithms/DemandCalculation/KDTreeOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/PopulationAssignment.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
+#include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/PopulationAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
-#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/Constants.h"
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Reading graph from file..." << std::flush;
     using VertexAttributes = VertexAttrs<
         LatLngAttribute, PopulationAttribute, SequentialVertexIdAttribute>;
-    using EdgeAttributes = EdgeAttrs<TravelTimeAttribute>;
+    using EdgeAttributes = EdgeAttrs<LengthAttribute>;
     using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
     std::ifstream graphFile(graphFileName, std::ios::binary);
     if (!graphFile.good())

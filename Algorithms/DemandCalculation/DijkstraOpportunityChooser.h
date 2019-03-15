@@ -4,7 +4,7 @@
 #include <random>
 
 #include "Algorithms/Dijkstra/Dijkstra.h"
-#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
+#include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
@@ -59,7 +59,7 @@ class DijkstraOpportunityChooser {
 
  private:
   using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-  using Dijkstra = StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet>;
+  using Dijkstra = StandardDijkstra<GraphT, LengthAttribute, LabelSet>;
 
   const GraphT& graph;   // The network we work on.
   int numOpportunities;  // The total number of opportunities in the network.
