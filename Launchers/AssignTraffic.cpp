@@ -43,6 +43,7 @@ inline void printUsage() {
       "Assigns OD pairs onto a network using the (conjugate) Frank-Wolfe algorithm. It\n"
       "supports different objectives, traversal cost functions and shortest-path algos.\n"
       "  -so               find the system optimum (default: user equilibrium)\n"
+      "  -i                output all intermediate flow patterns and OD distances\n"
       "  -v                display informative messages\n"
       "  -p <hrs>          period of analysis in hours (default: 1)\n"
       "  -n <num>          number of iterations (0 means to use the stopping criterion)\n"
@@ -161,6 +162,7 @@ template <typename FWAssignmentT>
 inline void assignTraffic(const CommandLineParser& clp) {
   // Parse the command-line options.
   const auto findSO = clp.isSet("so");
+  const auto outputIntermediates = clp.isSet("i");
   const auto verbose = clp.isSet("v");
   const auto analysisPeriod = clp.getValue<double>("p", 0);
   const auto numIterations = clp.getValue<int>("n", 0);
@@ -243,7 +245,7 @@ inline void assignTraffic(const CommandLineParser& clp) {
     statFile << "prev_total_traversal_cost,prev_relative_gap,checksum\n";
     statFile << std::flush;
   }
-  fwAssignment.run(flowFile, distFile, statFile, numIterations);
+  fwAssignment.run(flowFile, distFile, statFile, numIterations, outputIntermediates);
 }
 
 // Picks the shortest-path algorithm according to the command line options.

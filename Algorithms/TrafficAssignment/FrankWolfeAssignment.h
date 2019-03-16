@@ -44,7 +44,7 @@ class FrankWolfeAssignment {
   // Assigns all OD flows onto the graph.
   void run(
       std::ofstream& flowFile, std::ofstream& distFile, std::ofstream& statFile,
-      const int numIterations = 0) {
+      const int numIterations = 0, const bool outputIntermediates = false) {
     assert(numIterations >= 0);
     Timer timer;
     determineInitialSolution();
@@ -88,11 +88,11 @@ class FrankWolfeAssignment {
       stats.prevRelGap = 1 - aonAssignment.stats.lastChecksum / stats.prevTotalPathCost;
       stats.finishIteration();
 
-      if (flowFile.is_open())
+      if (flowFile.is_open() && outputIntermediates)
         for (const auto flow : trafficFlows)
           flowFile << aonAssignment.stats.numIterations << ',' << flow << '\n';
 
-      if (distFile.is_open())
+      if (distFile.is_open() && outputIntermediates)
         for (const auto dist : aonAssignment.stats.lastDistances)
           distFile << aonAssignment.stats.numIterations << ',' << dist << '\n';
 
@@ -113,6 +113,14 @@ class FrankWolfeAssignment {
         std::cout << std::flush;
       }
     }
+
+    if (flowFile.is_open() && !outputIntermediates)
+      for (const auto flow : trafficFlows)
+        flowFile << aonAssignment.stats.numIterations << ',' << flow << '\n';
+
+    if (distFile.is_open() && !outputIntermediates)
+      for (const auto dist : aonAssignment.stats.lastDistances)
+        distFile << aonAssignment.stats.numIterations << ',' << dist << '\n';
 
     if (verbose) {
       std::cout << "Total:\n";
