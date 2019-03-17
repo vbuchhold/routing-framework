@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -108,8 +107,7 @@ int main(int argc, char* argv[]) {
     out << '\n';
 
     // Compute the Dijkstra rank for each OD-pair.
-    std::default_random_engine rand;
-    ODPairGenerator<Graph, TravelTimeAttribute> gen(graph, rand);
+    ODPairGenerator<Graph, TravelTimeAttribute> gen(graph);
     int origin, destination, originZone, destinationZone, dep, dist;
     while (csv.read_row(origin, destination, originZone, destinationZone, dep, dist)) {
       out << origin << ',' << destination;

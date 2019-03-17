@@ -38,7 +38,7 @@ class Dijkstra {
   friend class DijkstraOpportunityChooser;
   template <typename>
   friend class FormulaDemandCalculator;
-  template <typename, typename, typename>
+  template <typename, typename>
   friend class ODPairGenerator;
 
  private:

@@ -2,74 +2,83 @@
 
 #include <cassert>
 #include <random>
+#include <utility>
 
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
+#include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/Constants.h"
+#include "Tools/OpenMP.h"
 
 // A facility generating O-D pairs (or queries) for the experimental evaluation of shortest-path
 // algorithms. It supports choosing O and D uniformly at random, and more advanced methodologies
 // such as choosing D by Dijkstra rank.
-template <
-    typename GraphT, typename WeightT, typename RandomNumberGeneratorT = std::default_random_engine>
+template <typename GraphT, typename WeightT>
 class ODPairGenerator {
  public:
-  // Constructs an O-D pair generator for the specified graph.
-  ODPairGenerator(const GraphT& graph, RandomNumberGeneratorT& rand)
-      : dijkstra(graph),
-        rand(rand),
-        dist(0, graph.numVertices() - 1) {}
+  // Constructs an OD-pair generator for the specified graph.
+  ODPairGenerator(const GraphT& graph, const int seed = 0)
+      : rand(seed + omp_get_thread_num() + 1),
+        distribution(0, graph.numVertices() - 1),
+        dijkstra(graph) {}
 
-  // Returns an O-D pair with O and D picked uniformly at random.
+  // Returns an OD pair with O and D picked uniformly at random.
   OriginDestination getRandomODPair() {
-    return {dist(rand), dist(rand)};
+    return {distribution(rand), distribution(rand)};
   }
 
-  // Returns a random O-D pair, where D has the specified Dijkstra rank from O.
-  OriginDestination getRandomODPairChosenByDijkstraRank(const int rank) {
-    assert(rank >= 0); assert(rank <= dist.b());
-    const int o = dist(rand);
-    int d = o;
-    dijkstra.init({o});
-    for (int i = 0; i <= rank; ++i) {
-      if (dijkstra.queue.empty())
-        assert(false);
-      d = dijkstra.settleNextVertex();
-    }
-    return {o, d};
+  // Returns a random OD pair, where D has the specified Dijkstra rank from O.
+  std::pair<OriginDestination, int> getRandomODPairChosenByRank(const int rank) {
+    return getRandomODPairChosenByRank(rank, distribution(rand));
   }
 
-  // Returns a random O-D pair, where the distance between O and D is distance.
-  OriginDestination getRandomODPairChosenByDistance(const int distance) {
-    assert(distance >= 0);
-    const int o = dist(rand);
-    int d = o;
-    dijkstra.init({o});
-    while (!dijkstra.queue.empty() && dijkstra.getDistance(d) < distance)
-      d = dijkstra.settleNextVertex();
-    return {o, d};
+  // Returns a random OD pair, where D has the specified Dijkstra rank from O.
+  std::pair<OriginDestination, int> getRandomODPairChosenByRank(const int rank, const int src) {
+    assert(rank >= 0);
+    assert(src >= 0); assert(src <= distribution.b());
+    auto dst = src;
+    auto actualRank = -1;
+    dijkstra.init({{src}});
+    for (; !dijkstra.queue.empty() && actualRank < rank; ++actualRank)
+      dst = dijkstra.settleNextVertex();
+    return {{src, dst}, actualRank};
+  }
+
+  // Returns a random OD pair, where the distance between O and D is dist.
+  std::pair<OriginDestination, int> getRandomODPairChosenByDistance(const int dist) {
+    return getRandomODPairChosenByDistance(dist, distribution(rand));
+  }
+
+  // Returns a random OD pair, where the distance between O and D is dist.
+  std::pair<OriginDestination, int> getRandomODPairChosenByDistance(const int dist, const int src) {
+    assert(dist >= 0);
+    assert(src >= 0); assert(src <= distribution.b());
+    auto dst = src;
+    dijkstra.init({{src}});
+    while (!dijkstra.queue.empty() && dijkstra.getDistance(dst) < dist)
+      dst = dijkstra.settleNextVertex();
+    return {{src, dst}, dijkstra.getDistance(dst)};
   }
 
   // Returns the Dijkstra rank for the specified destination with respect to the given origin.
   int getDijkstraRankFor(const OriginDestination& od) {
-    assert(od.origin >= 0); assert(od.origin <= dist.b());
-    assert(od.destination >= 0); assert(od.destination <= dist.b());
-    int rank = 0;
-    dijkstra.init({od.origin});
+    assert(od.origin >= 0); assert(od.origin <= distribution.b());
+    assert(od.destination >= 0); assert(od.destination <= distribution.b());
+    auto rank = 0;
+    dijkstra.init({{od.origin}});
     while (dijkstra.settleNextVertex() != od.destination) {
       if (dijkstra.queue.empty())
-        assert(false);
+        return INFTY;
       ++rank;
     }
     return rank;
   }
 
  private:
-  using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-  using Dijkstra = StandardDijkstra<GraphT, WeightT, LabelSet>;
+  using Dijkstra = StandardDijkstra<GraphT, WeightT, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
 
-  Dijkstra dijkstra;                    // The Dijkstra search used to compute Dijkstra ranks.
-  RandomNumberGeneratorT& rand;         // The random number engine providing randomness.
-  std::uniform_int_distribution<> dist; // A functor returning random vertex IDs.
+  std::minstd_rand rand;                        // A Lehmer random number generator.
+  std::uniform_int_distribution<> distribution; // A functor returning uniform random vertex IDs.
+  Dijkstra dijkstra;                            // Dijkstra's shortest-path algorithm.
 };

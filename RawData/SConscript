@@ -8,7 +8,7 @@ p05 = Program(
     source=['ConvertGraph.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj', 'routingkit'])
 p06 = Program(source=['DrawNetwork.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['cairo'])
 p07 = Program(source=['GenerateMatchingODPairs.cpp'], LIBS=['routingkit'])
-p08 = Program(source=['GenerateODPairs.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
+p08 = Program(source=['GenerateODPairs.cpp'], parse_flags='-DCSV_IO_NO_THREAD -fopenmp')
 p09 = Program(source=['ParseMobiToppFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p10 = Program(source=['ParseMtxFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p11 = Program(source=['RadiationModel.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj'])
