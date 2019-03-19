@@ -12,6 +12,7 @@ p08 = Program(source=['GenerateODPairs.cpp'], parse_flags='-DCSV_IO_NO_THREAD -f
 p09 = Program(source=['ParseMobiToppFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p10 = Program(source=['ParseMtxFile.cpp'], parse_flags='-DCSV_IO_NO_THREAD')
 p11 = Program(source=['RadiationModel.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj'])
+p12 = Program(source=['VisumExtractPoi.cpp'], parse_flags='-DCSV_IO_NO_THREAD', LIBS=['proj'])
 
 Alias('CalibrateOsm', p01)
 Alias('ComputeDijkstraRanks', p02)
@@ -24,5 +25,6 @@ Alias('GenerateODPairs', p08)
 Alias('ParseMobiToppFile', p09)
 Alias('ParseMtxFile', p10)
 Alias('RadiationModel', p11)
+Alias('VisumExtractPoi', p12)
 
-Return('p01', 'p02', 'p03', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p11')
+Return('p01', 'p02', 'p03', 'p04', 'p05', 'p06', 'p07', 'p08', 'p09', 'p10', 'p11', 'p12')
