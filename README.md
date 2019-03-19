@@ -34,7 +34,6 @@ type the following commands at the top-level directory of the framework:
 $ git submodule update --init
 $ cd External
 $ cd fast-cpp-csv-parser && sudo cp *.h /usr/local/include && cd ..
-$ cd nanoflann && sudo cp -r include /usr/local && cd ..
 $ cd randomc && sudo mkdir /usr/local/include/randomc && sudo cp *.cpp *.h $_ && cd ..
 $ cd RoutingKit && make && sudo cp -r include lib /usr/local && cd ..
 $ cd stocc && sudo mkdir /usr/local/include/stocc && sudo cp *.cpp *.h $_ && cd ..

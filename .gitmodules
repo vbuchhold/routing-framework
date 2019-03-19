@@ -1,6 +1,3 @@
-[submodule "External/nanoflann"]
-	path = External/nanoflann
-	url = https://github.com/jlblancoc/nanoflann.git
 [submodule "External/RoutingKit"]
 	path = External/RoutingKit
 	url = https://github.com/RoutingKit/RoutingKit.git
