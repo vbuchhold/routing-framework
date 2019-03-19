@@ -18,17 +18,20 @@
 
 // A travel demand calculator based on evaluating radiation model's formula for each pair of
 // vertices. For each vertex s in the graph, we run a Dijkstra search without early stopping.
-// Whenever we settle a vertex u, we know the intervening population between s and u, and we
-// evaluate the formula for s and u.
+// Whenever we settle a vertex u, we know the intervening opportunities between s and u, and
+// we evaluate the formula for s and u.
 template <typename GraphT>
 class FormulaDemandCalculator {
  public:
   // Constructs a travel demand calculator for the specified network.
   explicit FormulaDemandCalculator(const GraphT& graph, const int seed, const bool verbose) noexcept
-      : graph(graph), totPop(0), seed(seed), verbose(verbose) {
-    FORALL_VERTICES(graph, v)
+      : graph(graph), totPop(0), totPoi(1), seed(seed), verbose(verbose) {
+    FORALL_VERTICES(graph, v) {
       totPop += graph.population(v);
+      totPoi += graph.numOpportunities(v);
+    }
     assert(totPop > 0);
+    assert(totPoi > 1);
     assert(seed >= 0);
   }
 
@@ -52,31 +55,34 @@ class FormulaDemandCalculator {
 
       #pragma omp for schedule(static, 1) nowait
       for (auto src = 0; src < graph.numVertices(); ++src) {
-        auto srcPop = graph.population(src); // The source population.
-        auto intPop = 0;                     // The intervening population.
+        auto srcPop = graph.population(src);           // The source population.
+        auto srcPoi = graph.numOpportunities(src) + 1; // The number of opportunities at the source.
+        auto intPoi = 0;                               // The number of intervening opportunities.
+        if (srcPop == 0)
+          continue;
 
         auto outflow = std::binomial_distribution<>(numODPairs, srcPop / totPop)(rand);
         auto normConst = 1 / (1 -
-            (1 - std::pow(lambda, totPop)) / (1 - std::pow(lambda, srcPop)) * (srcPop / totPop));
-        auto m = (1 - std::pow(lambda, srcPop)) / srcPop;
+            (1 - std::pow(lambda, totPoi)) / (1 - std::pow(lambda, srcPoi)) * (srcPoi / totPoi));
+        auto n = (1 - std::pow(lambda, srcPoi)) / srcPoi;
 
         dijkstra.init({{src}});
         dijkstra.settleNextVertex();
         while (!dijkstra.queue.empty()) {
           auto dst = dijkstra.settleNextVertex();
-          auto dstPop = graph.population(dst);
-          if (dstPop == 0)
+          auto dstPoi = graph.numOpportunities(dst);
+          if (dstPoi == 0)
             continue;
 
           // Evaluate radiation model's formula for src and dst.
-          auto ms = (1 - std::pow(lambda, srcPop + intPop)) / (srcPop + intPop);
-          auto mms = (1 - std::pow(lambda, srcPop + dstPop + intPop)) / (srcPop + dstPop + intPop);
-          auto prob = (ms - mms) / m;
+          auto ns = (1 - std::pow(lambda, srcPoi + intPoi)) / (srcPoi + intPoi);
+          auto nns = (1 - std::pow(lambda, srcPoi + dstPoi + intPoi)) / (srcPoi + dstPoi + intPoi);
+          auto prob = (ns - nns) / n;
           auto numTravelers = std::binomial_distribution<>(outflow, normConst * prob)(rand);
 
           for (auto i = 0; i < numTravelers; ++i)
             out << src << ',' << dst << '\n';
-          intPop += dstPop;
+          intPoi += dstPoi;
         }
         ++bar;
       }
@@ -89,6 +95,7 @@ class FormulaDemandCalculator {
  private:
   const GraphT& graph; // The network we work on.
   double totPop;       // The total number of inhabitants living in the network.
+  double totPoi;       // The total number of opportunities in the network.
   const int seed;      // The seed with which the random number generator will be started.
   const bool verbose;  // Should we display informative messages?
 };

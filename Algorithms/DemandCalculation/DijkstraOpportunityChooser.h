@@ -22,7 +22,7 @@ class DijkstraOpportunityChooser {
   explicit DijkstraOpportunityChooser(const GraphT& graph, const int seed)
       : graph(graph), numOpportunities(0), rand(seed + omp_get_thread_num() + 1), dijkstra(graph) {
     FORALL_VERTICES(graph, u)
-      numOpportunities += graph.population(u);
+      numOpportunities += graph.numOpportunities(u);
     assert(numOpportunities > 0);
     assert(seed >= 0);
   }
@@ -38,20 +38,20 @@ class DijkstraOpportunityChooser {
     while (numInterveningOpportunities >= 0) {
       assert(!dijkstra.queue.empty());
       u = dijkstra.settleNextVertex();
-      numInterveningOpportunities -= graph.population(u);
+      numInterveningOpportunities -= graph.numOpportunities(u);
     }
     return u;
   }
 
   // Returns the cumulative number of opportunities between source and target.
-  int computeInterveningOpportunities(const int source, const int target) noexcept {
+  int computeInterveningOpportunities(const int src, const int dst) noexcept {
     int u = INVALID_VERTEX;
-    int numInterveningOpportunities = -graph.population(source) - graph.population(target);
-    dijkstra.init({{source}});
-    while (u != target) {
+    int numInterveningOpportunities = -graph.numOpportunities(src) - graph.numOpportunities(dst);
+    dijkstra.init({{src}});
+    while (u != dst) {
       assert(!dijkstra.queue.empty());
       u = dijkstra.settleNextVertex();
-      numInterveningOpportunities += graph.population(u);
+      numInterveningOpportunities += graph.numOpportunities(u);
     }
     assert(numInterveningOpportunities >= 0);
     return numInterveningOpportunities;

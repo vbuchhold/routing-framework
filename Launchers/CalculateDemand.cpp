@@ -13,8 +13,10 @@
 #include "Algorithms/DemandCalculation/FormulaDemandCalculator.h"
 #include "Algorithms/DemandCalculation/KDTreeOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/PopulationAssignment.h"
+#include "DataStructures/Geometry/KDTree.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/NumOpportunitiesAttribute.h"
 #include "DataStructures/Graph/Attributes/PopulationAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Graph.h"
@@ -24,19 +26,21 @@
 
 inline void printUsage() {
   std::cout <<
-      "Usage: CalculateDemand -n <num> -f <fmt> -g <file> -p <file> -o <file>\n"
+      "Usage: CalculateDemand -n <num> -f <fmt> -g <file> -pop <file> -o <file>\n"
       "Calculates travel demand in a road network according to the radiation model with\n"
       "selection, which requires as input only a population grid.\n"
       "  -n <num>          number of OD pairs to be generated\n"
       "  -l <real>         radiation model's parameter lambda (defaults to 0.999988)\n"
       "  -r <num>          use Moore neighborhoods of max range <num> (defaults to 1)\n"
+      "  -d <meters>       do not assign POIs to vertices farther than <meters>\n"
       "  -s <seed>         start demand calculation with <seed> (defaults to 0)\n"
       "  -f <fmt>          format of the population grid file\n"
       "                      possible values: DE EU\n"
       "  -a <algo>         use algorithm <algo> to calculate travel demand\n"
       "                      possible values: formula Dij (default) kd-tree\n"
       "  -g <file>         network of interest\n"
-      "  -p <file>         population grid\n"
+      "  -pop <file>       population grid\n"
+      "  -poi <file>       use density of POIs as proxy for trip attraction rates\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -53,11 +57,13 @@ int main(int argc, char* argv[]) {
     const auto numODPairs = clp.getValue<int>("n");
     const auto lambda = clp.getValue<double>("l", 0.999988);
     const auto maxRange = clp.getValue<int>("r", 1);
+    const auto maxDistance = clp.getValue<int>("d", 200);
     const auto seed = clp.getValue<int>("s", 0);
-    const auto gridFileFormat = clp.getValue<std::string>("f");
+    const auto popFileFormat = clp.getValue<std::string>("f");
     const auto algo = clp.getValue<std::string>("a", "Dij");
     const auto graphFileName = clp.getValue<std::string>("g");
-    const auto gridFileName = clp.getValue<std::string>("p");
+    const auto popFileName = clp.getValue<std::string>("pop");
+    const auto poiFileName = clp.getValue<std::string>("poi");
     auto outputFileName = clp.getValue<std::string>("o");
     if (!endsWith(outputFileName, ".csv"))
       outputFileName += ".csv";
@@ -72,13 +78,16 @@ int main(int argc, char* argv[]) {
       throw std::invalid_argument("lambda is no smaller than 1");
     if (maxRange < 0)
       throw std::invalid_argument("max range is smaller than 0");
+    if (maxDistance < 0)
+      throw std::invalid_argument("max distance is smaller than 0");
     if (seed < 0)
       throw std::invalid_argument("seed is smaller than 0");
 
     // Read the graph from file.
     std::cout << "Reading graph from file..." << std::flush;
     using VertexAttributes = VertexAttrs<
-        LatLngAttribute, PopulationAttribute, SequentialVertexIdAttribute>;
+        LatLngAttribute, NumOpportunitiesAttribute,
+        PopulationAttribute, SequentialVertexIdAttribute>;
     using EdgeAttributes = EdgeAttrs<LengthAttribute>;
     using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
     std::ifstream graphFile(graphFileName, std::ios::binary);
@@ -94,20 +103,59 @@ int main(int argc, char* argv[]) {
     std::cout << " done.\n";
 
     // Assign the population grid to the graph.
-    if (gridFileFormat == "DE") {
-      using GridFileReaderT = io::CSVReader<2, io::trim_chars<>, io::no_quote_escape<';'>>;
-      GridFileReaderT gridFileReader(gridFileName);
-      gridFileReader.read_header(io::ignore_extra_column, "Gitter_ID_100m", "Einwohner");
-      PopulationAssignment<GraphT, GridFileReaderT> assign(graph, gridFileReader, 100, maxRange);
+    if (popFileFormat == "DE") {
+      using PopFileReaderT = io::CSVReader<2, io::trim_chars<>, io::no_quote_escape<';'>>;
+      PopFileReaderT popFileReader(popFileName);
+      popFileReader.read_header(io::ignore_extra_column, "Gitter_ID_100m", "Einwohner");
+      PopulationAssignment<GraphT, PopFileReaderT> assign(graph, popFileReader, 100, maxRange);
       assign.run(true);
-    } else if (gridFileFormat == "EU") {
-      using GridFileReaderT = io::CSVReader<2>;
-      GridFileReaderT gridFileReader(gridFileName);
-      gridFileReader.read_header(io::ignore_extra_column, "GRD_ID", "TOT_P");
-      PopulationAssignment<GraphT, GridFileReaderT> assign(graph, gridFileReader, 1000, maxRange);
+    } else if (popFileFormat == "EU") {
+      using PopFileReaderT = io::CSVReader<2>;
+      PopFileReaderT popFileReader(popFileName);
+      popFileReader.read_header(io::ignore_extra_column, "GRD_ID", "TOT_P");
+      PopulationAssignment<GraphT, PopFileReaderT> assign(graph, popFileReader, 1000, maxRange);
       assign.run(true);
     } else {
-      throw std::invalid_argument("invalid grid file format -- '" + gridFileFormat + "'");
+      throw std::invalid_argument("invalid population file format -- '" + popFileFormat + "'");
+    }
+
+    // Assign POIs to vertices (or use the density of population as a proxy for trip attraction).
+    if (!poiFileName.empty()) {
+      Timer timer;
+      std::cout << "Assigning POIs to vertices..." << std::flush;
+      int assignedPoi = 0;
+      int unassignedPoi = 0;
+
+      std::vector<Point> points(graph.numVertices());
+      FORALL_VERTICES(graph, v)
+        points[v] = {graph.latLng(v).longitude(), graph.latLng(v).latitude()};
+      KDTree tree(points);
+
+      double lng, lat;
+      using TrimPolicy = io::trim_chars<>;
+      using QuotePolicy = io::no_quote_escape<','>;
+      using OverflowPolicy = io::throw_on_overflow;
+      using CommentPolicy = io::single_line_comment<'#'>;
+      using PoiReader = io::CSVReader<2, TrimPolicy, QuotePolicy, OverflowPolicy, CommentPolicy>;
+      PoiReader poiReader(poiFileName);
+      poiReader.read_header(io::ignore_extra_column, "longitude", "latitude");
+      while (poiReader.read_row(lng, lat)) {
+        const LatLng query(lat, lng);
+        const auto v = tree.findClosestPoint(Point(query.longitude(), query.latitude()));
+        if (graph.latLng(v).getGreatCircleDistanceTo(query) <= maxDistance) {
+          ++graph.numOpportunities(v);
+          ++assignedPoi;
+        } else {
+          ++unassignedPoi;
+        }
+      }
+
+      std::cout << " done (" << timer.elapsed() << "ms).\n";
+      std::cout << "  POIs that were assigned: " << assignedPoi << "\n";
+      std::cout << "  POIs that could not be assigned: " << unassignedPoi << "\n";
+    } else {
+      FORALL_VERTICES(graph, v)
+        graph.numOpportunities(v) = graph.population(v);
     }
 
     // Calculate travel demand using the specified algorithm.
@@ -131,7 +179,7 @@ int main(int argc, char* argv[]) {
       throw std::invalid_argument("file cannot be opened -- '" + outputFileName + "'");
     outputFile << "# Input graph: " << graphFileName << '\n';
     outputFile << "# Methodology: radiation model with selection (";
-    outputFile << algo << ", " << gridFileFormat << ", l=" << lambda << ", r=" << maxRange << ")\n";
+    outputFile << algo << ", " << popFileFormat << ", l=" << lambda << ", r=" << maxRange << ")\n";
     outputFile << "origin,destination\n";
     int src, dst;
     for (auto i = 0; true; ++i) {

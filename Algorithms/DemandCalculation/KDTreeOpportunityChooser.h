@@ -70,7 +70,7 @@ class KDTreeOpportunityChooser {
   // Builds a kd-tree for all vertices with a nonzero number of opportunities.
   void buildKDTree() {
     FORALL_VERTICES(graph, u)
-      if (graph.population(u) > 0) {
+      if (graph.numOpportunities(u) > 0) {
         Record record;
         record.id = u;
         record.coordinates = {graph.latLng(u).longitude(), graph.latLng(u).latitude()};
@@ -109,8 +109,8 @@ class KDTreeOpportunityChooser {
     if (last - first <= BUCKET_SIZE) {
       auto numOpportunitiesAtRoot = 0;
       for (auto i = first; i < last; ++i) {
-        assert(graph.population(recordsByX[i].id) > 0);
-        numOpportunitiesByRecords[i] = graph.population(recordsByX[i].id);
+        assert(graph.numOpportunities(recordsByX[i].id) > 0);
+        numOpportunitiesByRecords[i] = graph.numOpportunities(recordsByX[i].id);
         numOpportunitiesAtRoot += numOpportunitiesByRecords[i];
       }
 
