@@ -19,10 +19,10 @@ class ChooserDemandCalculator {
  public:
   // Constructs a travel demand calculator for the specified network.
   explicit ChooserDemandCalculator(const GraphT& graph, const int seed, const bool verbose) noexcept
-      : graph(graph), totalPop(0), seed(seed), verbose(verbose) {
+      : graph(graph), numOpportunities(0), seed(seed), verbose(verbose) {
     FORALL_VERTICES(graph, v)
-      totalPop += graph.population(v);
-    assert(totalPop > 0);
+    numOpportunities += graph.numOpportunities(v);
+    assert(numOpportunities > 0);
     assert(seed >= 0);
   }
 
@@ -40,7 +40,7 @@ class ChooserDemandCalculator {
       OpportunityChooserT<GraphT> chooser(graph, seed);
       std::minstd_rand rand(seed + omp_get_thread_num() + 1);
       std::discrete_distribution<> sourceDist(firstWeight, lastWeight);
-      std::uniform_int_distribution<> rankDist(1, totalPop);
+      std::uniform_int_distribution<> rankDist(1, numOpportunities);
 
       std::ofstream out(fileName + ".part" + std::to_string(omp_get_thread_num()));
       assert(out.good());
@@ -67,8 +67,8 @@ class ChooserDemandCalculator {
   }
 
  private:
-  const GraphT& graph; // The network we work on.
-  int totalPop;        // The total number of inhabitants living in the network.
-  const int seed;      // The seed with which the random number generators will be started.
-  const bool verbose;  // Should we display informative messages?
+  const GraphT& graph;  // The network we work on.
+  int numOpportunities; // The total number of opportunities in the network.
+  const int seed;       // The seed with which the random number generators will be started.
+  const bool verbose;   // Should we display informative messages?
 };
