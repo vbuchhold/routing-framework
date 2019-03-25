@@ -212,13 +212,13 @@ int main(int argc, char* argv[]) {
         if (iteration <= 0 || flow < 0)
           throw std::invalid_argument("flow file corrupt");
         if (iteration != prevIteration) {
-          if (edgeFlows.size() != prevIteration * numEdges)
+          if (iteration < prevIteration || edgeFlows.size() % numEdges != 0)
             throw std::invalid_argument("flow file corrupt");
-          ++prevIteration;
+          prevIteration = iteration;
         }
         edgeFlows.push_back(flow);
       }
-      if (edgeFlows.size() != iteration * numEdges)
+      if (edgeFlows.size() % numEdges != 0)
         throw std::invalid_argument("flow file corrupt");
       std::cout << " done.\n";
 
@@ -228,16 +228,16 @@ int main(int argc, char* argv[]) {
 
       // Draw the flow patterns, each on a distinct graphic.
       std::array<std::vector<std::pair<int, int>>, REDS_9CLASS.size() - 1> congestionLevels;
-      for (auto i = 1, firstEdge = 0; i <= iteration; ++i, firstEdge += numEdges) {
-        if (!(drawIntermediates || i == 1 || i == iteration))
+      for (auto firstEdge = 0; firstEdge < edgeFlows.size(); firstEdge += numEdges) {
+        if (!(drawIntermediates || firstEdge == 0 || firstEdge == edgeFlows.size() - numEdges))
           continue;
-        std::cout << "Drawing flow pattern after " << i << " iteration(s)..." << std::flush;
-        if (i != 1)
+        std::cout << "Drawing flow pattern..." << std::flush;
+        if (firstEdge != 0)
           graphic->newPage();
         for (auto& level : congestionLevels)
           level.clear();
         FORALL_VALID_EDGES(graph, u, e) {
-          const size_t level = 100 / 20 * edgeFlows[firstEdge + graph.edgeId(e)] / graph.capacity(e);
+          size_t level = 100 / 20 * edgeFlows[firstEdge + graph.edgeId(e)] / graph.capacity(e);
           congestionLevels[std::min(level, REDS_9CLASS.size() - 2)].emplace_back(u, e);
         }
         for (int j = 0; j < congestionLevels.size(); ++j) {
