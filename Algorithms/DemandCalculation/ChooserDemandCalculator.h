@@ -27,7 +27,8 @@ class ChooserDemandCalculator {
   }
 
   // Generates OD pairs and writes them to the specified file.
-  void calculateDemand(int numODPairs, double lambda, const std::string& fileName) const {
+  void calculateDemand(
+      int numODPairs, double lambda, double swapProb, const std::string& fileName) const {
     Timer timer;
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(numODPairs, verbose);
@@ -41,6 +42,7 @@ class ChooserDemandCalculator {
       std::minstd_rand rand(seed + omp_get_thread_num() + 1);
       std::discrete_distribution<> sourceDist(firstWeight, lastWeight);
       std::uniform_int_distribution<> rankDist(1, numOpportunities);
+      std::bernoulli_distribution swapDist(swapProb);
 
       std::ofstream out(fileName + ".part" + std::to_string(omp_get_thread_num()));
       assert(out.good());
@@ -57,7 +59,10 @@ class ChooserDemandCalculator {
           }
           dst = chooser.findClosestOpportunityWithHighFitness(src, numFitOpportunities);
         }
-        out << src << ',' << dst << '\n';
+        if (swapDist(rand))
+          out << dst << ',' << src << '\n';
+        else
+          out << src << ',' << dst << '\n';
         ++bar;
       }
     }

@@ -36,7 +36,8 @@ class FormulaDemandCalculator {
   }
 
   // Generates OD pairs and writes them to the specified file.
-  void calculateDemand(int numODPairs, double lambda, const std::string& fileName) const {
+  void calculateDemand(
+      int numODPairs, double lambda, double swapProb, const std::string& fileName) const {
     Timer timer;
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(graph.numVertices(), verbose);
@@ -49,6 +50,7 @@ class FormulaDemandCalculator {
     {
       Dijkstra dijkstra(graph);
       std::minstd_rand rand(seed + omp_get_thread_num() + 1);
+      std::bernoulli_distribution swapDist(swapProb);
 
       std::ofstream out(fileName + ".part" + std::to_string(omp_get_thread_num()));
       assert(out.good());
@@ -81,7 +83,10 @@ class FormulaDemandCalculator {
           auto numTravelers = std::binomial_distribution<>(outflow, normConst * prob)(rand);
 
           for (auto i = 0; i < numTravelers; ++i)
-            out << src << ',' << dst << '\n';
+            if (swapDist(rand))
+              out << dst << ',' << src << '\n';
+            else
+              out << src << ',' << dst << '\n';
           intPoi += dstPoi;
         }
         ++bar;

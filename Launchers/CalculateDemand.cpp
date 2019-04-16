@@ -31,6 +31,7 @@ inline void printUsage() {
       "selection, which requires as input only a population grid.\n"
       "  -n <num>          number of OD pairs to be generated\n"
       "  -l <real>         radiation model's parameter lambda (defaults to 0.999988)\n"
+      "  -p <prob>         swap src and dst of each OD pair with <prob> (defaults to 0)\n"
       "  -r <num>          use Moore neighborhoods of max range <num> (defaults to 1)\n"
       "  -d <meters>       do not assign POIs to vertices farther than <meters>\n"
       "  -s <seed>         start demand calculation with <seed> (defaults to 0)\n"
@@ -56,6 +57,7 @@ int main(int argc, char* argv[]) {
     // Parse the command-line options.
     const auto numODPairs = clp.getValue<int>("n");
     const auto lambda = clp.getValue<double>("l", 0.999988);
+    const auto swapProb = clp.getValue<double>("p", 0.0);
     const auto maxRange = clp.getValue<int>("r", 1);
     const auto maxDistance = clp.getValue<int>("d", 200);
     const auto seed = clp.getValue<int>("s", 0);
@@ -76,6 +78,8 @@ int main(int argc, char* argv[]) {
       throw std::invalid_argument("lambda is smaller than 0");
     if (lambda >= 1)
       throw std::invalid_argument("lambda is no smaller than 1");
+    if (swapProb > 1)
+      throw std::invalid_argument("swap probability is larger than 1");
     if (maxRange < 0)
       throw std::invalid_argument("max range is smaller than 0");
     if (maxDistance < 0)
@@ -161,13 +165,13 @@ int main(int argc, char* argv[]) {
     // Calculate travel demand using the specified algorithm.
     if (algo == "formula") {
       FormulaDemandCalculator<GraphT> calculator(graph, seed, true);
-      calculator.calculateDemand(numODPairs, lambda, partFileStem);
+      calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
     } else if (algo == "Dij") {
       ChooserDemandCalculator<GraphT, DijkstraOpportunityChooser> calculator(graph, seed, true);
-      calculator.calculateDemand(numODPairs, lambda, partFileStem);
+      calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
     } else if (algo == "kd-tree") {
       ChooserDemandCalculator<GraphT, KDTreeOpportunityChooser> calculator(graph, seed, true);
-      calculator.calculateDemand(numODPairs, lambda, partFileStem);
+      calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
     } else {
       throw std::invalid_argument("invalid algorithm -- '" + algo + "'");
     }
