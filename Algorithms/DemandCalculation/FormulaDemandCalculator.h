@@ -8,7 +8,7 @@
 #include <string>
 
 #include "Algorithms/Dijkstra/Dijkstra.h"
-#include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
@@ -44,7 +44,7 @@ class FormulaDemandCalculator {
 
     assert(lambda >= 0); assert(lambda <= 1);
     using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-    using Dijkstra = StandardDijkstra<GraphT, LengthAttribute, LabelSet>;
+    using Dijkstra = StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet>;
 
     #pragma omp parallel
     {

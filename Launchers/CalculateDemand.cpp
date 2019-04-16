@@ -19,6 +19,7 @@
 #include "DataStructures/Graph/Attributes/NumOpportunitiesAttribute.h"
 #include "DataStructures/Graph/Attributes/PopulationAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
+#include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/Constants.h"
@@ -29,6 +30,7 @@ inline void printUsage() {
       "Usage: CalculateDemand -n <num> -f <fmt> -g <file> -pop <file> -o <file>\n"
       "Calculates travel demand in a road network according to the radiation model with\n"
       "selection, which requires as input only a population grid.\n"
+      "  -len              use physical lengths as metric (default: travel time)\n"
       "  -n <num>          number of OD pairs to be generated\n"
       "  -l <real>         radiation model's parameter lambda (defaults to 0.999988)\n"
       "  -p <prob>         swap src and dst of each OD pair with <prob> (defaults to 0)\n"
@@ -55,6 +57,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Parse the command-line options.
+    const auto useLengths = clp.isSet("len");
     const auto numODPairs = clp.getValue<int>("n");
     const auto lambda = clp.getValue<double>("l", 0.999988);
     const auto swapProb = clp.getValue<double>("p", 0.0);
@@ -92,7 +95,7 @@ int main(int argc, char* argv[]) {
     using VertexAttributes = VertexAttrs<
         LatLngAttribute, NumOpportunitiesAttribute,
         PopulationAttribute, SequentialVertexIdAttribute>;
-    using EdgeAttributes = EdgeAttrs<LengthAttribute>;
+    using EdgeAttributes = EdgeAttrs<LengthAttribute, TravelTimeAttribute>;
     using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
     std::ifstream graphFile(graphFileName, std::ios::binary);
     if (!graphFile.good())
@@ -104,6 +107,9 @@ int main(int argc, char* argv[]) {
         assert(graph.sequentialVertexId(v) == INVALID_VERTEX);
         graph.sequentialVertexId(v) = v;
       }
+    if (useLengths)
+      FORALL_EDGES(graph, e)
+        graph.travelTime(e) = graph.length(e);
     std::cout << " done.\n";
 
     // Assign the population grid to the graph.
