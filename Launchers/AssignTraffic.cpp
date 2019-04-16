@@ -30,11 +30,13 @@
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
+#include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Tools/CommandLine/CommandLineParser.h"
+#include "Tools/Constants.h"
 #include "Tools/StringHelpers.h"
 
 inline void printUsage() {
@@ -188,14 +190,32 @@ inline void assignTraffic(const CommandLineParser& clp) {
     throw std::invalid_argument("file not found -- '" + graphFileName + "'");
   typename FWAssignmentT::Graph graph(graphFile);
   graphFile.close();
-  auto id = 0;
   FORALL_EDGES(graph, e) {
     graph.capacity(e) = std::max(std::round(analysisPeriod * graph.capacity(e)), 1.0);
-    graph.edgeId(e) = id++;
+    graph.edgeId(e) = e;
+  }
+  if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX)
+    FORALL_VERTICES(graph, v) {
+      assert(graph.sequentialVertexId(v) == INVALID_VERTEX);
+      graph.sequentialVertexId(v) = v;
+    }
+  auto maxOrigId = -1;
+  FORALL_VERTICES(graph, u)
+    maxOrigId = std::max(maxOrigId, graph.sequentialVertexId(u));
+  std::vector<int> origToCurrentId(maxOrigId + 1, INVALID_VERTEX);
+  FORALL_VERTICES(graph, u) {
+    assert(origToCurrentId[graph.sequentialVertexId(u)] == INVALID_VERTEX);
+    origToCurrentId[graph.sequentialVertexId(u)] = u;
   }
 
   // Read the OD pairs from file and reorder them if necessary.
   auto odPairs = importClusteredODPairsFrom(demandFileName);
+  for (auto& pair : odPairs) {
+    assert(pair.origin >= 0); assert(pair.origin <= maxOrigId);
+    assert(pair.destination >= 0); assert(pair.destination <= maxOrigId);
+    pair.origin = origToCurrentId[pair.origin];
+    pair.destination = origToCurrentId[pair.destination];
+  }
   if (ord == "random") {
     std::shuffle(odPairs.begin(), odPairs.end(), std::minstd_rand());
   } else if (ord == "sorted") {
@@ -251,7 +271,7 @@ inline void assignTraffic(const CommandLineParser& clp) {
 // Picks the shortest-path algorithm according to the command line options.
 template <template <typename> class ObjFunctionT, template <typename> class TraversalCostFunctionT>
 void chooseShortestPathAlgo(const CommandLineParser& clp) {
-  using VertexAttributes = VertexAttrs<LatLngAttribute>;
+  using VertexAttributes = VertexAttrs<LatLngAttribute, SequentialVertexIdAttribute>;
   using EdgeAttributes = EdgeAttrs<
       CapacityAttribute, EdgeIdAttribute, LengthAttribute, TravelTimeAttribute,
       TraversalCostAttribute>;
