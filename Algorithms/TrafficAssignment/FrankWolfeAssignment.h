@@ -53,8 +53,11 @@ class FrankWolfeAssignment {
     stats.finishIteration();
 
     if (flowFile.is_open())
-      for (const auto flow : trafficFlows)
-        flowFile << aonAssignment.stats.numIterations << ',' << flow << '\n';
+      FORALL_EDGES(graph, e) {
+        const auto vol = trafficFlows[e];
+        const auto sat = vol / graph.capacity(e);
+        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << '\n';
+      }
 
     if (distFile.is_open())
       for (const auto dist : aonAssignment.stats.lastDistances)
@@ -89,8 +92,11 @@ class FrankWolfeAssignment {
       stats.finishIteration();
 
       if (flowFile.is_open() && outputIntermediates)
-        for (const auto flow : trafficFlows)
-          flowFile << aonAssignment.stats.numIterations << ',' << flow << '\n';
+        FORALL_EDGES(graph, e) {
+          const auto vol = trafficFlows[e];
+          const auto sat = vol / graph.capacity(e);
+          flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << '\n';
+        }
 
       if (distFile.is_open() && outputIntermediates)
         for (const auto dist : aonAssignment.stats.lastDistances)
@@ -115,8 +121,11 @@ class FrankWolfeAssignment {
     }
 
     if (flowFile.is_open() && !outputIntermediates)
-      for (const auto flow : trafficFlows)
-        flowFile << aonAssignment.stats.numIterations << ',' << flow << '\n';
+      FORALL_EDGES(graph, e) {
+        const auto vol = trafficFlows[e];
+        const auto sat = vol / graph.capacity(e);
+        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << '\n';
+      }
 
     if (distFile.is_open() && !outputIntermediates)
       for (const auto dist : aonAssignment.stats.lastDistances)

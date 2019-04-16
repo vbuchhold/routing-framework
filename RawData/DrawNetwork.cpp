@@ -19,7 +19,6 @@
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Polygon.h"
 #include "DataStructures/Geometry/Rectangle.h"
-#include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/EdgeIdAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/NumLanesAttribute.h"
@@ -44,7 +43,6 @@ inline void printUsage() {
       "  -stuttgart        remove outliers in the network of Stuttgart\n"
       "  -n                hide the network\n"
       "  -i                draw all intermediate flow patterns\n"
-      "  -p <hrs>          analysis period in hours (defaults to 1.0)\n"
       "  -w <cm>           width in centimeters of the graphic (defaults to 14.0)\n"
       "  -h <cm>           height in centimeters of the graphic (defaults to 14.0)\n"
       "  -fmt <fmt>        file format of the graphic\n"
@@ -60,8 +58,7 @@ inline void printUsage() {
 
 // A graph type that encompasses all attributes required for drawing.
 using VertexAttributes = VertexAttrs<LatLngAttribute>;
-using EdgeAttributes =
-    EdgeAttrs<CapacityAttribute, EdgeIdAttribute, NumLanesAttribute, RoadGeometryAttribute>;
+using EdgeAttributes = EdgeAttrs<EdgeIdAttribute, NumLanesAttribute, RoadGeometryAttribute>;
 using GraphT = StaticGraph<VertexAttributes, EdgeAttributes>;
 
 // Draws the specified edge using the given primitive drawer.
@@ -91,7 +88,6 @@ int main(int argc, char* argv[]) {
     const auto isStuttgartGraph = clp.isSet("stuttgart");
     const auto hideNetwork = clp.isSet("n");
     const auto drawIntermediates = clp.isSet("i");
-    const auto period = clp.getValue<double>("p", 1.0);
     const auto width = clp.getValue<double>("w", 14.0);
     const auto height = clp.getValue<double>("h", 14.0);
     const auto format = clp.getValue<std::string>("fmt", "PNG");
@@ -202,29 +198,25 @@ int main(int argc, char* argv[]) {
       std::cout << "Reading flow patterns from file..." << std::flush;
       std::vector<double> edgeFlows;
       int iteration;
-      double flow;
+      double sat;
       int prevIteration = 1;
       io::CSVReader<
           2, io::trim_chars<>, io::no_quote_escape<','>, io::throw_on_overflow,
           io::single_line_comment<'#'>> flowFile(flowFileName);
-      flowFile.read_header(io::ignore_no_column, "iteration", "edge_flow");
-      while (flowFile.read_row(iteration, flow)) {
-        if (iteration <= 0 || flow < 0)
+      flowFile.read_header(io::ignore_extra_column, "iteration", "sat");
+      while (flowFile.read_row(iteration, sat)) {
+        if (iteration <= 0 || sat < 0)
           throw std::invalid_argument("flow file corrupt");
         if (iteration != prevIteration) {
           if (iteration < prevIteration || edgeFlows.size() % numEdges != 0)
             throw std::invalid_argument("flow file corrupt");
           prevIteration = iteration;
         }
-        edgeFlows.push_back(flow);
+        edgeFlows.push_back(sat);
       }
       if (edgeFlows.size() % numEdges != 0)
         throw std::invalid_argument("flow file corrupt");
       std::cout << " done.\n";
-
-      // Scale edge capacities according to the analysis period.
-      FORALL_EDGES(graph, e)
-        graph.capacity(e) = std::max(std::round(period * graph.capacity(e)), 1.0);
 
       // Draw the flow patterns, each on a distinct graphic.
       std::array<std::vector<std::pair<int, int>>, REDS_9CLASS.size() - 1> congestionLevels;
@@ -237,7 +229,7 @@ int main(int argc, char* argv[]) {
         for (auto& level : congestionLevels)
           level.clear();
         FORALL_VALID_EDGES(graph, u, e) {
-          size_t level = 100 / 20 * edgeFlows[firstEdge + graph.edgeId(e)] / graph.capacity(e);
+          size_t level = 100 / 20 * edgeFlows[firstEdge + graph.edgeId(e)];
           congestionLevels[std::min(level, REDS_9CLASS.size() - 2)].emplace_back(u, e);
         }
         for (int j = 0; j < congestionLevels.size(); ++j) {
