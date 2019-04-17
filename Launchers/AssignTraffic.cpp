@@ -41,10 +41,11 @@
 
 inline void printUsage() {
   std::cout <<
-      "Usage: AssignTraffic [-so] [-v] [-f <func>] [-a <algo>] -g <file> -d <file>\n"
+      "Usage: AssignTraffic [-so] [-l] [-f <func>] [-a <algo>] -g <file> -d <file>\n"
       "Assigns OD pairs onto a network using the (conjugate) Frank-Wolfe algorithm. It\n"
       "supports different objectives, traversal cost functions and shortest-path algos.\n"
       "  -so               find the system optimum (default: user equilibrium)\n"
+      "  -l                use physical lengths as metric (default: travel time)\n"
       "  -i                output all intermediate flow patterns and OD distances\n"
       "  -v                display informative messages\n"
       "  -p <hrs>          period of analysis in hours (default: 1)\n"
@@ -164,19 +165,22 @@ template <typename FWAssignmentT>
 inline void assignTraffic(const CommandLineParser& clp) {
   // Parse the command-line options.
   const auto findSO = clp.isSet("so");
+  const auto useLengths = clp.isSet("l");
   const auto outputIntermediates = clp.isSet("i");
   const auto verbose = clp.isSet("v");
   const auto analysisPeriod = clp.getValue<double>("p", 0);
-  const auto numIterations = clp.getValue<int>("n", 0);
   const auto traversalCostFunction = clp.getValue<std::string>("f", "BPR");
   const auto shortestPathAlgorithm = clp.getValue<std::string>("a", "CCH");
   const auto ord = clp.getValue<std::string>("o", "sorted");
   const auto maxDiam = clp.getValue<int>("U", 40);
   const auto graphFileName = clp.getValue<std::string>("g");
   const auto demandFileName = clp.getValue<std::string>("d");
+  auto numIterations = clp.getValue<int>("n", 0);
   auto flowFileName = clp.getValue<std::string>("flow");
   auto distFileName = clp.getValue<std::string>("dist");
   auto statFileName = clp.getValue<std::string>("stat");
+  if (useLengths)
+    numIterations = 1;
   if (!flowFileName.empty() && !endsWith(flowFileName, ".csv"))
     flowFileName += ".csv";
   if (!distFileName.empty() && !endsWith(distFileName, ".csv"))
@@ -194,6 +198,9 @@ inline void assignTraffic(const CommandLineParser& clp) {
     graph.capacity(e) = std::max(std::round(analysisPeriod * graph.capacity(e)), 1.0);
     graph.edgeId(e) = e;
   }
+  if (useLengths)
+    FORALL_EDGES(graph, e)
+      graph.travelTime(e) = graph.length(e);
   if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX)
     FORALL_VERTICES(graph, v) {
       assert(graph.sequentialVertexId(v) == INVALID_VERTEX);
