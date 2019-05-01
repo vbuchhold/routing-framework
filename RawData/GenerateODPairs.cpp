@@ -9,6 +9,10 @@
 
 #include <csv.h>
 
+#include "DataStructures/Containers/BitVector.h"
+#include "DataStructures/Geometry/Area.h"
+#include "DataStructures/Geometry/Point.h"
+#include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
@@ -23,9 +27,9 @@
 
 inline void printUsage() {
   std::cout <<
-      "Usage: GenerateODPairs -n <num> -i <file> -o <file>\n"
-      "       GenerateODPairs -n <num> -i <file> -o <file> -r <rank> [-geom] [-l]\n"
-      "       GenerateODPairs -n <num> -i <file> -o <file> -d <dist> [-geom] [-l]\n"
+      "Usage: GenerateODPairs -n <num> -g <file> -o <file>\n"
+      "       GenerateODPairs -n <num> -g <file> -o <file> -r <rank> [-geom] [-l]\n"
+      "       GenerateODPairs -n <num> -g <file> -o <file> -d <dist> [-geom] [-l]\n"
       "Generates OD pairs with the origin chosen uniformly at random. The destination\n"
       "is either picked uniformly at random or chosen by Dijkstra rank or OD distance.\n"
       "  -l                use physical length as cost function (default: travel time)\n"
@@ -34,7 +38,8 @@ inline void printUsage() {
       "  -r <rank>         space-separated list of (expected) Dijkstra ranks\n"
       "  -d <dist>         space-separated list of (expected) OD distances\n"
       "  -geom             choose geometrically distributed ranks/distances\n"
-      "  -i <file>         input graph in binary format\n"
+      "  -g <file>         input graph in binary format\n"
+      "  -a <file>         restrict origins and destinations to polygonal study area\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -54,7 +59,8 @@ int main(int argc, char* argv[]) {
     const auto expectedRanks = clp.getValues<int>("r");
     const auto expectedDists = clp.getValues<int>("d");
     const auto isGeom = clp.isSet("geom");
-    const auto inputFileName = clp.getValue<std::string>("i");
+    const auto graphFileName = clp.getValue<std::string>("g");
+    const auto areaFileName = clp.getValue<std::string>("a");
     auto outputFileName = clp.getValue<std::string>("o");
     if (!endsWith(outputFileName, ".csv"))
       outputFileName += ".csv";
@@ -62,12 +68,12 @@ int main(int argc, char* argv[]) {
 
     // Read the graph from file.
     std::cout << "Reading graph from file..." << std::flush;
-    using VertexAttributes = VertexAttrs<SequentialVertexIdAttribute>;
+    using VertexAttributes = VertexAttrs<LatLngAttribute, SequentialVertexIdAttribute>;
     using EdgeAttributes = EdgeAttrs<LengthAttribute, TravelTimeAttribute>;
     using Graph = StaticGraph<VertexAttributes, EdgeAttributes>;
-    std::ifstream graphFile(inputFileName, std::ios::binary);
+    std::ifstream graphFile(graphFileName, std::ios::binary);
     if (!graphFile.good())
-      throw std::invalid_argument("file not found -- '" + inputFileName + "'");
+      throw std::invalid_argument("file not found -- '" + graphFileName + "'");
     Graph graph(graphFile);
     graphFile.close();
     if (graph.numVertices() > 0 && graph.sequentialVertexId(0) == INVALID_VERTEX)
@@ -80,11 +86,25 @@ int main(int argc, char* argv[]) {
         graph.travelTime(e) = graph.length(e);
     std::cout << " done.\n";
 
+    // Read the study area from OSM POLY file.
+    BitVector isVertexInStudyArea(graph.numVertices(), true);
+    if (!areaFileName.empty()) {
+      std::cout << "Reading study area from OSM POLY file..." << std::flush;
+      Area studyArea;
+      studyArea.importFromOsmPolyFile(areaFileName);
+      const auto box = studyArea.boundingBox();
+      FORALL_VERTICES(graph, u) {
+        const Point p(graph.latLng(u).longitude(), graph.latLng(u).latitude());
+        isVertexInStudyArea[u] = box.contains(p) && studyArea.contains(p);
+      }
+      std::cout << " done.\n";
+    }
+
     // Write header to the output file.
     std::ofstream outputFile(outputFileName);
     if (!outputFile.good())
       throw std::invalid_argument("file cannot be opened -- '" + outputFileName + "'");
-    outputFile << "# Input graph: " << inputFileName << '\n';
+    outputFile << "# Input graph: " << graphFileName << '\n';
     outputFile << "# Methodology: ";
 
     if (expectedRanks.size() > 0) {
@@ -103,7 +123,7 @@ int main(int argc, char* argv[]) {
       #pragma omp parallel
       {
         std::minstd_rand rand(seed + omp_get_thread_num() + 1);
-        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, seed);
+        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, isVertexInStudyArea, seed);
 
         for (auto i = 0; i < expectedRanks.size(); ++i) {
           #pragma omp master
@@ -124,7 +144,8 @@ int main(int argc, char* argv[]) {
           for (auto j = 0; j < numODPairs; ++j) {
             auto rank = isGeom ? rankDistribution(rand) : expectedRanks[i];
             auto odPairWithRank = g.getRandomODPairChosenByRank(rank);
-            while (odPairWithRank.second < rank) {
+            while (odPairWithRank.second < rank ||
+                   !isVertexInStudyArea[odPairWithRank.first.destination]) {
               rank = isGeom ? rankDistribution(rand) : expectedRanks[i];
               odPairWithRank = g.getRandomODPairChosenByRank(rank, odPairWithRank.first.origin);
             }
@@ -159,7 +180,7 @@ int main(int argc, char* argv[]) {
       #pragma omp parallel
       {
         std::minstd_rand rand(seed + omp_get_thread_num() + 1);
-        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, seed);
+        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, isVertexInStudyArea, seed);
 
         for (auto i = 0; i < expectedDists.size(); ++i) {
           #pragma omp master
@@ -180,7 +201,8 @@ int main(int argc, char* argv[]) {
           for (auto j = 0; j < numODPairs; ++j) {
             auto dist = isGeom ? distDistribution(rand) : expectedDists[i];
             auto odPairWithDist = g.getRandomODPairChosenByDistance(dist);
-            while (odPairWithDist.second < dist) {
+            while (odPairWithDist.second < dist ||
+                   !isVertexInStudyArea[odPairWithDist.first.destination]) {
               dist = isGeom ? distDistribution(rand) : expectedDists[i];
               odPairWithDist = g.getRandomODPairChosenByDistance(dist, odPairWithDist.first.origin);
             }
@@ -209,7 +231,7 @@ int main(int argc, char* argv[]) {
       ProgressBar bar;
       #pragma omp parallel
       {
-        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, seed);
+        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, isVertexInStudyArea, seed);
         #pragma omp master
         {
           std::cout << "Generating OD pairs: ";

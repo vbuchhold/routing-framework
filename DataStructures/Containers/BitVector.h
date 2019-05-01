@@ -50,7 +50,10 @@ class BitVector {
 
   // Constructs a bit vector of the specified size. All bits are initialized to init.
   explicit BitVector(const int size, const bool init = false)
-      : blocks((size + BITS_PER_BLOCK - 1) / BITS_PER_BLOCK, init ? -1 : 0), numBits(size) {}
+      : blocks((size + BITS_PER_BLOCK - 1) / BITS_PER_BLOCK, init ? -1 : 0), numBits(size) {
+    const auto numUnusedBits = (BITS_PER_BLOCK - size % BITS_PER_BLOCK) % BITS_PER_BLOCK;
+    blocks.back() &= static_cast<Block>(-1) >> numUnusedBits;
+  }
 
   // Returns the number of bits in this bit vector.
   int size() const {
@@ -60,6 +63,14 @@ class BitVector {
   // Returns the number of blocks in this bit vector.
   int numBlocks() const {
     return blocks.size();
+  }
+
+  // Returns the number of bits set to true in this bit vector.
+  int cardinality() const {
+    auto cardinality = 0;
+    for (const auto block : blocks)
+      cardinality += bitCount(block);
+    return cardinality;
   }
 
   // Returns the bit with the specified index.
