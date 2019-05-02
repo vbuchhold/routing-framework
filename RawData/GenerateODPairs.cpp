@@ -1,4 +1,7 @@
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -9,7 +12,11 @@
 
 #include <csv.h>
 
+#include "Algorithms/Dijkstra/BiDijkstra.h"
+#include "Algorithms/Dijkstra/Dijkstra.h"
 #include "DataStructures/Containers/BitVector.h"
+#include "DataStructures/Labels/BasicLabelSet.h"
+#include "DataStructures/Labels/ParentInfo.h"
 #include "DataStructures/Geometry/Area.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
@@ -30,10 +37,12 @@ inline void printUsage() {
       "Usage: GenerateODPairs -n <num> -g <file> -o <file>\n"
       "       GenerateODPairs -n <num> -g <file> -o <file> -r <rank> [-geom] [-l]\n"
       "       GenerateODPairs -n <num> -g <file> -o <file> -d <dist> [-geom] [-l]\n"
+      "       GenerateODPairs -t <tot> -g <file> -o <file>\n"
       "Generates OD pairs with the origin chosen uniformly at random. The destination\n"
       "is either picked uniformly at random or chosen by Dijkstra rank or OD distance.\n"
       "  -l                use physical length as cost function (default: travel time)\n"
       "  -n <num>          generate <num> OD pairs (per rank/distance)\n"
+      "  -t <tot>          generate OD pairs with a total length of <tot>\n"
       "  -s <seed>         start random number generator with <seed> (default: 0)\n"
       "  -r <rank>         space-separated list of (expected) Dijkstra ranks\n"
       "  -d <dist>         space-separated list of (expected) OD distances\n"
@@ -55,6 +64,7 @@ int main(int argc, char* argv[]) {
     // Parse the command-line options.
     const auto useLengths = clp.isSet("l");
     const auto numODPairs = clp.getValue<int>("n");
+    const auto totalLength = clp.getValue<int64_t>("t");
     const auto seed = clp.getValue<int>("s", 0);
     const auto expectedRanks = clp.getValues<int>("r");
     const auto expectedDists = clp.getValues<int>("d");
@@ -221,7 +231,7 @@ int main(int argc, char* argv[]) {
       }
       std::cout << "Total time: " << timer.elapsed() << "ms\n";
 
-    } else {
+    } else if (clp.isSet("n")) {
 
       // Choose the destination uniformly at random.
       outputFile << "random\n";
@@ -249,6 +259,53 @@ int main(int argc, char* argv[]) {
           const auto odPair = g.getRandomODPair();
           partFile << odPair.origin << ',' << odPair.destination << '\n';
           ++bar;
+        }
+
+        #pragma omp master
+        {
+          bar.finish();
+          std::cout << "done.\n";
+        }
+      }
+      std::cout << "Total time: " << timer.elapsed() << "ms\n";
+
+    } else {
+
+      // Choose random OD pairs with a specified total length.
+      const auto reverseGraph = graph.getReverseGraph();
+      outputFile << "random with a total length of " << totalLength << "\n";
+      outputFile << "origin,destination\n";
+
+      Timer timer;
+      ProgressBar bar;
+      #pragma omp parallel
+      {
+        using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
+        using Dijkstra = StandardDijkstra<Graph, TravelTimeAttribute, LabelSet>;
+        BiDijkstra<Dijkstra> biDijkstra(graph, reverseGraph);
+        ODPairGenerator<Graph, TravelTimeAttribute> g(graph, isVertexInStudyArea, seed);
+
+        const int64_t totalLengthPerThread = std::ceil(1.0 * totalLength / omp_get_num_threads());
+        int64_t totalLen = 0;
+
+        #pragma omp master
+        {
+          std::cout << "Generating OD pairs: ";
+          bar.init(omp_get_num_threads() * totalLengthPerThread);
+        }
+
+        const auto partFileName = partFileStem + ".part" + std::to_string(omp_get_thread_num());
+        std::ofstream partFile(partFileName);
+        if (!partFile.good())
+          throw std::invalid_argument("file cannot be opened -- '" + partFileName + "'");
+        partFile << "origin,destination\n";
+
+        while (totalLen < totalLengthPerThread) {
+          const auto odPair = g.getRandomODPair();
+          partFile << odPair.origin << ',' << odPair.destination << '\n';
+          biDijkstra.run(odPair.origin, odPair.destination);
+          bar += std::min(int64_t{biDijkstra.getDistance()}, totalLengthPerThread - totalLen);
+          totalLen += biDijkstra.getDistance();
         }
 
         #pragma omp master
