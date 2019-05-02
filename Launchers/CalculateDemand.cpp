@@ -5,6 +5,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <csv.h>
 
@@ -13,7 +14,10 @@
 #include "Algorithms/DemandCalculation/FormulaDemandCalculator.h"
 #include "Algorithms/DemandCalculation/KDTreeOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/PopulationAssignment.h"
+#include "DataStructures/Containers/BitVector.h"
+#include "DataStructures/Geometry/Area.h"
 #include "DataStructures/Geometry/KDTree.h"
+#include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/NumOpportunitiesAttribute.h"
@@ -39,9 +43,10 @@ inline void printUsage() {
       "  -s <seed>         start demand calculation with <seed> (defaults to 0)\n"
       "  -f <fmt>          format of the population grid file\n"
       "                      possible values: DE EU\n"
-      "  -a <algo>         use algorithm <algo> to calculate travel demand\n"
+      "  -m <algo>         use method <algo> to calculate travel demand\n"
       "                      possible values: formula Dij (default) kd-tree\n"
-      "  -g <file>         network of interest\n"
+      "  -g <file>         input graph in binary format\n"
+      "  -a <file>         restrict origins and destinations to polygonal study area\n"
       "  -pop <file>       population grid\n"
       "  -poi <file>       use density of POIs as proxy for trip attraction rates\n"
       "  -o <file>         place output in <file>\n"
@@ -65,8 +70,9 @@ int main(int argc, char* argv[]) {
     const auto maxDistance = clp.getValue<int>("d", 200);
     const auto seed = clp.getValue<int>("s", 0);
     const auto popFileFormat = clp.getValue<std::string>("f");
-    const auto algo = clp.getValue<std::string>("a", "Dij");
+    const auto algo = clp.getValue<std::string>("m", "Dij");
     const auto graphFileName = clp.getValue<std::string>("g");
+    const auto areaFileName = clp.getValue<std::string>("a");
     const auto popFileName = clp.getValue<std::string>("pop");
     const auto poiFileName = clp.getValue<std::string>("poi");
     auto outputFileName = clp.getValue<std::string>("o");
@@ -112,18 +118,34 @@ int main(int argc, char* argv[]) {
         graph.travelTime(e) = graph.length(e);
     std::cout << " done.\n";
 
+    // Read the study area from OSM POLY file.
+    BitVector isVertexInStudyArea(graph.numVertices(), true);
+    if (!areaFileName.empty()) {
+      std::cout << "Reading study area from OSM POLY file..." << std::flush;
+      Area studyArea;
+      studyArea.importFromOsmPolyFile(areaFileName);
+      const auto box = studyArea.boundingBox();
+      FORALL_VERTICES(graph, u) {
+        const Point p(graph.latLng(u).longitude(), graph.latLng(u).latitude());
+        isVertexInStudyArea[u] = box.contains(p) && studyArea.contains(p);
+      }
+      std::cout << " done.\n";
+    }
+
     // Assign the population grid to the graph.
     if (popFileFormat == "DE") {
       using PopFileReaderT = io::CSVReader<2, io::trim_chars<>, io::no_quote_escape<';'>>;
+      using PopAssignmentT = PopulationAssignment<GraphT, PopFileReaderT>;
       PopFileReaderT popFileReader(popFileName);
       popFileReader.read_header(io::ignore_extra_column, "Gitter_ID_100m", "Einwohner");
-      PopulationAssignment<GraphT, PopFileReaderT> assign(graph, popFileReader, 100, maxRange);
+      PopAssignmentT assign(graph, isVertexInStudyArea, popFileReader, 100, maxRange);
       assign.run(true);
     } else if (popFileFormat == "EU") {
       using PopFileReaderT = io::CSVReader<2>;
+      using PopAssignmentT = PopulationAssignment<GraphT, PopFileReaderT>;
       PopFileReaderT popFileReader(popFileName);
       popFileReader.read_header(io::ignore_extra_column, "GRD_ID", "TOT_P");
-      PopulationAssignment<GraphT, PopFileReaderT> assign(graph, popFileReader, 1000, maxRange);
+      PopAssignmentT assign(graph, isVertexInStudyArea, popFileReader, 1000, maxRange);
       assign.run(true);
     } else {
       throw std::invalid_argument("invalid population file format -- '" + popFileFormat + "'");
@@ -136,9 +158,17 @@ int main(int argc, char* argv[]) {
       int assignedPoi = 0;
       int unassignedPoi = 0;
 
-      std::vector<Point> points(graph.numVertices());
-      FORALL_VERTICES(graph, v)
-        points[v] = {graph.latLng(v).longitude(), graph.latLng(v).latitude()};
+      std::vector<int> verticesInStudyArea(isVertexInStudyArea.cardinality());
+      for (auto i = 0, v = isVertexInStudyArea.firstSetBit(); i < verticesInStudyArea.size(); ++i) {
+        verticesInStudyArea[i] = v;
+        v = isVertexInStudyArea.nextSetBit(v);
+      }
+
+      std::vector<Point> points(verticesInStudyArea.size());
+      for (auto i = 0; i < verticesInStudyArea.size(); ++i) {
+        const auto& latLng = graph.latLng(verticesInStudyArea[i]);
+        points[i] = {latLng.longitude(), latLng.latitude()};
+      }
       KDTree tree(points);
 
       double lng, lat;
@@ -151,9 +181,9 @@ int main(int argc, char* argv[]) {
       poiReader.read_header(io::ignore_extra_column, "longitude", "latitude");
       while (poiReader.read_row(lng, lat)) {
         const LatLng query(lat, lng);
-        const auto v = tree.findClosestPoint(Point(query.longitude(), query.latitude()));
-        if (graph.latLng(v).getGreatCircleDistanceTo(query) <= maxDistance) {
-          ++graph.numOpportunities(v);
+        const auto p = tree.findClosestPoint(Point(query.longitude(), query.latitude()));
+        if (graph.latLng(verticesInStudyArea[p]).getGreatCircleDistanceTo(query) <= maxDistance) {
+          ++graph.numOpportunities(verticesInStudyArea[p]);
           ++assignedPoi;
         } else {
           ++unassignedPoi;
@@ -168,7 +198,7 @@ int main(int argc, char* argv[]) {
         graph.numOpportunities(v) = graph.population(v);
     }
 
-    // Calculate travel demand using the specified algorithm.
+    // Calculate travel demand using the specified method.
     if (algo == "formula") {
       FormulaDemandCalculator<GraphT> calculator(graph, seed, true);
       calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
@@ -179,7 +209,7 @@ int main(int argc, char* argv[]) {
       ChooserDemandCalculator<GraphT, KDTreeOpportunityChooser> calculator(graph, seed, true);
       calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
     } else {
-      throw std::invalid_argument("invalid algorithm -- '" + algo + "'");
+      throw std::invalid_argument("invalid method -- '" + algo + "'");
     }
 
     // Merge the part files into a single output file.

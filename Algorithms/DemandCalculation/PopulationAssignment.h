@@ -5,6 +5,7 @@
 #include <random>
 #include <vector>
 
+#include "DataStructures/Containers/BitVector.h"
 #include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Rectangle.h"
@@ -24,7 +25,18 @@ class PopulationAssignment {
  public:
   // Constructs a population assignment procedure with the specified graph and population grid.
   PopulationAssignment(GraphT& graph, GridReaderT& gridReader, int gridResolution, int maxRange = 1)
-      : graph(graph), gridReader(gridReader), gridResolution(gridResolution), maxRange(maxRange) {
+      : PopulationAssignment(
+            graph, BitVector(graph.numVertices(), true), gridReader, gridResolution, maxRange) {}
+
+  // Constructs a population assignment procedure with the specified graph and population grid.
+  PopulationAssignment(GraphT& graph, const BitVector& isVertexInStudyArea,
+                       GridReaderT& gridReader, int gridResolution, int maxRange = 1)
+      : graph(graph),
+        isVertexInStudyArea(isVertexInStudyArea),
+        gridReader(gridReader),
+        gridResolution(gridResolution),
+        maxRange(maxRange) {
+    assert(graph.numVertices() == isVertexInStudyArea.size());
     assert(maxRange >= 0);
   }
 
@@ -60,7 +72,9 @@ class PopulationAssignment {
     double easting, northing;
     std::vector<Point> cellsByVertex;
 
-    FORALL_VERTICES(graph, v) {
+    for (auto v = isVertexInStudyArea.firstSetBit();
+         v != -1;
+         v = isVertexInStudyArea.nextSetBit(v)) {
       const auto& latLng = graph.latLng(v);
       trans.forward(toRadians(latLng.lngInDeg()), toRadians(latLng.latInDeg()), easting, northing);
       cellsByVertex.emplace_back(easting / gridResolution, northing / gridResolution);
@@ -72,17 +86,19 @@ class PopulationAssignment {
     boundingBox.extend(boundingBox.northEast() + Point(2 * maxRange, 2 * maxRange));
     const auto dim = boundingBox.northEast() - boundingBox.southWest() + Point(1, 1);
     firstVertexInCell.assign(dim.x() * dim.y() + 1, 0);
-    verticesByCell.assign(graph.numVertices(), 0);
+    verticesByCell.assign(cellsByVertex.size(), 0);
     populationGrid.assign(dim.y(), dim.x(), 0);
 
-    FORALL_VERTICES(graph, v) {
-      cellsByVertex[v] = cellsByVertex[v] - boundingBox.southWest();
-      ++firstVertexInCell[cellId(cellsByVertex[v].y(), cellsByVertex[v].x()) + 1];
+    for (auto& cell : cellsByVertex) {
+      cell = cell - boundingBox.southWest();
+      ++firstVertexInCell[cellId(cell.y(), cell.x()) + 1];
     }
     std::partial_sum(firstVertexInCell.begin(), firstVertexInCell.end(), firstVertexInCell.begin());
 
-    FORALL_VERTICES(graph, v) {
-      const auto id = cellId(cellsByVertex[v].y(), cellsByVertex[v].x());
+    for (auto v = isVertexInStudyArea.firstSetBit(), i = 0;
+         v != -1;
+         v = isVertexInStudyArea.nextSetBit(v), ++i) {
+      const auto id = cellId(cellsByVertex[i].y(), cellsByVertex[i].x());
       verticesByCell[firstVertexInCell[id]++] = v;
     }
 
@@ -193,10 +209,11 @@ class PopulationAssignment {
     return i * populationGrid.numCols() + j;
   }
 
-  GraphT& graph;            // The network of interest.
-  GridReaderT& gridReader;  // A CSV reader to read the file containing the population grid.
-  const int gridResolution; // The resolution of the population grid (cell width in meters).
-  const int maxRange;       // The upper bound for the range of the Moore neighborhood.
+  GraphT& graph;                       // The input graph.
+  const BitVector isVertexInStudyArea; // Indicates whether a vertex is in the study area.
+  GridReaderT& gridReader;             // A CSV reader for reading the population grid file.
+  const int gridResolution;            // The population grid resolution (cell width in meters).
+  const int maxRange;                  // The upper bound for the range of the Moore neighborhood.
 
   Rectangle boundingBox;              // A bounding box containing all covered grid cells.
   std::vector<int> firstVertexInCell; // Stores the index of the first vertex in the following list.
