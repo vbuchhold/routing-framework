@@ -139,8 +139,7 @@ class PopulationAssignment {
 
       if (pop != -1 && boundingBox.contains(cell)) {
         cell = cell - boundingBox.southWest();
-        assert(populationGrid(cell.y(), cell.x()) == 0);
-        populationGrid(cell.y(), cell.x()) = pop;
+        populationGrid(cell.y(), cell.x()) += pop;
       }
     }
   }
