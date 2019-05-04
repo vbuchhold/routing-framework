@@ -21,3 +21,8 @@ constexpr int EARTH_RADIUS = 6371000;
 #ifndef TA_LOG_K
 # define TA_LOG_K 5
 #endif
+
+// The maximum number of source vertices that are to be substituted into radiation model's formula.
+#ifndef DC_MAX_NUM_SOURCES
+# define DC_MAX_NUM_SOURCES std::numeric_limits<int>::max()
+#endif

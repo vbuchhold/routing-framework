@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -13,6 +14,7 @@
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 #include "Tools/CommandLine/ProgressBar.h"
+#include "Tools/Constants.h"
 #include "Tools/OpenMP.h"
 #include "Tools/Timer.h"
 
@@ -39,8 +41,9 @@ class FormulaDemandCalculator {
   void calculateDemand(
       int numODPairs, double lambda, double swapProb, const std::string& fileName) const {
     Timer timer;
+    const auto maxNumSources = std::min(graph.numVertices(), DC_MAX_NUM_SOURCES);
     if (verbose) std::cout << "Calculating demand: ";
-    ProgressBar bar(graph.numVertices(), verbose);
+    ProgressBar bar(maxNumSources);
 
     assert(lambda >= 0); assert(lambda <= 1);
     using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
@@ -56,7 +59,7 @@ class FormulaDemandCalculator {
       assert(out.good());
 
       #pragma omp for schedule(static, 1) nowait
-      for (auto src = 0; src < graph.numVertices(); ++src) {
+      for (auto src = 0; src < maxNumSources; ++src) {
         auto srcPop = graph.population(src);           // The source population.
         auto srcPoi = graph.numOpportunities(src) + 1; // The number of opportunities at the source.
         auto intPoi = 0;                               // The number of intervening opportunities.
