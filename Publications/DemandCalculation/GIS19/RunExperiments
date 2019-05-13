@@ -1,0 +1,257 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+scons variant=Release
+
+binaryDir=Build/Release
+inputDir=$1/Inputs
+outputDir=$1/Experiments/DemandCalculation/GIS19
+
+germanGrid=$inputDir/RawData/GermanCensus2011/Zensus_Bevoelkerung_100m-Gitter.csv
+europeanGrid=$inputDir/RawData/GEOSTAT2011/GEOSTAT_grid_POP_1K_2011_V2_0_1.csv
+poisInStuttgart=$inputDir/RawData/Visum/Stuttgart/POI.csv
+
+mkdir --parents $inputDir/RawData/XATF_sorted $inputDir/Graphs
+mkdir --parents $outputDir/DemandData
+mkdir --parents $outputDir/FlowPatterns
+mkdir --parents $outputDir/ODDistances
+mkdir --parents $outputDir/AssignmentStats
+
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+###################
+# Building Graphs #
+###################
+
+RawData/XatfMergeCountries.py -I $inputDir/RawData/XATF -O $inputDir/RawData/XATF_sorted -o bel bel
+RawData/XatfMergeCountries.py -I $inputDir/RawData/XATF -O $inputDir/RawData/XATF_sorted -o deu deu
+RawData/XatfMergeCountries.py -I $inputDir/RawData/XATF -O $inputDir/RawData/XATF_sorted -o eur
+
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts P -cs 31467 -cp 1    -ap 10 -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $inputDir/RawData/Visum/Stuttgart -o $inputDir/Graphs/Visum_Stuttgart
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts C -cs 27700 -cp 1000 -ap 1  -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $inputDir/RawData/Visum/London    -o $inputDir/Graphs/Visum_London
+
+$binaryDir/RawData/ConvertGraph -s xatf -d binary -scc -a capacity free_flow_speed lat_lng length num_lanes travel_time xatf_road_category -i $inputDir/RawData/XATF_sorted/bel/bel -o $inputDir/Graphs/DIMACS_bel
+$binaryDir/RawData/ConvertGraph -s xatf -d binary -scc -a capacity free_flow_speed lat_lng length num_lanes travel_time xatf_road_category -i $inputDir/RawData/XATF_sorted/deu/deu -o $inputDir/Graphs/DIMACS_deu
+$binaryDir/RawData/ConvertGraph -s xatf -d binary -scc -a capacity free_flow_speed lat_lng length num_lanes travel_time xatf_road_category -i $inputDir/RawData/XATF_sorted/eur/eur -o $inputDir/Graphs/DIMACS_eur
+
+$binaryDir/RawData/ComputeUnionBoundary -p 1    -crs 31467 -col TYPNR      -val 1 2 3           -i $inputDir/RawData/Visum/Stuttgart -o $inputDir/RawData/Visum/Stuttgart/StuttgartRegion
+$binaryDir/RawData/ComputeUnionBoundary -p 1000 -crs 27700 -col BOROUGH_NO -val $(seq 1.000 33) -i $inputDir/RawData/Visum/London    -o $inputDir/RawData/Visum/London/GreaterLondon
+
+$binaryDir/RawData/VisumExtractPoi -crs 31467 -i $inputDir/RawData/Visum/Stuttgart -o $inputDir/RawData/Visum/Stuttgart/POI
+
+#####################################
+# Calculating Reference Demand Data #
+#####################################
+
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 07:30:00 -ld Tue -lt 08:29:59 -col TYPNR -val 1 2 3 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $inputDir/RawData/Visum/Stuttgart -m $inputDir/RawData/mobiTopp/weg.csv -o $outputDir/DemandData/Stuttgart_morn_mobiTopp
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 16:30:00 -ld Tue -lt 17:29:59 -col TYPNR -val 1 2 3 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $inputDir/RawData/Visum/Stuttgart -m $inputDir/RawData/mobiTopp/weg.csv -o $outputDir/DemandData/Stuttgart_even_mobiTopp
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 00:00:00 -ld Tue -lt 23:59:59 -col TYPNR -val 1 2 3 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $inputDir/RawData/Visum/Stuttgart -m $inputDir/RawData/mobiTopp/weg.csv -o $outputDir/DemandData/Stuttgart_day_mobiTopp
+
+$binaryDir/RawData/ParseMtxFile -p 1000 -col BOROUGH_NO -val $(seq 1.000 33) -g $inputDir/Graphs/Visum_London.gr.bin -v $inputDir/RawData/Visum/London -m $inputDir/RawData/Visum/London/ONE_5692_AM_ME2_C.mtx -o $outputDir/DemandData/London_morn_Visum
+
+$binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_morn_mobiTopp.csv -flow $outputDir/FlowPatterns/Stuttgart_morn_mobiTopp -dist $outputDir/ODDistances/Stuttgart_morn_mobiTopp -stat $outputDir/AssignmentStats/Stuttgart_morn_mobiTopp
+$binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_even_mobiTopp.csv -flow $outputDir/FlowPatterns/Stuttgart_even_mobiTopp -dist $outputDir/ODDistances/Stuttgart_even_mobiTopp -stat $outputDir/AssignmentStats/Stuttgart_even_mobiTopp
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_day_mobiTopp.csv  -flow $outputDir/FlowPatterns/Stuttgart_day_mobiTopp  -dist $outputDir/ODDistances/Stuttgart_day_mobiTopp  -stat $outputDir/AssignmentStats/Stuttgart_day_mobiTopp
+$binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_London.gr.bin    -d $outputDir/DemandData/London_morn_Visum.csv       -flow $outputDir/FlowPatterns/London_morn_Visum       -dist $outputDir/ODDistances/London_morn_Visum       -stat $outputDir/AssignmentStats/London_morn_Visum
+
+################
+# Main Results #
+################
+
+fileName=Stuttgart_morn_rand_10
+$binaryDir/RawData/GenerateODPairs -t 1406208000 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_geom_10
+$binaryDir/RawData/GenerateODPairs -n 234368 -d 6000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_formula_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99741 -p 0.3 -r 1 -f DE -m formula -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_Dij_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99732 -p 0.3 -r 1 -f DE -m Dij -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_kd-tree_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99681 -p 0.3 -r 1 -f DE -m kd-tree -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+##################################################
+# Using Population Densities as Attraction Rates #
+##################################################
+
+fileName=Stuttgart_morn_formula_10_DE_POP
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.9999828 -p 0.0 -r 1 -f DE -m formula -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_Dij_10_DE_POP
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.9999821 -p 0.0 -r 1 -f DE -m Dij -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_kd-tree_10_DE_POP
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.9999793 -p 0.0 -r 1 -f DE -m kd-tree -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+#################################
+# Impact of the Grid Resolution #
+#################################
+
+fileName=Stuttgart_morn_formula_10_EU_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99741 -p 0.3 -r 0 -f EU -m formula -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $europeanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_Dij_10_EU_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99732 -p 0.3 -r 0 -f EU -m Dij -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $europeanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_morn_kd-tree_10_EU_POI
+$binaryDir/Launchers/CalculateDemand -n 234368 -l 0.99681 -p 0.3 -r 0 -f EU -m kd-tree -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $europeanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+##########################
+# Other Analysis Periods #
+##########################
+
+fileName=Stuttgart_even_rand_10
+$binaryDir/RawData/GenerateODPairs -t 1577226000 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_even_geom_10
+$binaryDir/RawData/GenerateODPairs -n 262871 -d 6000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_even_formula_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 262871 -l 0.99741 -p 0.6 -r 1 -f DE -m formula -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_even_Dij_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 262871 -l 0.99732 -p 0.6 -r 1 -f DE -m Dij -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_even_kd-tree_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 262871 -l 0.99681 -p 0.6 -r 1 -f DE -m kd-tree -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_day_rand_10
+$binaryDir/RawData/GenerateODPairs -t 18893478000 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_day_geom_10
+$binaryDir/RawData/GenerateODPairs -n 3148913 -d 6000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_day_formula_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 3148913 -l 0.99741 -p 0.5 -r 1 -f DE -m formula -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_day_Dij_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 3148913 -l 0.99732 -p 0.5 -r 1 -f DE -m Dij -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=Stuttgart_day_kd-tree_10_DE_POI
+$binaryDir/Launchers/CalculateDemand -n 3148913 -l 0.99681 -p 0.5 -r 1 -f DE -m kd-tree -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+####################################
+# Other Study Area: Greater London #
+####################################
+
+###############################
+# Performance and Scalability #
+###############################
+
+for numTrips in 100000 1000000; do
+  fileName=Stuttgart_${numTrips}_geom_10
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Stuttgart_${numTrips}_geom_20
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 12000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  for algo in formula Dij kd-tree; do
+    fileName=Stuttgart_${numTrips}_${algo}_10_DE_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.9999821 -p 0.0 -r 1 -f DE -m $algo -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=Stuttgart_${numTrips}_${algo}_20_DE_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.99999835 -p 0.0 -r 1 -f DE -m $algo -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+
+for numTrips in 100000 1000000; do
+  for algo in formula Dij kd-tree; do
+    fileName=Stuttgart_${numTrips}_${algo}_10_DE_POI
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.99732 -p 0.5 -r 1 -f DE -m $algo -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=Stuttgart_${numTrips}_${algo}_20_DE_POI
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.999842 -p 0.5 -r 1 -f DE -m $algo -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -pop $germanGrid -poi $poisInStuttgart -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+
+for numTrips in 100000 1000000; do
+  fileName=London_${numTrips}_geom_10
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=London_${numTrips}_geom_20
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 12000 -geom -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  for algo in formula Dij kd-tree; do
+    fileName=London_${numTrips}_${algo}_10_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.99999679 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=London_${numTrips}_${algo}_20_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.99999980 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+
+for numTrips in 1000000 10000000; do
+  fileName=Belgium_${numTrips}_geom_10
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_bel.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Belgium_${numTrips}_geom_20
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 12000 -geom -g $inputDir/Graphs/DIMACS_bel.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  for algo in formula Dij kd-tree; do
+    fileName=Belgium_${numTrips}_${algo}_10_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.9999480 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_bel.gr.bin -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=Belgium_${numTrips}_${algo}_20_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.9999935 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_bel.gr.bin -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+
+scons variant=Release def=DC_MAX_NUM_SOURCES=43773 CalculateDemand
+for numTrips in 1000000 10000000; do
+  fileName=Germany_${numTrips}_geom_10
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_deu.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Germany_${numTrips}_geom_20
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 12000 -geom -g $inputDir/Graphs/DIMACS_deu.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  for algo in formula Dij kd-tree; do
+    fileName=Germany_${numTrips}_${algo}_10_DE_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.9999371 -p 0.0 -r 1 -f DE -m $algo -g $inputDir/Graphs/DIMACS_deu.gr.bin -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=Germany_${numTrips}_${algo}_20_DE_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.9999891 -p 0.0 -r 1 -f DE -m $algo -g $inputDir/Graphs/DIMACS_deu.gr.bin -pop $germanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+
+scons variant=Release def=DC_MAX_NUM_SOURCES=18018 CalculateDemand
+for numTrips in 10000000 100000000; do
+  fileName=Europe_${numTrips}_geom_10
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Europe_${numTrips}_geom_20
+  $binaryDir/RawData/GenerateODPairs -n $numTrips -d 12000 -geom -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  for algo in formula Dij kd-tree; do
+    fileName=Europe_${numTrips}_${algo}_10_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.999911 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_eur.gr.bin -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+    fileName=Europe_${numTrips}_${algo}_20_EU_POP
+    $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.999983 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_eur.gr.bin -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+  done
+done
+scons variant=Release CalculateDemand
