@@ -164,6 +164,12 @@ $binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.
 ###############################
 
 for numTrips in 100000 1000000; do
+  fileName=Stuttgart_${numTrips}_rand_10
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Stuttgart_${numTrips}_rand_20
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 12000)) -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
   fileName=Stuttgart_${numTrips}_geom_10
   $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -a $inputDir/RawData/Visum/Stuttgart/StuttgartRegion.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
 
@@ -190,6 +196,12 @@ for numTrips in 100000 1000000; do
 done
 
 for numTrips in 100000 1000000; do
+  fileName=London_${numTrips}_rand_10
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=London_${numTrips}_rand_20
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 12000)) -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
   fileName=London_${numTrips}_geom_10
   $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
 
@@ -206,6 +218,12 @@ for numTrips in 100000 1000000; do
 done
 
 for numTrips in 1000000 10000000; do
+  fileName=Belgium_${numTrips}_rand_10
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/DIMACS_bel.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Belgium_${numTrips}_rand_20
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 12000)) -g $inputDir/Graphs/DIMACS_bel.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
   fileName=Belgium_${numTrips}_geom_10
   $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_bel.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
 
@@ -221,8 +239,13 @@ for numTrips in 1000000 10000000; do
   done
 done
 
-scons variant=Release def=DC_MAX_NUM_SOURCES=43773 CalculateDemand
 for numTrips in 1000000 10000000; do
+  fileName=Germany_${numTrips}_rand_10
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/DIMACS_deu.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Germany_${numTrips}_rand_20
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 12000)) -g $inputDir/Graphs/DIMACS_deu.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
   fileName=Germany_${numTrips}_geom_10
   $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_deu.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
 
@@ -240,6 +263,12 @@ done
 
 scons variant=Release def=DC_MAX_NUM_SOURCES=18018 CalculateDemand
 for numTrips in 10000000 100000000; do
+  fileName=Europe_${numTrips}_rand_10
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
+  fileName=Europe_${numTrips}_rand_20
+  $binaryDir/RawData/GenerateODPairs -t $((numTrips * 12000)) -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+
   fileName=Europe_${numTrips}_geom_10
   $binaryDir/RawData/GenerateODPairs -n $numTrips -d 6000 -geom -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
 
