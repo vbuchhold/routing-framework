@@ -10,6 +10,9 @@ This repository contains the C++14 source code used in the following publication
 * Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-Time Traffic Assignment Using
   Engineered Customizable Contraction Hierarchies. Submitted to the ACM Journal of Experimental
   Algorithmics.
+* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Efficient Calculation of Microscopic Travel
+  Demand Data with Low Calibration Effort. Submitted to the 27th ACM SIGSPATIAL International
+  Conference on Advances in Geographic Information Systems (SIGSPATIAL'19).
 
 ## Prerequisites
 
@@ -22,7 +25,6 @@ $ sudo apt-get install scons
 $ sudo apt-get install python3
 $ sudo apt-get install libboost-all-dev
 $ sudo apt-get install libcairo2-dev
-$ sudo apt-get install libnuma-dev
 $ sudo apt-get install libproj-dev
 $ sudo apt-get install zlib1g-dev
 ```
@@ -92,6 +94,37 @@ $ ./ConductManyCoreExperiments ~
 
 *Note: This repository contains the full source code used in the publication. However,
 unfortunately the data used in the experiments is proprietary and not publicly available.*
+
+## Experiments in *Efficient Calculation of Microscopic Travel Demand Data with Low Calibration Effort*
+
+To get the version of the source code used in the publication, check out the `SIGSPATIAL19` tag:
+
+```
+$ git checkout SIGSPATIAL19
+```
+
+To run the experiments presented in the publication, create the following directory structure in a
+freely chosen base directory `<base-dir>` and fill the directories with the respective raw data:
+
+```
+<base-dir>/Inputs/RawData/GermanCensus2011/
+<base-dir>/Inputs/RawData/XATF/
+<base-dir>/Inputs/RawData/GEOSTAT2011/
+<base-dir>/Inputs/RawData/mobiTopp/
+<base-dir>/Inputs/RawData/Visum/London/
+<base-dir>/Inputs/RawData/Visum/Stuttgart/
+```
+
+*Note: This repository contains the full source code used in the publication. However,
+unfortunately most data used in the experiments is proprietary and not publicly available.
+Exceptions are the [German population grid](https://www.zensus2011.de/DE/Home/Aktuelles/DemografischeGrunddaten.html)
+and the [European population grid](https://ec.europa.eu/eurostat/web/gisco/geodata/reference-data/population-distribution-demography/geostat).*
+
+Now, enter the following command at the top-level directory of the framework:
+
+```
+$ Publications/DemandCalculation/SIGSPATIAL19/RunExperiments <base-dir>
+```
 
 ## SCons Integration for Eclipse
 

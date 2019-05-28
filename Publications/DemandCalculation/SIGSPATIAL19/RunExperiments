@@ -4,7 +4,7 @@ scons variant=Release
 
 binaryDir=Build/Release
 inputDir=$1/Inputs
-outputDir=$1/Experiments/DemandCalculation/GIS19
+outputDir=$1/Experiments/DemandCalculation/SIGSPATIAL19
 
 germanGrid=$inputDir/RawData/GermanCensus2011/Zensus_Bevoelkerung_100m-Gitter.csv
 europeanGrid=$inputDir/RawData/GEOSTAT2011/GEOSTAT_grid_POP_1K_2011_V2_0_1.csv
@@ -48,12 +48,12 @@ $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 07:30:00 -ld Tue -lt 08:29:59 -
 $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 16:30:00 -ld Tue -lt 17:29:59 -col TYPNR -val 1 2 3 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $inputDir/RawData/Visum/Stuttgart -m $inputDir/RawData/mobiTopp/weg.csv -o $outputDir/DemandData/Stuttgart_even_mobiTopp
 $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 00:00:00 -ld Tue -lt 23:59:59 -col TYPNR -val 1 2 3 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $inputDir/RawData/Visum/Stuttgart -m $inputDir/RawData/mobiTopp/weg.csv -o $outputDir/DemandData/Stuttgart_day_mobiTopp
 
-$binaryDir/RawData/ParseMtxFile -p 1000 -col BOROUGH_NO -val $(seq 1.000 33) -g $inputDir/Graphs/Visum_London.gr.bin -v $inputDir/RawData/Visum/London -m $inputDir/RawData/Visum/London/ONE_5692_AM_ME2_C.mtx -o $outputDir/DemandData/London_morn_Visum
+$binaryDir/RawData/ParseMtxFile -p 1000 -col BOROUGH_NO -val $(seq 1.000 33) -g $inputDir/Graphs/Visum_London.gr.bin -v $inputDir/RawData/Visum/London -m $inputDir/RawData/Visum/London/ONE_5692_AM_ME2_C.mtx -o $outputDir/DemandData/London_peak_Visum
 
 $binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_morn_mobiTopp.csv -flow $outputDir/FlowPatterns/Stuttgart_morn_mobiTopp -dist $outputDir/ODDistances/Stuttgart_morn_mobiTopp -stat $outputDir/AssignmentStats/Stuttgart_morn_mobiTopp
 $binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_even_mobiTopp.csv -flow $outputDir/FlowPatterns/Stuttgart_even_mobiTopp -dist $outputDir/ODDistances/Stuttgart_even_mobiTopp -stat $outputDir/AssignmentStats/Stuttgart_even_mobiTopp
 $binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $outputDir/DemandData/Stuttgart_day_mobiTopp.csv  -flow $outputDir/FlowPatterns/Stuttgart_day_mobiTopp  -dist $outputDir/ODDistances/Stuttgart_day_mobiTopp  -stat $outputDir/AssignmentStats/Stuttgart_day_mobiTopp
-$binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_London.gr.bin    -d $outputDir/DemandData/London_morn_Visum.csv       -flow $outputDir/FlowPatterns/London_morn_Visum       -dist $outputDir/ODDistances/London_morn_Visum       -stat $outputDir/AssignmentStats/London_morn_Visum
+$binaryDir/Launchers/AssignTraffic -p 1  -g $inputDir/Graphs/Visum_London.gr.bin    -d $outputDir/DemandData/London_peak_Visum.csv       -flow $outputDir/FlowPatterns/London_peak_Visum       -dist $outputDir/ODDistances/London_peak_Visum       -stat $outputDir/AssignmentStats/London_peak_Visum
 
 ################
 # Main Results #
@@ -158,6 +158,26 @@ $binaryDir/Launchers/AssignTraffic -p 10 -g $inputDir/Graphs/Visum_Stuttgart.gr.
 ####################################
 # Other Study Area: Greater London #
 ####################################
+
+fileName=London_peak_rand_7
+$binaryDir/RawData/GenerateODPairs -t 1968128400 -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_London.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=London_peak_geom_7
+$binaryDir/RawData/GenerateODPairs -n 468602 -d 4200 -geom -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_London.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=London_peak_formula_7_EU_POP
+$binaryDir/Launchers/CalculateDemand -n 468602 -l 0.99999260 -p 0.0 -r 0 -f EU -m formula -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_London.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=London_peak_Dij_7_EU_POP
+$binaryDir/Launchers/CalculateDemand -n 468602 -l 0.99999232 -p 0.0 -r 0 -f EU -m Dij -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_London.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
+
+fileName=London_peak_kd-tree_7_EU_POP
+$binaryDir/Launchers/CalculateDemand -n 468602 -l 0.99999142 -p 0.0 -r 0 -f EU -m kd-tree -g $inputDir/Graphs/Visum_London.gr.bin -a $inputDir/RawData/Visum/London/GreaterLondon.poly -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
+$binaryDir/Launchers/AssignTraffic -p 1 -g $inputDir/Graphs/Visum_London.gr.bin -d $outputDir/DemandData/$fileName.csv -flow $outputDir/FlowPatterns/$fileName -dist $outputDir/ODDistances/$fileName -stat $outputDir/AssignmentStats/$fileName
 
 ###############################
 # Performance and Scalability #
