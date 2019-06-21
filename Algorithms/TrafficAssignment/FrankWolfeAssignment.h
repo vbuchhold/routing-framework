@@ -181,6 +181,12 @@ class FrankWolfeAssignment {
   void findDescentDirection() {
     aonAssignment.run();
 #ifndef TA_NO_CFW
+    if (aonAssignment.stats.numIterations == 2) {
+      FORALL_EDGES(graph, e)
+        pointOfSight[e] = aonAssignment.trafficFlowOn(e);
+      return;
+    }
+
     auto num = 0.0, den = 0.0;
     #pragma omp parallel for reduction(+: num, den) schedule(static)
     FORALL_EDGES(graph, e) {
