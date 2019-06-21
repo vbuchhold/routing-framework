@@ -9,9 +9,10 @@ struct AllOrNothingAssignmentStats {
   AllOrNothingAssignmentStats(const int numODPairs)
       : lastChecksum(0),
         totalChecksum(0),
+        prevMinPathCost(0),
         lastDistances(numODPairs, -1),
-        maxChangeInDistances(0),
         avgChangeInDistances(0),
+        maxChangeInDistances(0),
         lastCustomizationTime(0),
         lastQueryTime(0),
         lastRoutingTime(0),
@@ -24,8 +25,9 @@ struct AllOrNothingAssignmentStats {
   // Resets the values from the last iteration.
   void startIteration() {
     lastChecksum = 0;
-    maxChangeInDistances = 0;
+    prevMinPathCost = 0;
     avgChangeInDistances = 0;
+    maxChangeInDistances = 0;
   }
 
   // Adds the values from the last iteration to the totals.
@@ -37,12 +39,13 @@ struct AllOrNothingAssignmentStats {
     totalRoutingTime += lastRoutingTime;
   }
 
-  int64_t lastChecksum;  // The sum of the distances computed in the last iteration.
-  int64_t totalChecksum; // The total sum of distances computed.
+  int64_t lastChecksum;    // The sum of the distances computed in the last iteration.
+  int64_t totalChecksum;   // The total sum of distances computed.
+  int64_t prevMinPathCost; // The sum of distances between OD pairs sampled in previous iteration.
 
-  std::vector<int> lastDistances; // The OD-distances from the last iteration.
-  double maxChangeInDistances;    // The max change in the OD-distances between the last iterations.
-  double avgChangeInDistances;    // The avg change in the OD-distances between the last iterations.
+  std::vector<int32_t> lastDistances; // The OD distances from the last iteration.
+  double avgChangeInDistances;        // The avg change in OD distances between last two iterations.
+  double maxChangeInDistances;        // The max change in OD distances between last two iterations.
 
   int lastCustomizationTime; // The time spent on customization in the last iteration.
   int lastQueryTime;         // The time spent on queries in the last iteration.

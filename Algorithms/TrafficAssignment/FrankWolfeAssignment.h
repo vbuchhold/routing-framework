@@ -14,6 +14,7 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
 #include "Stats/TrafficAssignment/FrankWolfeAssignmentStats.h"
+#include "Tools/Math.h"
 #include "Tools/Timer.h"
 
 // A traffic assignment procedure based on the Frank-Wolfe method (also known as convex combinations
@@ -47,7 +48,8 @@ class FrankWolfeAssignment {
       const int numIterations = 0, const bool outputIntermediates = false) {
     assert(numIterations >= 0);
     Timer timer;
-    determineInitialSolution();
+    auto prevSkipInterval = 1u;
+    determineInitialSolution(prevSkipInterval);
     stats.lastRunningTime = timer.elapsed();
     stats.lastLineSearchTime = stats.lastRunningTime - aonAssignment.stats.lastRoutingTime;
     stats.finishIteration();
@@ -77,18 +79,22 @@ class FrankWolfeAssignment {
       std::cout << std::flush;
     }
 
-    while ((numIterations != 0 || stats.prevRelGap > 1e-4) &&
+    while ((numIterations != 0 || stats.prevRelGap > 1e-4 || prevSkipInterval > 1) &&
            (numIterations == 0 || aonAssignment.stats.numIterations < numIterations)) {
       stats.startIteration();
       Timer timer;
+      const unsigned int skip = std::min(std::max(stats.prevRelGap / 1e-4, 1.0), double{-1u});
+      const auto skipInterval = std::min(roundDownToPowerOfTwo(skip), prevSkipInterval);
       updateTraversalCosts();
-      findDescentDirection();
+      findDescentDirection(skipInterval);
       const auto tau = findMoveSize();
       moveAlongDescentDirection(tau);
-      assert(aonAssignment.stats.lastChecksum <= stats.prevTotalPathCost);
+      const auto prevMinPathCost = aonAssignment.stats.prevMinPathCost * prevSkipInterval;
+      assert(prevMinPathCost <= stats.prevTotalPathCost);
+      prevSkipInterval = skipInterval;
       stats.lastRunningTime = timer.elapsed();
       stats.lastLineSearchTime = stats.lastRunningTime - aonAssignment.stats.lastRoutingTime;
-      stats.prevRelGap = 1 - aonAssignment.stats.lastChecksum / stats.prevTotalPathCost;
+      stats.prevRelGap = 1 - prevMinPathCost / stats.prevTotalPathCost;
       stats.finishIteration();
 
       if (flowFile.is_open() && outputIntermediates)
@@ -154,11 +160,11 @@ class FrankWolfeAssignment {
 
  private:
   // Determines the initial solution.
-  void determineInitialSolution() {
+  void determineInitialSolution(const int skipInterval) {
     #pragma omp parallel for schedule(static)
     FORALL_EDGES(graph, e)
       graph.traversalCost(e) = objFunction.derivative(e, 0);
-    aonAssignment.run();
+    aonAssignment.run(skipInterval);
     #pragma omp parallel for schedule(static)
     FORALL_EDGES(graph, e)
       trafficFlows[e] = aonAssignment.trafficFlowOn(e);
@@ -178,8 +184,8 @@ class FrankWolfeAssignment {
   }
 
   // Finds the descent direction.
-  void findDescentDirection() {
-    aonAssignment.run();
+  void findDescentDirection(const int skipInterval) {
+    aonAssignment.run(skipInterval);
 #ifndef TA_NO_CFW
     if (aonAssignment.stats.numIterations == 2) {
       FORALL_EDGES(graph, e)
