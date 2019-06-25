@@ -85,11 +85,10 @@ directory of the framework:
 
 ```
 $ cd Publications/FastTA/JEA
-$ ./PrepareP2P <path-to-xatf-data> ~
-$ ./PrepareTA <path-to-visum-data> <path-to-mobitopp-data> ~
+$ ./PrepareP2P <path-to-stuttgart-data> <path-to-london-data> <path-to-xatf-data>     ~
+$ ./PrepareTA  <path-to-stuttgart-data> <path-to-london-data> <path-to-mobitopp-data> ~
 $ ./ConductP2P ~
-$ ./ConductTA ~
-$ ./ConductManyCoreExperiments ~
+$ ./ConductTA  ~
 ```
 
 *Note: This repository contains the full source code used in the publication. However,

@@ -1,17 +1,25 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-BUILD_DIR=Build/Release/RawData
-INPUT_GRAPH=$3/Inputs/Graphs/Visum_Stuttgart.gr.bin
-OD_DIR=$3/Inputs/ODPairs/TA
-mkdir --parents ${INPUT_GRAPH%/*}
-mkdir --parents $OD_DIR
+scons variant=Release
 
-scons variant=Release RawData
-$BUILD_DIR/ConvertGraph -s visum -d binary -scc -a capacity coordinate free_flow_speed lat_lng length num_lanes travel_time vertex_id -i $1 -o ${INPUT_GRAPH%%.*}
-$BUILD_DIR/ParseMobiTopp -g $INPUT_GRAPH -v $1 -o $OD_DIR/Visum_Stuttgart
+binaryDir=Build/Release
+stuttgartData=$1
+londonData=$2
+mobiToppData=$3
+inputDir=$4/Inputs
 
-$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 07:30:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue30m
-$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 08:00:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue01h
-$BUILD_DIR/ParseMobiTopp -ed Tue -et 07:00 -ld Tue -lt 09:00:00 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue02h
-$BUILD_DIR/ParseMobiTopp -ed Tue -et 00:00 -ld Tue -lt 23:59:59 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_Tue24h
-$BUILD_DIR/ParseMobiTopp -ed Mon -et 00:00 -ld Sun -lt 23:59:59 -g $INPUT_GRAPH -vs $OD_DIR/Visum_Stuttgart.vs.bin -od $2 -o $OD_DIR/Visum_Stuttgart_MonSun
+mkdir --parents $inputDir/Graphs $inputDir/ODPairs/TA
+
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts P -cs 31467 -cp 1    -ap 10 -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $stuttgartData -o $inputDir/Graphs/Visum_Stuttgart
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts C -cs 27700 -cp 1000 -ap 1  -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $londonData    -o $inputDir/Graphs/Visum_London
+
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 07:30:00 -ld Tue -lt 08:29:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_morn
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 16:30:00 -ld Tue -lt 17:29:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_even
+$binaryDir/RawData/ParseMobiToppFile -ed Tue -et 00:00:00 -ld Tue -lt 23:59:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_day
+$binaryDir/RawData/ParseMobiToppFile -ed Mon -et 00:00:00 -ld Sun -lt 23:59:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_week
+
+$binaryDir/RawData/ParseMtxFile -p 1000 -col BOROUGH_NO -val $(seq 1.000 33) -g $inputDir/Graphs/Visum_London.gr.bin -v $londonData -m $londonData/ONE_5692_AM_ME2_C.mtx -o $inputDir/ODPairs/TA/Visum_London_peak

@@ -1,20 +1,35 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-BUILD_DIR=Build/Release
-INPUT_GRAPH=$2/Inputs/Graphs/DIMACS_eur.gr.bin
-ORDER=$2/Inputs/Partitions/DIMACS_eur
-CH=$2/Inputs/CH/DIMACS_eur
-OD_DIR=$2/Inputs/ODPairs/P2P
-mkdir --parents ${INPUT_GRAPH%/*}
-mkdir --parents ${ORDER%/*}
-mkdir --parents ${CH%/*}
-mkdir --parents $OD_DIR
-
 scons variant=Release
-$BUILD_DIR/RawData/ConvertGraph -s xatf -d binary -scc -a capacity lat_lng length num_lanes travel_time xatf_road_category -i $1 -o ${INPUT_GRAPH%%.*}
-$BUILD_DIR/Launchers/RunP2PAlgo -a CH -g $INPUT_GRAPH -o $CH
-$BUILD_DIR/Launchers/RunP2PAlgo -a CH -g $INPUT_GRAPH -o $CH -l
-$BUILD_DIR/Launchers/RunP2PAlgo -a CCH -b 30 -g $INPUT_GRAPH -o $ORDER
 
-$BUILD_DIR/RawData/GenerateODPairs -n 1000 -i $INPUT_GRAPH -o $OD_DIR/DIMACS_eur.time.rank -r {7..24}
-$BUILD_DIR/RawData/GenerateODPairs -n 1000 -i $INPUT_GRAPH -o $OD_DIR/DIMACS_eur.dist.rank -r {7..24} -len
+binaryDir=Build/Release
+stuttgartData=$1
+londonData=$2
+xatfData=$3
+inputDir=$4/Inputs
+
+mkdir --parents $inputDir/CHs
+mkdir --parents $inputDir/Graphs
+mkdir --parents $inputDir/ODPairs/P2P
+mkdir --parents $inputDir/RawData/XATF_sorted
+mkdir --parents $inputDir/SepDecomps
+
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+RawData/XatfMergeCountries.py -I $xatfData -O $inputDir/RawData/XATF_sorted -o eur
+$binaryDir/RawData/ConvertGraph -s xatf -d binary -scc -a capacity free_flow_speed lat_lng length num_lanes travel_time xatf_road_category -i $inputDir/RawData/XATF_sorted/eur/eur -o $inputDir/Graphs/DIMACS_eur
+
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts P -cs 31467 -cp 1    -ap 10 -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $stuttgartData -o $inputDir/Graphs/Visum_Stuttgart
+$binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts C -cs 27700 -cp 1000 -ap 1  -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $londonData    -o $inputDir/Graphs/Visum_London
+
+$binaryDir/Launchers/RunP2PAlgo -a CH -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/CHs/DIMACS_eur_time
+$binaryDir/Launchers/RunP2PAlgo -a CH -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/CHs/DIMACS_eur_dist -l
+
+$binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -o $inputDir/SepDecomps/Visum_Stuttgart_nd30
+$binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/Visum_London.gr.bin    -o $inputDir/SepDecomps/Visum_London_nd30
+$binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/DIMACS_eur.gr.bin      -o $inputDir/SepDecomps/DIMACS_eur_nd30
+
+$binaryDir/RawData/GenerateODPairs -n 1000 -r {7..24} -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_time
+$binaryDir/RawData/GenerateODPairs -n 1000 -r {7..24} -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist -l
