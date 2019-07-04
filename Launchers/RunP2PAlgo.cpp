@@ -106,7 +106,7 @@ inline void runQueries(AlgoT& algo, const std::string& demand, std::ofstream& ou
     dst = translate(dst);
     timer.restart();
     algo.run(src, dst);
-    const auto elapsed = timer.elapsed<std::chrono::microseconds>();
+    const auto elapsed = timer.elapsed<std::chrono::nanoseconds>();
     if (hasRanks) out << rank << ',';
     writeRecordLine(out, algo, dst, elapsed);
   }
