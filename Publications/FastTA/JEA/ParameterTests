@@ -15,55 +15,55 @@ export OMP_PLACES=cores
 
 scons variant=Release def=TA_LOG_K=0 AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_sorted_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_sorted_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_sorted_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_sorted_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_sorted_L-peak_U$U
 done
 
 scons variant=Release def=TA_LOG_K=2 AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k4_SSE_L-peak_U$U
 done
 
 scons variant=Release simd=avx def=TA_LOG_K=3 AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k8_AVX_L-peak_U$U
 done
 
 scons variant=Release simd=avx def=TA_LOG_K=4 AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k16_AVX_L-peak_U$U
 done
 
 scons variant=Release simd=avx AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k32_AVX_L-peak_U$U
 done
 
 scons variant=Release simd=avx def=TA_LOG_K=6 AssignTraffic
 for ((U = 8; U <= 48; U += 8)); do
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-morn_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-even_U$U
-  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-day_U$U
-  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-week_U$U
-  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_L-peak_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-morn_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 34 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_even.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-even_U$U
+  $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_day.csv  -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-day_U$U
+  $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_S-week_U$U
+  $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -U $U -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/ParameterTests/CCH_k64_AVX_L-peak_U$U
 done
 scons variant=Release AssignTraffic

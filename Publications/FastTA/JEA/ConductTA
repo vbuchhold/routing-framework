@@ -185,5 +185,5 @@ for ((numCores = 2; numCores <= 16; numCores *= 2)); do
 done
 
 scons variant=Release simd=avx AssignTraffic
-$binaryDir/Launchers/AssignTraffic -p 1 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -flow $outputDir/TA/FlowPatterns/S-morn
+$binaryDir/Launchers/AssignTraffic -p 1 -n 28 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -flow $outputDir/TA/FlowPatterns/S-morn
 scons variant=Release AssignTraffic

@@ -31,5 +31,5 @@ $binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/Visum_Stuttgart.gr.bi
 $binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/Visum_London.gr.bin    -o $inputDir/SepDecomps/Visum_London_nd30
 $binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/DIMACS_eur.gr.bin      -o $inputDir/SepDecomps/DIMACS_eur_nd30
 
-$binaryDir/RawData/GenerateODPairs -n 1000 -r {7..24} -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_time
-$binaryDir/RawData/GenerateODPairs -n 1000 -r {7..24} -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist -l
+$binaryDir/RawData/GenerateODPairs -n 1000 -r $(for exp in {6..24}; do echo $((2**exp)); done) -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_time
+$binaryDir/RawData/GenerateODPairs -n 1000 -r $(for exp in {6..24}; do echo $((2**exp)); done) -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist -l
