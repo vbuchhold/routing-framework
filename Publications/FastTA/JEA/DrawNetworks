@@ -1,0 +1,22 @@
+#!/bin/bash
+cd ${BASH_SOURCE%/*}/../../..
+scons variant=Release
+
+binaryDir=Build/Release
+baseDir=$1
+outputDir=$2
+
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+$binaryDir/RawData/DrawNetwork -stuttgart -w 6.5 -h 6.0 -g $baseDir/Inputs/Graphs/Visum_Stuttgart.gr.bin -o $outputDir/StuttgartRegion
+$binaryDir/RawData/DrawNetwork -stuttgart -w 6.5 -h 6.0 -g $baseDir/Inputs/Graphs/Visum_Stuttgart.gr.bin -o $outputDir/Stuttgart        -c $baseDir/Inputs/RawData/Visum/Stuttgart/Stuttgart.poly
+$binaryDir/RawData/DrawNetwork -stuttgart -w 6.5 -h 6.0 -g $baseDir/Inputs/Graphs/Visum_Stuttgart.gr.bin -o $outputDir/Stuttgart_S-morn -c $baseDir/Inputs/RawData/Visum/Stuttgart/Stuttgart.poly -f $baseDir/Experiments/FastTA/JEA_/TA/FlowPatterns/S-morn.csv
+
+mv $outputDir/Stuttgart_S-morn.png $outputDir/Stuttgart_S-morn_1.png
+
+convert $outputDir/StuttgartRegion.png    -alpha Remove $outputDir/StuttgartRegion.png
+convert $outputDir/Stuttgart.png          -alpha Remove $outputDir/Stuttgart.png
+convert $outputDir/Stuttgart_S-morn_1.png -alpha Remove $outputDir/Stuttgart_S-morn_1.png
+convert $outputDir/Stuttgart_S-morn_2.png -alpha Remove $outputDir/Stuttgart_S-morn_2.png

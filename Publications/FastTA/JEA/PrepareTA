@@ -17,6 +17,8 @@ export OMP_PLACES=cores
 $binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts P -cs 31467 -cp 1    -ap 10 -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $stuttgartData -o $inputDir/Graphs/Visum_Stuttgart
 $binaryDir/RawData/ConvertGraph -s visum -d binary -scc -ts C -cs 27700 -cp 1000 -ap 1  -a capacity coordinate free_flow_speed lat_lng length num_lanes road_geometry travel_time -i $londonData    -o $inputDir/Graphs/Visum_London
 
+$binaryDir/RawData/ComputeUnionBoundary -crs 31467 -val S -i $inputDir/RawData/Visum/Stuttgart -o $inputDir/RawData/Visum/Stuttgart/Stuttgart
+
 $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 07:30:00 -ld Tue -lt 08:29:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_morn
 $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 16:30:00 -ld Tue -lt 17:29:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_even
 $binaryDir/RawData/ParseMobiToppFile -ed Tue -et 00:00:00 -ld Tue -lt 23:59:59 -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -v $stuttgartData -m $mobiToppData -o $inputDir/ODPairs/TA/Visum_Stuttgart_day
