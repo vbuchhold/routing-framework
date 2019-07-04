@@ -172,7 +172,7 @@ inline void assignTraffic(const CommandLineParser& clp) {
   const auto traversalCostFunction = clp.getValue<std::string>("f", "BPR");
   const auto shortestPathAlgorithm = clp.getValue<std::string>("a", "CCH");
   const auto ord = clp.getValue<std::string>("o", "sorted");
-  const auto maxDiam = clp.getValue<int>("U", 40);
+  const auto maxDiam = clp.getValue<int>("U", 32);
   const auto graphFileName = clp.getValue<std::string>("g");
   const auto demandFileName = clp.getValue<std::string>("d");
   auto numIterations = clp.getValue<int>("n", 0);
