@@ -12,7 +12,7 @@ export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true
 export OMP_PLACES=cores
 
-for ((numCores = 1; numCores <= 16; numCores *= 2)); do
+for numCores in 1 2 4 8 12 16; do
   export OMP_NUM_THREADS=$numCores
   $binaryDir/Launchers/RunP2PAlgo -a CCH-custom -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -s $inputDir/SepDecomps/Visum_Stuttgart_nd30.sep.bin -o $outputDir/P2P/Customization_Stuttgart_${numCores}cores
   $binaryDir/Launchers/RunP2PAlgo -a CCH-custom -g $inputDir/Graphs/DIMACS_eur.gr.bin      -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin      -o $outputDir/P2P/Customization_Europe_${numCores}cores

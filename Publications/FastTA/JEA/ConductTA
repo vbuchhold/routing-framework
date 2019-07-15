@@ -167,7 +167,7 @@ $binaryDir/Launchers/AssignTraffic -p 10 -n 39 -a CCH -o sorted -g $inputDir/Gra
 $binaryDir/Launchers/AssignTraffic -p 70 -n 29 -a CCH -o sorted -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_week.csv -stat $outputDir/TA/CCH_k64_AVX_S-week
 $binaryDir/Launchers/AssignTraffic -p 1  -n 20 -a CCH -o sorted -g $inputDir/Graphs/Visum_London.gr.bin    -d $inputDir/ODPairs/TA/Visum_London_peak.csv    -stat $outputDir/TA/CCH_k64_AVX_L-peak
 
-for ((numCores = 2; numCores <= 16; numCores *= 2)); do
+for numCores in 2 4 8 12 16; do
   export OMP_NUM_THREADS=$numCores
   scons variant=Release def=TA_LOG_K=0 AssignTraffic
   $binaryDir/Launchers/AssignTraffic -p 1  -n 29 -a CH -o random -g $inputDir/Graphs/Visum_Stuttgart.gr.bin -d $inputDir/ODPairs/TA/Visum_Stuttgart_morn.csv -stat $outputDir/TA/CH_rand_S-morn_${numCores}cores
