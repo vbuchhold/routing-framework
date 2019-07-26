@@ -187,8 +187,8 @@ int main(int argc, char* argv[]) {
         // Draw the travel demand data, each OD pair as a straight line.
         std::cout << "Drawing travel demand..." << std::flush;
         const auto odPairs = importODPairsFrom(demandFileName);
-        const auto step = std::round(odPairs.size() / 131072.0);
-        pd.setColor({KIT_GREEN.red(), KIT_GREEN.green(), KIT_GREEN.blue(), 3});
+        const auto step = std::round(odPairs.size() / 16384.0);
+        pd.setColor({KIT_GREEN.red(), KIT_GREEN.green(), KIT_GREEN.blue(), 13});
         for (auto i = 0; i < odPairs.size(); i += step)
           pd.drawLine(origCoordinates[odPairs[i].origin], origCoordinates[odPairs[i].destination]);
         std::cout << " done.\n";
