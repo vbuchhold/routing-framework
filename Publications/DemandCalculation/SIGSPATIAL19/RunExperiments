@@ -1,6 +1,5 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-scons variant=Release
 
 binaryDir=Build/Release
 inputDir=$1/Inputs
@@ -15,6 +14,9 @@ mkdir --parents $outputDir/DemandData
 mkdir --parents $outputDir/FlowPatterns
 mkdir --parents $outputDir/ODDistances
 mkdir --parents $outputDir/AssignmentStats
+
+cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
+cmake --build $binaryDir
 
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true
@@ -281,7 +283,8 @@ for numTrips in 1000000 10000000; do
   done
 done
 
-scons variant=Release def=DC_MAX_NUM_SOURCES=18018 CalculateDemand
+cmake -D CMAKE_BUILD_TYPE=Release -D DC_MAX_NUM_SOURCES=18018 -S . -B $binaryDir
+cmake --build $binaryDir --target CalculateDemand
 for numTrips in 10000000 100000000; do
   fileName=Europe_${numTrips}_rand_10
   $binaryDir/RawData/GenerateODPairs -t $((numTrips * 6000)) -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
@@ -303,4 +306,5 @@ for numTrips in 10000000 100000000; do
     $binaryDir/Launchers/CalculateDemand -n $numTrips -l 0.999983 -p 0.0 -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_eur.gr.bin -pop $europeanGrid -o $outputDir/DemandData/$fileName > $outputDir/DemandData/$fileName.log
   done
 done
-scons variant=Release CalculateDemand
+cmake -D CMAKE_BUILD_TYPE=Release -D DC_MAX_NUM_SOURCES= -S . -B $binaryDir
+cmake --build $binaryDir --target CalculateDemand

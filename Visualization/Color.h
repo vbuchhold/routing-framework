@@ -30,7 +30,7 @@ class Color {
         alphaValue(hasAlpha ? rgba >> 24 : 255) {}
 
   // Constructs a color with the specified red, green, blue and alpha values in the range 0.0-1.0.
-  constexpr Color(const double red, const double green, const double blue, const double alpha = 1.0)
+  Color(const double red, const double green, const double blue, const double alpha = 1.0)
       : redValue(std::round(red * 255)),
         greenValue(std::round(green * 255)),
         blueValue(std::round(blue * 255)),

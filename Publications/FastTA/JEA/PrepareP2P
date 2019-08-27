@@ -1,6 +1,5 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-scons variant=Release
 
 binaryDir=Build/Release
 stuttgartData=$1
@@ -13,6 +12,9 @@ mkdir --parents $inputDir/Graphs
 mkdir --parents $inputDir/ODPairs/P2P
 mkdir --parents $inputDir/RawData/XATF_sorted
 mkdir --parents $inputDir/SepDecomps
+
+cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
+cmake --build $binaryDir
 
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true

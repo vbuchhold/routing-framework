@@ -1,12 +1,14 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-scons variant=Release
 
 binaryDir=Build/Release
 inputDir=$1/Inputs
 outputDir=$1/Experiments/FastTA/JEA
 
 mkdir --parents $outputDir/P2P
+
+cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
+cmake --build $binaryDir
 
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true
@@ -24,10 +26,12 @@ $binaryDir/Launchers/RunP2PAlgo -a CH -h $inputDir/CHs/DIMACS_eur_dist.ch.bin -d
 $binaryDir/Launchers/RunP2PAlgo -a CCH-Dij -no-stall -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_time.csv -o $outputDir/P2P/LocalQueries_time_CCHDij
 $binaryDir/Launchers/RunP2PAlgo -a CCH-Dij -no-stall -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist.csv -o $outputDir/P2P/LocalQueries_dist_CCHDij -l
 
-scons variant=Release def=NO_FAST_ELIMINATION_TREE_QUERY RunP2PAlgo
+cmake -D CMAKE_BUILD_TYPE=Release -D USE_FAST_ELIMINATION_TREE_QUERY=OFF -S . -B $binaryDir
+cmake --build $binaryDir --target RunP2PAlgo
 $binaryDir/Launchers/RunP2PAlgo -a CCH-tree -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_time.csv -o $outputDir/P2P/LocalQueries_time_CCHTree
 $binaryDir/Launchers/RunP2PAlgo -a CCH-tree -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist.csv -o $outputDir/P2P/LocalQueries_dist_CCHTree -l
-scons variant=Release RunP2PAlgo
+cmake -D CMAKE_BUILD_TYPE=Release -D USE_FAST_ELIMINATION_TREE_QUERY=ON -S . -B $binaryDir
+cmake --build $binaryDir --target RunP2PAlgo
 
 $binaryDir/Launchers/RunP2PAlgo -a CCH-tree -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_time.csv -o $outputDir/P2P/LocalQueries_time_CCHTreeFast
 $binaryDir/Launchers/RunP2PAlgo -a CCH-tree -g $inputDir/Graphs/DIMACS_eur.gr.bin -s $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -d $inputDir/ODPairs/P2P/DIMACS_eur_rank_dist.csv -o $outputDir/P2P/LocalQueries_dist_CCHTreeFast -l

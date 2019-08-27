@@ -1,10 +1,12 @@
 #!/bin/bash
 cd ${BASH_SOURCE%/*}/../../..
-scons variant=Release
 
 binaryDir=Build/Release
 baseDir=$1
 outputDir=$2
+
+cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
+cmake --build $binaryDir
 
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true
