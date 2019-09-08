@@ -171,7 +171,7 @@ class XatfImporter {
   static constexpr int MAX_NUM_FIELDS = std::max(NUM_VERTEX_FIELDS, NUM_EDGE_FIELDS);
 
   // The free-flow speed in km/h for each XATF road category.
-  static constexpr const int (&FREE_FLOW_SPEED)[] = {
+  static constexpr const int (&FREE_FLOW_SPEED)[16] = {
     -1,
     130, // Motorway, fast
     120, // Motorway, medium
@@ -191,7 +191,7 @@ class XatfImporter {
   };
 
   // The number of lanes for each XATF road category.
-  static constexpr const int (&NUM_LANES)[] = {
+  static constexpr const int (&NUM_LANES)[16] = {
     -1,
     2,  // Motorway, fast
     2,  // Motorway, medium
