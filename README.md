@@ -25,6 +25,7 @@ $ sudo apt-get install cmake
 $ sudo apt-get install python3
 $ sudo apt-get install libboost-all-dev
 $ sudo apt-get install libcairo2-dev
+$ sudo apt-get install libcgal-dev
 $ sudo apt-get install libproj-dev
 $ sudo apt-get install zlib1g-dev
 ```
