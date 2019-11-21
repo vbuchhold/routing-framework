@@ -7,12 +7,15 @@ This repository contains the C++14 source code used in the following publication
   the 17th International Symposium on Experimental Algorithms (SEA'18)*, volume 103 of *Leibniz
   International Proceedings in Informatics (LIPIcs)*, pages 27:1–27:15. Schloss Dagstuhl, 2018.
   [doi:10.4230/LIPIcs.SEA.2018.27](http://dx.doi.org/10.4230/LIPIcs.SEA.2018.27).
+* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Efficient Calculation of Microscopic
+  Travel Demand Data with Low Calibration Effort. In Farnoush Banaei-Kashani, Goce Trajcevski, Ralf
+  Hartmut Güting, Lars Kulik, and Shawn D. Newsam, editors, *Proceedings of the 27th ACM SIGSPATIAL
+  International Conference on Advances in Geographic Information Systems (SIGSPATIAL'19)*, pages
+  379-388. ACM Press, 2019.
+  [doi:10.1145/3347146.3359361](http://dx.doi.org/10.1145/3347146.3359361).
 * Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-Time Traffic Assignment Using
-  Engineered Customizable Contraction Hierarchies. Submitted to the ACM Journal of Experimental
-  Algorithmics.
-* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Efficient Calculation of Microscopic Travel
-  Demand Data with Low Calibration Effort. Submitted to the 27th ACM SIGSPATIAL International
-  Conference on Advances in Geographic Information Systems (SIGSPATIAL'19).
+  Engineered Customizable Contraction Hierarchies. Accepted for publication in the ACM Journal of
+  Experimental Algorithmics.
 
 ## Prerequisites
 
