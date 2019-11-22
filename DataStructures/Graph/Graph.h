@@ -212,6 +212,11 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return Attr::values[idx];
   }
 
+  // Returns true if v is the head vertex of e.
+  bool isVertexTailOf(const int e, const int v) const {
+    return firstEdge(v) <= e && e < lastEdge(v);
+  }
+
   // Returns true if the graph contains an edge from tail to head.
   bool containsEdge(const int tail, const int head) const {
     for (int e = firstEdge(tail); e != lastEdge(tail); ++e)
