@@ -13,9 +13,9 @@ This repository contains the C++14 source code used in the following publication
   International Conference on Advances in Geographic Information Systems (SIGSPATIAL'19)*, pages
   379-388. ACM Press, 2019.
   [doi:10.1145/3347146.3359361](http://dx.doi.org/10.1145/3347146.3359361).
-* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-Time Traffic Assignment Using
-  Engineered Customizable Contraction Hierarchies. Accepted for publication in the ACM Journal of
-  Experimental Algorithmics.
+* Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-time Traffic Assignment Using
+  Engineered Customizable Contraction Hierarchies. ACM Journal of Experimental Algorithmics,
+  24(2):2.4:1-2.4:28, 2019. [doi:10.1145/3362693](http://dx.doi.org/10.1145/3362693).
 
 ## Prerequisites
 
