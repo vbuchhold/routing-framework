@@ -28,6 +28,13 @@ if(OpenMP_FOUND)
   target_link_libraries(GenerateODPairs OpenMP::OpenMP_CXX)
 endif()
 
+add_executable(MeanDistancePerRank MeanDistancePerRank.cc)
+target_compile_definitions(MeanDistancePerRank PRIVATE CSV_IO_NO_THREAD)
+target_link_libraries(MeanDistancePerRank ${PROJ_LIBRARY})
+if(OpenMP_FOUND)
+  target_link_libraries(MeanDistancePerRank OpenMP::OpenMP_CXX)
+endif()
+
 add_executable(ParseMobiToppFile ParseMobiToppFile.cc)
 target_compile_definitions(ParseMobiToppFile PRIVATE CSV_IO_NO_THREAD)
 
