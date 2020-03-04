@@ -26,6 +26,7 @@
 #include "DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h"
 #include "DataStructures/Graph/Export/DefaultExporter.h"
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Graph/Import/DimacsImporter.h"
 #include "DataStructures/Graph/Import/OsmImporter.h"
 #include "DataStructures/Graph/Import/VisumImporter.h"
 #include "DataStructures/Graph/Import/XatfImporter.h"
@@ -44,6 +45,9 @@ inline void printUsage() {
       "  -c                compress the output file(s), if available\n"
       "  -p <file>         extract a region given as an OSM POLY file\n"
       "  -scc              extract the largest strongly connected component\n"
+      "  -dp <prec>        travel distances are given in 1/<prec> meters (DIMACS only)\n"
+      "  -tp <prec>        travel times are given in 1/<prec> seconds (DIMACS only)\n"
+      "  -cp <prec>        coordinates are given in 1/<prec> degrees (DIMACS only)\n"
       "  -ts <sys>         the system whose network is to be imported (Visum only)\n"
       "  -cs <epsg-code>   coordinate reference system used in files (Visum only)\n"
       "  -cp <factor>      multiply coordinates in files by <factor> (Visum only)\n"
@@ -79,6 +83,23 @@ inline GraphT importGraph(const CommandLineParser& clp) {
     if (!in.good())
       throw std::invalid_argument("file not found -- '" + infile + ".gr.bin'");
     return GraphT(in);
+  } else if (format == "dimacs") {
+    const auto distPrecision = clp.getValue<int>("dp", 1);
+    const auto timePrecision = clp.getValue<int>("tp", 10);
+    const auto coordinatePrecision = clp.getValue<int>("cp", 1000000);
+    if (distPrecision <= 0) {
+      const std::string what = "travel distance precision not strictly positive";
+      throw std::invalid_argument(what + " -- '" + std::to_string(distPrecision) + "'");
+    }
+    if (timePrecision <= 0) {
+      const std::string what = "travel time precision not strictly positive";
+      throw std::invalid_argument(what + " -- '" + std::to_string(timePrecision) + "'");
+    }
+    if (coordinatePrecision <= 0) {
+      const std::string what = "coordinate precision not strictly positive";
+      throw std::invalid_argument(what + " -- '" + std::to_string(coordinatePrecision) + "'");
+    }
+    return GraphT(infile, DimacsImporter(distPrecision, timePrecision, coordinatePrecision));
   } else if (format == "osm") {
     return GraphT(infile, OsmImporter());
   } else if (format == "visum") {
