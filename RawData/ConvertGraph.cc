@@ -7,7 +7,6 @@
 #include <vector>
 
 #include <boost/dynamic_bitset.hpp>
-#include <Graph/Import/OsmImporter.h>
 
 #include "Algorithms/GraphTraversal/StronglyConnectedComponents.h"
 #include "DataStructures/Geometry/Area.h"
