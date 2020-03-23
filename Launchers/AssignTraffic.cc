@@ -286,10 +286,12 @@ void chooseShortestPathAlgo(const CommandLineParser& clp) {
 
   const auto algo = clp.getValue<std::string>("a", "CCH");
   if (algo == "Dijkstra") {
+      std::cout << "Dijkstra picked!";
     using FWAssignment = FrankWolfeAssignment<
         ObjFunctionT, TraversalCostFunctionT, trafficassignment::DijkstraAdapter, Graph>;
     assignTraffic<FWAssignment>(clp);
   } else if (algo == "Bi-Dijkstra") {
+      std::cout << "BI Dijkstra picked!";
     using FWAssignment = FrankWolfeAssignment<
         ObjFunctionT, TraversalCostFunctionT, trafficassignment::BiDijkstraAdapter, Graph>;
     assignTraffic<FWAssignment>(clp);
