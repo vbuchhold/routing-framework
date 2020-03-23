@@ -133,6 +133,7 @@ class FrankWolfeAssignment {
         const auto vol = trafficFlows[e];
         const auto sat = vol / graph.capacity(e);
         const auto time = graph.travelTime(e);
+
         flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << '\n';
       }
 
