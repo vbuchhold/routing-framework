@@ -1,55 +1,333 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
-project(RoutingFramework CXX)
+cmake_minimum_required(VERSION 3.15)
+project(routing_framework)
 
-# Directories containing .cc source files.
-set(SOURCE_DIRECTORIES Launchers RawData)
-
-# Determine the language standard.
 set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Flags when building for the Devel configuration.
-if(CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
-  set(CMAKE_CXX_FLAGS_DEVEL -O3)
-endif()
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Devel)
-endif()
+include_directories(Algorithms)
+include_directories(Algorithms/CCH)
+include_directories(Algorithms/CH)
+include_directories(Algorithms/DemandCalculation)
+include_directories(Algorithms/Dijkstra)
+include_directories(Algorithms/GraphTraversal)
+include_directories(Algorithms/Partitioning)
+include_directories(Algorithms/TrafficAssignment)
+include_directories(Algorithms/TrafficAssignment/Adapters)
+include_directories(Algorithms/TrafficAssignment/ObjectiveFunctions)
+include_directories(Algorithms/TrafficAssignment/TraversalCostFunctions)
+include_directories(DataStructures)
+include_directories(DataStructures/Containers)
+include_directories(DataStructures/Geometry)
+include_directories(DataStructures/Geometry/SummedAreaTables)
+include_directories(DataStructures/Graph)
+include_directories(DataStructures/Graph/Attributes)
+include_directories(DataStructures/Graph/Export)
+include_directories(DataStructures/Graph/Import)
+include_directories(DataStructures/Labels)
+include_directories(DataStructures/Labels/Containers)
+include_directories(DataStructures/Partitioning)
+include_directories(DataStructures/Queues)
+include_directories(DataStructures/Utilities)
+include_directories(Experiments)
+include_directories(External/fast-cpp-csv-parser)
+include_directories(External/randomc)
+include_directories(External/RoutingKit/include)
+include_directories(External/RoutingKit/include/routingkit)
+include_directories(External/RoutingKit/src)
+include_directories(External/stocc)
+include_directories(External/vectorclass)
+include_directories(External/vectorclass/special)
+include_directories(RawData/Visum)
+include_directories(Stats)
+include_directories(Stats/TrafficAssignment)
+include_directories(Tools)
+include_directories(Tools/CommandLine)
+include_directories(Tools/Simd)
+include_directories(Visualization)
+include_directories(Visualization/Graphics)
 
-# Enable the compiler to use extended instructions in generated code.
-if(CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-endif()
-option(DISABLE_AVX "Disable use of instructions in the AVX extended instruction set.")
-if(DISABLE_AVX)
-  if(CMAKE_CXX_COMPILER_ID MATCHES GNU|Clang)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-avx")
-  endif()
-endif()
-
-# Request warnings.
-if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wfatal-errors -Wpedantic -pedantic-errors\
-      -Wall -Wextra -ftemplate-backtrace-limit=1 -Wno-unknown-pragmas -Wno-sign-compare")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wextra -pedantic-errors -ferror-limit=1\
-      -ftemplate-backtrace-limit=1 -Wno-sign-compare")
-endif()
-
-include_directories(${CMAKE_SOURCE_DIR})
-
-find_package(OpenMP)
-find_package(CGAL REQUIRED)
-find_library(cairo_LIBRARY cairo)
-find_library(PROJ_LIBRARY proj)
-find_library(RoutingKit_LIBRARY routingkit)
-
-# Clang does not support the option -frounding-math, thus remove it from the CGAL compile options.
-if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
-  set_target_properties(CGAL::CGAL PROPERTIES INTERFACE_COMPILE_OPTIONS "")
-endif()
-
-foreach(SRC_DIR ${SOURCE_DIRECTORIES})
-  add_subdirectory(${SRC_DIR})
-endforeach()
+add_executable(routing_framework
+        Algorithms/CCH/CCH.h
+        Algorithms/CCH/CCHMetric.h
+        Algorithms/CCH/EliminationTreeQuery.h
+        Algorithms/CCH/EliminationTreeUpwardSearch.h
+        Algorithms/CH/CH.h
+        Algorithms/CH/CHQuery.h
+        Algorithms/DemandCalculation/ChooserDemandCalculator.h
+        Algorithms/DemandCalculation/DijkstraOpportunityChooser.h
+        Algorithms/DemandCalculation/FormulaDemandCalculator.h
+        Algorithms/DemandCalculation/KDTreeOpportunityChooser.h
+        Algorithms/DemandCalculation/PopulationAssignment.h
+        Algorithms/Dijkstra/BiDijkstra.h
+        Algorithms/Dijkstra/Dijkstra.h
+        Algorithms/GraphTraversal/DepthFirstSearch.h
+        Algorithms/GraphTraversal/DfsNumbering.h
+        Algorithms/GraphTraversal/StronglyConnectedComponents.h
+        Algorithms/Partitioning/RecursiveBisection.h
+        Algorithms/TrafficAssignment/Adapters/BiDijkstraAdapter.h
+        Algorithms/TrafficAssignment/Adapters/CCHAdapter.h
+        Algorithms/TrafficAssignment/Adapters/CHAdapter.h
+        Algorithms/TrafficAssignment/Adapters/DijkstraAdapter.h
+        Algorithms/TrafficAssignment/ObjectiveFunctions/SystemOptimum.h
+        Algorithms/TrafficAssignment/ObjectiveFunctions/UserEquilibrium.h
+        Algorithms/TrafficAssignment/TraversalCostFunctions/BprFunction.h
+        Algorithms/TrafficAssignment/TraversalCostFunctions/DavidsonFunction.h
+        Algorithms/TrafficAssignment/TraversalCostFunctions/InverseFunction.h
+        Algorithms/TrafficAssignment/TraversalCostFunctions/ModifiedDavidsonFunction.h
+        Algorithms/TrafficAssignment/AllOrNothingAssignment.h
+        Algorithms/TrafficAssignment/FrankWolfeAssignment.h
+        Algorithms/TrafficAssignment/UnivariateMinimization.h
+        DataStructures/Containers/BitVector.h
+        DataStructures/Containers/ConcurrentLocalIdMap.h
+        DataStructures/Containers/LocalIdMap.h
+        DataStructures/Containers/Subset.h
+        DataStructures/Geometry/SummedAreaTables/OctagonalSummedAreaTable.h
+        DataStructures/Geometry/Area.h
+        DataStructures/Geometry/CoordinateTransformation.h
+        DataStructures/Geometry/Helpers.h
+        DataStructures/Geometry/KDTree.h
+        DataStructures/Geometry/LatLng.h
+        DataStructures/Geometry/Point.h
+        DataStructures/Geometry/PointSet.h
+        DataStructures/Geometry/Polygon.h
+        DataStructures/Geometry/Rectangle.h
+        DataStructures/Graph/Attributes/AbstractAttribute.h
+        DataStructures/Graph/Attributes/AbstractBitAttribute.h
+        DataStructures/Graph/Attributes/CapacityAttribute.h
+        DataStructures/Graph/Attributes/CoordinateAttribute.h
+        DataStructures/Graph/Attributes/EdgeIdAttribute.h
+        DataStructures/Graph/Attributes/EdgeTailAttribute.h
+        DataStructures/Graph/Attributes/FreeFlowSpeedAttribute.h
+        DataStructures/Graph/Attributes/LatLngAttribute.h
+        DataStructures/Graph/Attributes/LengthAttribute.h
+        DataStructures/Graph/Attributes/NumLanesAttribute.h
+        DataStructures/Graph/Attributes/NumOpportunitiesAttribute.h
+        DataStructures/Graph/Attributes/OsmRoadCategoryAttribute.h
+        DataStructures/Graph/Attributes/PopulationAttribute.h
+        DataStructures/Graph/Attributes/RoadGeometryAttribute.h
+        DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h
+        DataStructures/Graph/Attributes/SpeedLimitAttribute.h
+        DataStructures/Graph/Attributes/TravelCostAttribute.h
+        DataStructures/Graph/Attributes/TravelTimeAttribute.h
+        DataStructures/Graph/Attributes/TraversalCostAttribute.h
+        DataStructures/Graph/Attributes/UnpackingInfoAttribute.h
+        DataStructures/Graph/Attributes/VertexIdAttribute.h
+        DataStructures/Graph/Attributes/XatfRoadCategoryAttribute.h
+        DataStructures/Graph/Export/DefaultExporter.h
+        DataStructures/Graph/Import/OsmImporter.h
+        DataStructures/Graph/Import/VisumImporter.h
+        DataStructures/Graph/Import/XatfImporter.h
+        DataStructures/Graph/Graph.h
+        DataStructures/Labels/Containers/ParentLabelContainer.h
+        DataStructures/Labels/Containers/SimpleDistanceLabelContainer.h
+        DataStructures/Labels/Containers/StampedDistanceLabelContainer.h
+        DataStructures/Labels/BasicLabelSet.h
+        DataStructures/Labels/ParentInfo.h
+        DataStructures/Labels/SimdLabelSet.h
+        DataStructures/Partitioning/SeparatorDecomposition.h
+        DataStructures/Partitioning/SeparatorTree.h
+        DataStructures/Queues/AddressableKHeap.h
+        DataStructures/Queues/TournamentTree.h
+        DataStructures/Utilities/Matrix.h
+        DataStructures/Utilities/OriginDestination.h
+        DataStructures/Utilities/Permutation.h
+        DataStructures/Utilities/UnionFind.h
+        Experiments/ODPairGenerator.h
+        External/fast-cpp-csv-parser/csv.h
+        External/randomc/ex-ran.cpp
+        External/randomc/mersenne.cpp
+        External/randomc/mother.cpp
+        External/randomc/rancombi.cpp
+        External/randomc/randomc.h
+        External/randomc/sfmt.cpp
+        External/randomc/sfmt.h
+        External/randomc/testirandomx.cpp
+        External/randomc/userintf.cpp
+        External/RoutingKit/include/routingkit/all.h
+        External/RoutingKit/include/routingkit/bit_vector.h
+        External/RoutingKit/include/routingkit/constants.h
+        External/RoutingKit/include/routingkit/contraction_hierarchy.h
+        External/RoutingKit/include/routingkit/customizable_contraction_hierarchy.h
+        External/RoutingKit/include/routingkit/dijkstra.h
+        External/RoutingKit/include/routingkit/filter.h
+        External/RoutingKit/include/routingkit/geo_dist.h
+        External/RoutingKit/include/routingkit/geo_position_to_node.h
+        External/RoutingKit/include/routingkit/graph_util.h
+        External/RoutingKit/include/routingkit/id_mapper.h
+        External/RoutingKit/include/routingkit/id_queue.h
+        External/RoutingKit/include/routingkit/id_set_queue.h
+        External/RoutingKit/include/routingkit/inverse_vector.h
+        External/RoutingKit/include/routingkit/min_max.h
+        External/RoutingKit/include/routingkit/nested_dissection.h
+        External/RoutingKit/include/routingkit/osm_decoder.h
+        External/RoutingKit/include/routingkit/osm_graph_builder.h
+        External/RoutingKit/include/routingkit/osm_profile.h
+        External/RoutingKit/include/routingkit/osm_simple.h
+        External/RoutingKit/include/routingkit/permutation.h
+        External/RoutingKit/include/routingkit/sort.h
+        External/RoutingKit/include/routingkit/tag_map.h
+        External/RoutingKit/include/routingkit/timer.h
+        External/RoutingKit/include/routingkit/timestamp_flag.h
+        External/RoutingKit/include/routingkit/vector_io.h
+        External/RoutingKit/src/bit_select.cpp
+        External/RoutingKit/src/bit_select.h
+        External/RoutingKit/src/bit_vector.cpp
+        External/RoutingKit/src/buffered_asynchronous_reader.cpp
+        External/RoutingKit/src/buffered_asynchronous_reader.h
+        External/RoutingKit/src/compare_vector.cpp
+        External/RoutingKit/src/compute_contraction_hierarchy.cpp
+        External/RoutingKit/src/compute_geographic_distance_weights.cpp
+        External/RoutingKit/src/compute_nested_dissection_order.cpp
+        External/RoutingKit/src/contraction_hierarchy.cpp
+        External/RoutingKit/src/convert_road_dimacs_coordinates.cpp
+        External/RoutingKit/src/convert_road_dimacs_graph.cpp
+        External/RoutingKit/src/customizable_contraction_hierarchy.cpp
+        External/RoutingKit/src/decode_vector.cpp
+        External/RoutingKit/src/emulate_gcc_builtin.h
+        External/RoutingKit/src/encode_vector.cpp
+        External/RoutingKit/src/examine_ch.cpp
+        External/RoutingKit/src/expect.cpp
+        External/RoutingKit/src/expect.h
+        External/RoutingKit/src/export_road_dimacs_graph.cpp
+        External/RoutingKit/src/file_data_source.cpp
+        External/RoutingKit/src/file_data_source.h
+        External/RoutingKit/src/generate_constant_vector.cpp
+        External/RoutingKit/src/generate_dijkstra_rank_test_queries.cpp
+        External/RoutingKit/src/generate_random_node_list.cpp
+        External/RoutingKit/src/generate_random_source_times.cpp
+        External/RoutingKit/src/generate_test_queries.cpp
+        External/RoutingKit/src/geo_position_to_node.cpp
+        External/RoutingKit/src/graph_to_dot.cpp
+        External/RoutingKit/src/graph_to_svg.cpp
+        External/RoutingKit/src/graph_util.cpp
+        External/RoutingKit/src/id_mapper.cpp
+        External/RoutingKit/src/nested_dissection.cpp
+        External/RoutingKit/src/osm_decoder.cpp
+        External/RoutingKit/src/osm_extract.cpp
+        External/RoutingKit/src/osm_graph_builder.cpp
+        External/RoutingKit/src/osm_profile.cpp
+        External/RoutingKit/src/osm_simple.cpp
+        External/RoutingKit/src/protobuf.cpp
+        External/RoutingKit/src/protobuf.h
+        External/RoutingKit/src/randomly_permute_nodes.cpp
+        External/RoutingKit/src/run_contraction_hierarchy_query.cpp
+        External/RoutingKit/src/run_dijkstra.cpp
+        External/RoutingKit/src/show_path.cpp
+        External/RoutingKit/src/test_basic_features.cpp
+        External/RoutingKit/src/test_bit_vector.cpp
+        External/RoutingKit/src/test_buffered_asynchronous_reader.cpp
+        External/RoutingKit/src/test_contraction_hierarchy_extra_weight.cpp
+        External/RoutingKit/src/test_contraction_hierarchy_path_query.cpp
+        External/RoutingKit/src/test_contraction_hierarchy_pinned_query.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy_customization.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy_path_query.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy_perfect_customization.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy_pinned_query.cpp
+        External/RoutingKit/src/test_customizable_contraction_hierarchy_reset.cpp
+        External/RoutingKit/src/test_dijkstra.cpp
+        External/RoutingKit/src/test_geo_dist.cpp
+        External/RoutingKit/src/test_id_mapper.cpp
+        External/RoutingKit/src/test_id_set_queue.cpp
+        External/RoutingKit/src/test_inverse_vector.cpp
+        External/RoutingKit/src/test_nearest_neighbor.cpp
+        External/RoutingKit/src/test_nested_dissection.cpp
+        External/RoutingKit/src/test_osm_simple.cpp
+        External/RoutingKit/src/test_permutation.cpp
+        External/RoutingKit/src/test_protobuf.cpp
+        External/RoutingKit/src/test_sort.cpp
+        External/RoutingKit/src/test_tag_map.cpp
+        External/RoutingKit/src/timer.cpp
+        External/RoutingKit/src/vector_io.cpp
+        External/RoutingKit/src/verify.cpp
+        External/RoutingKit/src/verify.h
+        External/stocc/erfres.cpp
+        External/stocc/erfresmk.cpp
+        External/stocc/ex-cards.cpp
+        External/stocc/ex-evol1.cpp
+        External/stocc/ex-evol2.cpp
+        External/stocc/ex-lotto.cpp
+        External/stocc/ex-stoc.cpp
+        External/stocc/fnchyppr.cpp
+        External/stocc/randomc.h
+        External/stocc/stoc1.cpp
+        External/stocc/stoc2.cpp
+        External/stocc/stoc3.cpp
+        External/stocc/stocc.h
+        External/stocc/testbino.cpp
+        External/stocc/testfnch.cpp
+        External/stocc/testhype.cpp
+        External/stocc/testmfnc.cpp
+        External/stocc/testmwnc.cpp
+        External/stocc/testpois.cpp
+        External/stocc/testwnch.cpp
+        External/stocc/wnchyppr.cpp
+        External/vectorclass/special/complexvec.h
+        External/vectorclass/special/decimal.h
+        External/vectorclass/special/quaternion.h
+        External/vectorclass/special/ranvec1.cpp
+        External/vectorclass/special/ranvec1.h
+        External/vectorclass/special/vector3d.h
+        External/vectorclass/dispatch_example.cpp
+        External/vectorclass/instrset.h
+        External/vectorclass/instrset_detect.cpp
+        External/vectorclass/vectorclass.h
+        External/vectorclass/vectorf128.h
+        External/vectorclass/vectorf256.h
+        External/vectorclass/vectorf256e.h
+        External/vectorclass/vectorf512.h
+        External/vectorclass/vectorf512e.h
+        External/vectorclass/vectori128.h
+        External/vectorclass/vectori256.h
+        External/vectorclass/vectori256e.h
+        External/vectorclass/vectori512.h
+        External/vectorclass/vectori512e.h
+        External/vectorclass/vectormath_common.h
+        External/vectorclass/vectormath_exp.h
+        External/vectorclass/vectormath_hyp.h
+        External/vectorclass/vectormath_lib.h
+        External/vectorclass/vectormath_trig.h
+        Launchers/AssignTraffic.cc
+        Launchers/CalculateDemand.cc
+        Launchers/RunP2PAlgo.cc
+        RawData/Visum/ZonePolygons.h
+        RawData/CalibrateOsm.cc
+        RawData/ComputeDijkstraRanks.cc
+        RawData/ComputeDistances.cc
+        RawData/ComputeUnionBoundary.cc
+        RawData/ConvertGraph.cc
+        RawData/DrawNetwork.cc
+        RawData/GenerateMatchingODPairs.cc
+        RawData/GenerateODPairs.cc
+        RawData/ParseMobiToppFile.cc
+        RawData/ParseMtxFile.cc
+        RawData/RadiationModel.cc
+        RawData/VisumExtractPoi.cc
+        Stats/TrafficAssignment/AllOrNothingAssignmentStats.h
+        Stats/TrafficAssignment/FrankWolfeAssignmentStats.h
+        Tools/CommandLine/CommandLineParser.h
+        Tools/CommandLine/ProgressBar.h
+        Tools/Simd/AlignedVector.h
+        Tools/Simd/HorizontalOps.h
+        Tools/BinaryIO.h
+        Tools/Bitwise.h
+        Tools/CompilerSpecific.h
+        Tools/ConcurrentHelpers.h
+        Tools/Constants.h
+        Tools/ContainerHelpers.h
+        Tools/DateHelpers.h
+        Tools/EnumParser.h
+        Tools/LexicalCast.h
+        Tools/MachineSpecs.h
+        Tools/Math.h
+        Tools/OpenMP.h
+        Tools/StringHelpers.h
+        Tools/TemplateProgramming.h
+        Tools/Timer.h
+        Tools/Workarounds.h
+        Visualization/Graphics/PdfGraphic.h
+        Visualization/Graphics/PngGraphic.h
+        Visualization/Graphics/SvgGraphic.h
+        Visualization/Color.h
+        Visualization/GraphDrawer.h
+        Visualization/Graphic.h
+        Visualization/PrimitiveDrawer.h)

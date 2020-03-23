@@ -3,7 +3,7 @@
 #include <cassert>
 #include <limits>
 
-#include "Tools/Bitwise.h"
+#include "Bitwise.h"
 
 // The ratio of the circumference of a circle to its diameter.
 constexpr double PI = 3.14159265358979323846l;
