@@ -58,7 +58,8 @@ class FrankWolfeAssignment {
       FORALL_EDGES(graph, e) {
         const auto vol = trafficFlows[e];
         const auto sat = vol / graph.capacity(e);
-        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << '\n';
+        const auto time = graph.travelTime(e);
+        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << '\n';
       }
 
     if (distFile.is_open())
