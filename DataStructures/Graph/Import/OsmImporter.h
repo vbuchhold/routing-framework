@@ -313,6 +313,13 @@ inline FreeFlowSpeedAttribute::Type OsmImporter::getValue<FreeFlowSpeedAttribute
   return std::round(roadDefaults.at(wayCategory[way]).freeFlowFactor * waySpeed[way]);
 }
 
+// Returns the value of the free-flow speed attribute for the current edge.
+template <>
+inline WayIdAttribute::Type OsmImporter::getValue<WayIdAttribute>() const {
+  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
+  return osmGraph.way[currentEdge];
+}
+
 // Returns the value of the length attribute for the current edge.
 template <>
 inline LengthAttribute::Type OsmImporter::getValue<LengthAttribute>() const {

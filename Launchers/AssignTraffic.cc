@@ -32,6 +32,7 @@
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
+#include "DataStructures/Graph/Attributes/WayIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TraversalCostAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/OriginDestination.h"
@@ -239,7 +240,7 @@ inline void assignTraffic(const CommandLineParser& clp) {
       throw std::invalid_argument("file cannot be opened -- '" + flowFileName + "'");
     if (!statFileName.empty())
       flowFile << "# Stat file: " << statFileName << "\n";
-    flowFile << "iteration,vol,sat,travel_time\n";
+    flowFile << "iteration,vol,sat,travel_time,way_id\n";
   }
 
   std::ofstream distFile;
@@ -280,7 +281,7 @@ template <template <typename> class ObjFunctionT, template <typename> class Trav
 void chooseShortestPathAlgo(const CommandLineParser& clp) {
   using VertexAttributes = VertexAttrs<LatLngAttribute, SequentialVertexIdAttribute>;
   using EdgeAttributes = EdgeAttrs<
-      CapacityAttribute, EdgeIdAttribute, LengthAttribute, TravelTimeAttribute,
+      CapacityAttribute, EdgeIdAttribute, LengthAttribute, TravelTimeAttribute, WayIdAttribute,
       TraversalCostAttribute>;
   using Graph = StaticGraph<VertexAttributes, EdgeAttributes>;
 

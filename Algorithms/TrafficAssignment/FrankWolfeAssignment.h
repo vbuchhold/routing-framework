@@ -59,7 +59,8 @@ class FrankWolfeAssignment {
         const auto vol = trafficFlows[e];
         const auto sat = vol / graph.capacity(e);
         const auto time = graph.travelTime(e);
-        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << '\n';
+        const auto wayId = graph.wayId(e);
+        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << ',' << wayId << '\n';
       }
 
     if (distFile.is_open())
@@ -103,7 +104,9 @@ class FrankWolfeAssignment {
           const auto vol = trafficFlows[e];
           const auto sat = vol / graph.capacity(e);
           const auto time = graph.travelTime(e);
-          flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << '\n';
+          const auto wayId = graph.wayId(e);
+
+          flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << ',' << wayId << '\n';
         }
 
       if (distFile.is_open() && outputIntermediates)
@@ -133,8 +136,9 @@ class FrankWolfeAssignment {
         const auto vol = trafficFlows[e];
         const auto sat = vol / graph.capacity(e);
         const auto time = graph.travelTime(e);
+        const auto wayId = graph.wayId(e);
 
-        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << '\n';
+        flowFile << aonAssignment.stats.numIterations << ',' << vol << ',' << sat << ',' << time << ',' << wayId << '\n';
       }
 
     if (distFile.is_open() && !outputIntermediates)
