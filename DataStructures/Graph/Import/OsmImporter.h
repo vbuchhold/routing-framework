@@ -11,6 +11,7 @@
 
 #include <routingkit/osm_graph_builder.h>
 #include <routingkit/tag_map.h>
+#include <routingkit/id_mapper.h>
 
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/FreeFlowSpeedAttribute.h"
