@@ -173,7 +173,7 @@ class OsmImporter {
     // Eventually, actually perform the work. Extract a graph from OSM data.
     mapping =
         RoutingKit::load_osm_id_mapping_from_pbf(filename + ".osm.pbf", nullptr, isWayOpenForCars);
-    wayIdMapper = RoutingKit::IDMapper(mapping.is_routing_way)
+    wayIdMapper = RoutingKit::IDMapper(mapping.is_routing_way);
     const int numWaysOpenForCars = mapping.is_routing_way.population_count();
     wayCategory.resize(numWaysOpenForCars);
     waySpeed.resize(numWaysOpenForCars);
@@ -317,7 +317,7 @@ inline FreeFlowSpeedAttribute::Type OsmImporter::getValue<FreeFlowSpeedAttribute
   return std::round(roadDefaults.at(wayCategory[way]).freeFlowFactor * waySpeed[way]);
 }
 
-// Returns the value of the free-flow speed attribute for the current edge.
+// Returns the value of the way id attribute for the current edge.
 template <>
 inline WayIdAttribute::Type OsmImporter::getValue<WayIdAttribute>() const {
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
