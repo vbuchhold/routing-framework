@@ -173,7 +173,7 @@ class OsmImporter {
     // Eventually, actually perform the work. Extract a graph from OSM data.
     mapping =
         RoutingKit::load_osm_id_mapping_from_pbf(filename + ".osm.pbf", nullptr, isWayOpenForCars);
-    way_mapper = RoutingKit::IDMapper(mapping.is_routing_way)
+    wayIdMapper = RoutingKit::IDMapper(mapping.is_routing_way)
     const int numWaysOpenForCars = mapping.is_routing_way.population_count();
     wayCategory.resize(numWaysOpenForCars);
     waySpeed.resize(numWaysOpenForCars);
