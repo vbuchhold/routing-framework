@@ -712,8 +712,8 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     int numVertices;
     bio::read(in, numVertices);
     bio::read(in, edgeCount);
-    std::cout << "VERTICES  __________    : " << numVertices << endl;
-    std::cout << "EDGES  __________    : " << edgeCount << endl;
+    std::cout << "VERTICES  __________    : " << numVertices << std::endl;
+    std::cout << "EDGES  __________    : " << edgeCount << std::endl;
 
     assert(numVertices >= 0);
     assert(edgeCount >= 0);
