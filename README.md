@@ -1,6 +1,6 @@
 # Routing Framework
 
-This repository contains the C++14 source code used in the following publications/submissions:
+This repository contains the C++17 source code used in the following publications/submissions:
 
 * Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-Time Traffic Assignment Using Fast
   Queries in Customizable Contraction Hierarchies. In Gianlorenzo D'Angelo, editor, *Proceedings of

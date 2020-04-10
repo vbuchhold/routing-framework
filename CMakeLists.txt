@@ -5,7 +5,7 @@ project(RoutingFramework CXX)
 set(SOURCE_DIRECTORIES Launchers RawData)
 
 # Determine the language standard.
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
