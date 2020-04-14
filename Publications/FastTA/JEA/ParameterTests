@@ -10,6 +10,7 @@ mkdir --parents $outputDir/TA/ParameterTests
 cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
 cmake --build $binaryDir
 
+export LC_ALL=C
 export OMP_NUM_THREADS=1
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true

@@ -18,6 +18,7 @@ mkdir --parents $outputDir/AssignmentStats
 cmake -D CMAKE_BUILD_TYPE=Release -S . -B $binaryDir
 cmake --build $binaryDir
 
+export LC_ALL=C
 export OMP_DYNAMIC=false
 export OMP_PROC_BIND=true
 export OMP_PLACES=cores
