@@ -240,7 +240,7 @@ inline void assignTraffic(const CommandLineParser& clp) {
       throw std::invalid_argument("file cannot be opened -- '" + flowFileName + "'");
     if (!statFileName.empty())
       flowFile << "# Stat file: " << statFileName << "\n";
-    flowFile << "iteration,vol,sat,travel_time,way_id\n";
+    flowFile << "iteration,vol,sat,travel_time,way_id,bpr_result\n";
   }
 
   std::ofstream distFile;
