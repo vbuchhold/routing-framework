@@ -115,8 +115,7 @@ inline void computeAndOutputDistPerRank(const GraphT& graph, const CommandLinePa
     std::vector<int64_t> localDistPerDijRank(numOpportunities);
     std::vector<int64_t> localDistPerGeoRank(numOpportunities);
 
-    using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-    StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet> dij(graph);
+    Dijkstra<GraphT, TravelTimeAttribute, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> dij(graph);
 
     #pragma omp for schedule(static, 1) nowait
     FORALL_VERTICES(graph, s) {

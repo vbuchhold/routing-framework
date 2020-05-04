@@ -58,11 +58,10 @@ class DijkstraOpportunityChooser {
   }
 
  private:
-  using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-  using Dijkstra = StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet>;
+  using Dij = Dijkstra<GraphT, TravelTimeAttribute, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
 
   const GraphT& graph;   // The network we work on.
   int numOpportunities;  // The total number of opportunities in the network.
   std::minstd_rand rand; // A Lehmer random number generator.
-  Dijkstra dijkstra;     // Dijkstra's shortest-path algorithm.
+  Dij dijkstra;          // Dijkstra's shortest-path algorithm.
 };

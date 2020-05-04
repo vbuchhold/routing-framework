@@ -1,28 +1,65 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "Algorithms/CH/CH.h"
-#include "Algorithms/CCH/EliminationTreeUpwardSearch.h"
+#include "Algorithms/CCH/UpwardEliminationTreeSearch.h"
+#include "Algorithms/Dijkstra/Dijkstra.h"
 #include "Tools/Constants.h"
 
-// An implementation of an elimination tree query, computing shortest paths in CCHs without using
-// priority queues. Depending on the label set, the algorithm keeps parent vertices and/or edges,
-// and computes multiple shortest paths simultaneously, possibly using SSE or AVX instructions.
+// Implementation of an elimination tree query, which computes shortest paths in CCH without using
+// priority queues. Depending on the used label set, it keeps parent vertices and/or edges, and
+// computes multiple shortest paths simultaneously, optionally using SSE or AVX instructions.
 template <typename LabelSetT>
 class EliminationTreeQuery {
- public:
+ private:
+  using DistanceLabel = typename LabelSetT::DistanceLabel;
+  using ParentLabel = typename LabelSetT::ParentLabel;
+
+  // The pruning criterion for an elimination tree query that computes k shortest paths
+  // simultaneously. We can prune the search at v if d_i(v) >= mu_i for all i = 1, ..., k.
+  struct PruningCriterion {
+    // Constructs a pruning criterion for an elimination tree query.
+    PruningCriterion(const DistanceLabel& tentativeDistances) noexcept
+        : tentativeDistances(&tentativeDistances) {}
+
+    // Returns true if the search can be pruned at v.
+    template <typename DistanceLabelContT>
+    bool operator()(const int, const DistanceLabel& distToV, const DistanceLabelContT&) const {
+      return !(distToV < *tentativeDistances);
+    }
+
+    const DistanceLabel* tentativeDistances; // One tentative distance per simultaneous search.
+  };
+
   static constexpr int K = LabelSetT::K; // The number of simultaneous shortest-path computations.
 
+ public:
   // Constructs an elimination tree query instance.
-  EliminationTreeQuery(const CH& ch, const std::vector<int32_t>& eliminationTree)
-      : ch(ch),
-        forwardSearch(ch.upwardGraph(), eliminationTree, tentativeDistances),
-        reverseSearch(ch.downwardGraph(), eliminationTree, tentativeDistances) {}
+  EliminationTreeQuery(const CH& ch, const std::vector<int32_t>& eliminTree)
+#ifdef NO_FAST_ELIMINATION_TREE_QUERY
+      : forwardSearch(ch.upwardGraph(), eliminTree),
+        reverseSearch(ch.downwardGraph(), eliminTree) {
+#else
+      : forwardSearch(ch.upwardGraph(), eliminTree, {tentativeDistances}),
+        reverseSearch(ch.downwardGraph(), eliminTree, {tentativeDistances}) {
+#endif
+    assert(ch.upwardGraph().numVertices() == eliminTree.size());
+  }
+
+  // Move constructor.
+  EliminationTreeQuery(EliminationTreeQuery&& other) noexcept
+      : forwardSearch(std::move(other.forwardSearch)),
+        reverseSearch(std::move(other.reverseSearch)) {
+#ifndef NO_FAST_ELIMINATION_TREE_QUERY
+    forwardSearch.pruneSearch = {tentativeDistances};
+    reverseSearch.pruneSearch = {tentativeDistances};
+#endif
+  }
 
   // Runs an elimination tree query from s to t.
   void run(const int s, const int t) {
@@ -35,15 +72,16 @@ class EliminationTreeQuery {
 
   // Runs an elimination tree query that computes multiple shortest paths simultaneously.
   void run(const std::array<int, K>& sources, const std::array<int, K>& targets) {
+    reverseSearch.distanceLabels[reverseSearch.searchGraph.numVertices() - 1] = INFTY;
     forwardSearch.init(sources);
     reverseSearch.init(targets);
     tentativeDistances = INFTY;
-    while (forwardSearch.getNextVertex() != INVALID_VERTEX)
-      if (forwardSearch.getNextVertex() <= reverseSearch.getNextVertex()) {
-        updateTentativeDistances(forwardSearch.getNextVertex());
-        forwardSearch.settleNextVertex();
+    while (forwardSearch.nextVertices.minKey() != INVALID_VERTEX)
+      if (forwardSearch.nextVertices.minKey() <= reverseSearch.nextVertices.minKey()) {
+        updateTentativeDistances(forwardSearch.nextVertices.minKey());
+        forwardSearch.distanceLabels[forwardSearch.settleNextVertex()] = INFTY;
       } else {
-        reverseSearch.settleNextVertex();
+        reverseSearch.distanceLabels[reverseSearch.settleNextVertex()] = INFTY;
       }
   }
 
@@ -52,71 +90,36 @@ class EliminationTreeQuery {
     return tentativeDistances[i];
   }
 
-  // Returns the vertices on the i-th up-down path.
-  std::vector<int> getUpDownPath(const int i = 0) {
-    assert(tentativeDistances[i] != INFTY);
-    auto subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
-    auto subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
-    std::reverse(subpath1.begin(), subpath1.end());
-    subpath1.pop_back();
-    subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
-    return subpath1;
-  }
-
-  // Returns the edges in the upward graph on the up part of the up-down path (in reverse order).
-  std::vector<int> getUpEdgePath(const int i = 0) {
+  // Returns the edges in the upward graph on the up segment of the up-down path (in reverse order).
+  const std::vector<int32_t>& getUpEdgePath(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
     return forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
-  // Returns the edges in the downward graph on the down part of the up-down path.
-  std::vector<int> getDownEdgePath(const int i = 0) {
+  // Returns the edges in the downward graph on the down segment of the up-down path.
+  const std::vector<int32_t>& getDownEdgePath(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
     return reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
-  // Returns the edges in the input graph on the i-th shortest path.
-  std::vector<int> getEdgePath(const int i = 0) {
-    auto upPath = getUpEdgePath(i);
-    auto downPath = getDownEdgePath(i);
-    std::reverse(downPath.begin(), downPath.end());
-    std::for_each(downPath.begin(), downPath.end(), [](int& e) { e = -e - 1; });
-    downPath.insert(downPath.end(), upPath.begin(), upPath.end());
-
-    std::vector<int> fullPath;
-    const auto& upGraph = ch.upwardGraph();
-    const auto& downGraph = ch.downwardGraph();
-
-    while (!downPath.empty()) {
-      const auto e = downPath.back();
-      downPath.pop_back();
-      const auto& unpackInfo = e >= 0 ? upGraph.unpackingInfo(e) : downGraph.unpackingInfo(-e - 1);
-      if (unpackInfo.second == INVALID_EDGE) {
-        fullPath.push_back(unpackInfo.first);
-      } else {
-        downPath.push_back(unpackInfo.second);
-        downPath.push_back(-unpackInfo.first - 1);
-      }
-    }
-    return fullPath;
-  }
-
  private:
-  using DistanceLabel = typename LabelSetT::DistanceLabel; // The distance label of a vertex.
-  using ParentLabel = typename LabelSetT::ParentLabel;     // The parent information for a vertex.
-
-  // Checks if the path s-u-t improves the tentative distance for any search.
-  void updateTentativeDistances(const int u) {
-    DistanceLabel dist = forwardSearch.getDistanceLabel(u) + reverseSearch.getDistanceLabel(u);
-    meetingVertices.setVertex(u, dist < tentativeDistances);
-    tentativeDistances.min(dist);
+  // Checks whether the path via v improves the tentative distance for any search.
+  void updateTentativeDistances(const int v) {
+    const auto distances = forwardSearch.distanceLabels[v] + reverseSearch.distanceLabels[v];
+    meetingVertices.setVertex(v, distances < tentativeDistances);
+    tentativeDistances.min(distances);
   }
 
-  using UpwardSearch = EliminationTreeUpwardSearch<LabelSetT>;
+  using UpwardSearch =
+#ifdef NO_FAST_ELIMINATION_TREE_QUERY
+      UpwardEliminationTreeSearch<LabelSetT>;
+#else
+      UpwardEliminationTreeSearch<LabelSetT, PruningCriterion>;
+#endif
 
-  const CH& ch;                     // The CH on which we compute shortest paths.
-  UpwardSearch forwardSearch;       // The forward search from the source vertices.
-  UpwardSearch reverseSearch;       // The reverse search from the target vertices.
-  DistanceLabel tentativeDistances; // One tentative distance for each simultaneous search.
-  ParentLabel meetingVertices;      // One meeting vertex for each simultaneous search.
+  UpwardSearch forwardSearch;       // The forward search from the source(s).
+  UpwardSearch reverseSearch;       // The reverse search from the target(s).
+
+  DistanceLabel tentativeDistances; // One tentative distance per simultaneous search.
+  ParentLabel meetingVertices;      // One meeting vertex per simultaneous search.
 };

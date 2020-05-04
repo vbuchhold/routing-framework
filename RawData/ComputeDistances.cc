@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
     out << '\n';
 
     // Compute the distance for each OD-pair.
-    StandardCHQuery<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
+    CHQuery<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>> chSearch(ch);
     int origin, destination, originZone, destinationZone, dep, rank;
     while (csv.read_row(origin, destination, originZone, destinationZone, dep, rank)) {
       chSearch.run(ch.rank(origToLocalId[origin]), ch.rank(origToLocalId[destination]));

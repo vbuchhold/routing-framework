@@ -20,8 +20,14 @@ class StampedDistanceLabelContainer {
 
   // Ensures that this container can hold the specified number of distance labels.
   void resize(const int numVertices) {
-    distanceLabels.resize(numVertices);
-    timestamps.resize(numVertices);
+    const auto currentSize = distanceLabels.size();
+    if (numVertices < currentSize) {
+      distanceLabels.erase(distanceLabels.begin() + numVertices, distanceLabels.end());
+      timestamps.erase(timestamps.begin() + numVertices, timestamps.end());
+    } else {
+      distanceLabels.insert(distanceLabels.end(), numVertices - currentSize, DistanceLabelT());
+      timestamps.insert(timestamps.end(), numVertices - currentSize, 0);
+    }
   }
 
   // Initializes all distance labels to infinity.

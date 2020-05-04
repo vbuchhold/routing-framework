@@ -46,12 +46,11 @@ class FormulaDemandCalculator {
     ProgressBar bar(maxNumSources);
 
     assert(lambda >= 0); assert(lambda <= 1);
-    using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-    using Dijkstra = StandardDijkstra<GraphT, TravelTimeAttribute, LabelSet>;
+    using Dij = Dijkstra<GraphT, TravelTimeAttribute, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
 
     #pragma omp parallel
     {
-      Dijkstra dijkstra(graph);
+      Dij dijkstra(graph);
       std::minstd_rand rand(seed + omp_get_thread_num() + 1);
       std::bernoulli_distribution swapDist(swapProb);
 

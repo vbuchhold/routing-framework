@@ -281,8 +281,7 @@ int main(int argc, char* argv[]) {
       #pragma omp parallel
       {
         using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
-        using Dijkstra = StandardDijkstra<Graph, TravelTimeAttribute, LabelSet>;
-        BiDijkstra<Dijkstra> biDijkstra(graph, reverseGraph);
+        BiDijkstra<Dijkstra<Graph, TravelTimeAttribute, LabelSet>> biDijkstra(graph, reverseGraph);
         ODPairGenerator<Graph, TravelTimeAttribute> g(graph, isVertexInStudyArea, seed);
 
         const int64_t totalLengthPerThread = std::ceil(1.0 * totalLength / omp_get_num_threads());

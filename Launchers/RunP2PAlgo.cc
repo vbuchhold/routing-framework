@@ -63,10 +63,10 @@ using InputGraph = StaticGraph<VertexAttributes, EdgeAttributes>;
 using LabelSet = BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>;
 
 // The query algorithms.
-using Dij = StandardDijkstra<InputGraph, TravelTimeAttribute, LabelSet>;
+using Dij = Dijkstra<InputGraph, TravelTimeAttribute, LabelSet>;
 using BiDij = BiDijkstra<Dij>;
 template <bool useStalling>
-using CCHDij = StandardCHQuery<LabelSet, useStalling>;
+using CCHDij = CHQuery<LabelSet, useStalling>;
 using CCHTree = EliminationTreeQuery<LabelSet>;
 
 // Writes the header line of the output CSV file.

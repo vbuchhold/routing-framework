@@ -193,7 +193,7 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
   }
 
   // Returns the head vertex of edge e.
-  int edgeHead(const int e) const {
+  const int& edgeHead(const int e) const {
     assert(e >= 0); assert(e < edgeHeads.size()); assert(isValidEdge(e));
     return edgeHeads[e];
   }

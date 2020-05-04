@@ -19,7 +19,11 @@ class SimpleDistanceLabelContainer {
 
   // Ensures that this container can hold the specified number of distance labels.
   void resize(const int numLabels) {
-    distanceLabels.resize(numLabels, INFTY);
+    const auto currentSize = distanceLabels.size();
+    if (numLabels < currentSize)
+      distanceLabels.erase(distanceLabels.begin() + numLabels, distanceLabels.end());
+    else
+      distanceLabels.insert(distanceLabels.end(), numLabels - currentSize, INFTY);
   }
 
   // Initializes all distance labels to infinity.

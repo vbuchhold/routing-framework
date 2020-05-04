@@ -64,11 +64,9 @@ class DijkstraAdapter {
     }
 
    private:
-    using Dijkstra = StandardDijkstra<InputGraph, WeightT, LabelSet>;
-
-    Dijkstra search;                           // The Dijkstra search.
-    AlignedVector<int>& flowsOnForwardEdges;   // The flows in the forward graph.
-    std::vector<int> localFlowsOnForwardEdges; // The local flows in the forward graph.
+    Dijkstra<InputGraph, WeightT, LabelSet> search; // The Dijkstra search.
+    AlignedVector<int>& flowsOnForwardEdges;        // The flows in the forward graph.
+    std::vector<int> localFlowsOnForwardEdges;      // The local flows in the forward graph.
   };
 
   // Constructs an adapter for Dijkstra's algorithm.

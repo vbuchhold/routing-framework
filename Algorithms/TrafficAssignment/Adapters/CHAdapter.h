@@ -81,7 +81,7 @@ class CHAdapter {
 
    private:
     const CH& ch;                           // The CH rebuilt in each iteration.
-    StandardCHQuery<LabelSet> search;       // The CH search.
+    CHQuery<LabelSet> search;               // The CH search.
     AlignedVector<int>& flowsOnUpEdges;     // The flows in the upward graph.
     AlignedVector<int>& flowsOnDownEdges;   // The flows in the downward graph.
     std::vector<int> localFlowsOnUpEdges;   // The local flows in the upward graph.

@@ -1,22 +1,22 @@
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <cassert>
-#include <type_traits>
+#include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "Tools/Constants.h"
 
-namespace bidijkstra {
+namespace bidij {
 
-// The stopping criterion for a standard bidirectional Dijkstra search computing k shortest paths.
-// We can stop the search as soon as mu_i <= Qf.minKey + Qr.minKey for all i = 1, ..., k.
+// The stopping criterion for a standard bidirectional search that computes k shortest paths. We can
+// stop the search as soon as mu_i <= Qf.minKey + Qr.minKey for all i = 1, ..., k.
 template <typename QueueT>
-struct BiDijkstraStoppingCriterion {
+struct StoppingCriterion {
   // Constructs a stopping criterion for a standard bidirectional search.
-  BiDijkstraStoppingCriterion(const QueueT& forwardQueue, const QueueT& reverseQueue,
-                              const int& maxTentativeDistance)
+  StoppingCriterion(
+      const QueueT& forwardQueue, const QueueT& reverseQueue, const int& maxTentativeDistance)
       : forwardQueue(forwardQueue),
         reverseQueue(reverseQueue),
         maxTentativeDistance(maxTentativeDistance) {}
@@ -41,38 +41,44 @@ struct BiDijkstraStoppingCriterion {
 }
 
 // Implementation of a bidirectional search. Depending on the underlying Dijkstra implementation, it
-// keeps track of parent vertices and/or edges, and computes multiple shortest paths simultaneously,
-// possibly using SSE or AVX instructions. The algorithm can be used with various stopping criteria,
-// allowing it to be used as CH query algorithm.
-template <typename DijkstraT,
-          template <typename> class StoppingCriterionT = bidijkstra::BiDijkstraStoppingCriterion>
+// keeps parent vertices and/or edges, and computes multiple shortest paths simultaneously,
+// optionally using SSE or AVX instructions. The algorithm can be used with different stopping
+// criteria, allowing it to be used as CH query algorithm.
+template <
+    typename DijkstraT, template <typename> class StoppingCriterionT = bidij::StoppingCriterion>
 class BiDijkstra {
  private:
-  using Graph = typename DijkstraT::Graph; // The graph type on which we compute shortest paths.
-
   static constexpr int K = DijkstraT::K; // The number of simultaneous shortest-path computations.
 
  public:
-  // Constructs a bidirectional search instance.
-  BiDijkstra(const Graph& graph, const Graph& reverseGraph,
-             const typename DijkstraT::PruningCriterion& pruneForwardSearch = {},
-             const typename DijkstraT::PruningCriterion& pruneReverseSearch = {})
-      : forwardSearch(graph, pruneForwardSearch),
-        reverseSearch(reverseGraph, pruneReverseSearch),
-        stoppingCriterion(forwardSearch.queue, reverseSearch.queue, maxTentativeDistance) {}
+  using Graph = typename DijkstraT::Graph; // The graph on which we compute shortest paths.
 
-  // Ensures that the internal data structures fit for the size of the graph.
-  void resize() {
-    forwardSearch.resize();
-    reverseSearch.resize();
+  // Constructs a bidirectional search instance.
+  BiDijkstra(
+      const Graph& forwardGraph, const Graph& reverseGraph,
+      typename DijkstraT::PruningCriterion pruneForwardSearch = {},
+      typename DijkstraT::PruningCriterion pruneReverseSearch = {})
+      : forwardSearch(forwardGraph, {}, pruneForwardSearch),
+        reverseSearch(reverseGraph, {}, pruneReverseSearch),
+        stoppingCriterion(forwardSearch.queue, reverseSearch.queue, maxTentativeDistance) {
+    assert(forwardGraph.numVertices() == reverseGraph.numVertices());
   }
 
-  // Run a bidirectional search from s to t.
+  // Move constructor.
+  BiDijkstra(BiDijkstra&& other) noexcept
+      : forwardSearch(std::move(other.forwardSearch)),
+        reverseSearch(std::move(other.reverseSearch)),
+        stoppingCriterion(forwardSearch.queue, reverseSearch.queue, maxTentativeDistance),
+        tentativeDistances(other.tentativeDistances),
+        meetingVertices(other.meetingVertices),
+        maxTentativeDistance(other.maxTentativeDistance) {}
+
+  // Runs a bidirectional search from s to t.
   void run(const int s, const int t) {
     std::array<int, K> sources;
     std::array<int, K> targets;
-    std::fill(sources.begin(), sources.end(), s);
-    std::fill(targets.begin(), targets.end(), t);
+    sources.fill(s);
+    targets.fill(t);
     run(sources, targets);
   }
 
@@ -84,7 +90,7 @@ class BiDijkstra {
     maxTentativeDistance = INFTY;
     bool advanceForward = false;
     while (!stoppingCriterion.stopForwardSearch() || !stoppingCriterion.stopReverseSearch()) {
-      advanceForward = !advanceForward; // Alternate between forward and reverse search.
+      advanceForward = !advanceForward; // Alternate between the forward and reverse search.
       if ((advanceForward && !stoppingCriterion.stopForwardSearch()) ||
           stoppingCriterion.stopReverseSearch())
         updateTentativeDistances(forwardSearch.settleNextVertex());
@@ -98,48 +104,36 @@ class BiDijkstra {
     return tentativeDistances[i];
   }
 
-  // Returns the vertices on the i-th shortest path.
-  std::vector<int> getPath(const int i = 0) {
-    assert(tentativeDistances[i] != INFTY);
-    auto subpath1 = forwardSearch.getReversePath(meetingVertices.vertex(i), i);
-    auto subpath2 = reverseSearch.getReversePath(meetingVertices.vertex(i), i);
-    std::reverse(subpath1.begin(), subpath1.end());
-    subpath1.pop_back();
-    subpath1.insert(subpath1.end(), subpath2.begin(), subpath2.end());
-    return subpath1;
-  }
-
   // Returns the edges in the forward graph on the path to the meeting vertex (in reverse order).
-  std::vector<int> getEdgePathToMeetingVertex(const int i = 0) {
+  const std::vector<int32_t>& getEdgePathToMeetingVertex(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
     return forwardSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
   // Returns the edges in the reverse graph on the path from the meeting vertex.
-  std::vector<int> getEdgePathFromMeetingVertex(const int i = 0) {
+  const std::vector<int32_t>& getEdgePathFromMeetingVertex(const int i = 0) {
     assert(tentativeDistances[i] != INFTY);
     return reverseSearch.getReverseEdgePath(meetingVertices.vertex(i), i);
   }
 
  private:
-  using DistanceLabel = typename DijkstraT::DistanceLabel; // The distance label of a vertex.
-  using ParentLabel = typename DijkstraT::ParentLabel;     // The parent label of a vertex.
-
-  // Checks whether the path s-u-t improves the tentative distance for any search.
-  void updateTentativeDistances(const int u) {
-    DistanceLabel dist = forwardSearch.distanceLabels[u] + reverseSearch.distanceLabels[u];
-    meetingVertices.setVertex(u, dist < tentativeDistances);
-    tentativeDistances.min(dist);
+  // Checks whether the path via v improves the tentative distance for any search.
+  void updateTentativeDistances(const int v) {
+    const auto distances = forwardSearch.distanceLabels[v] + reverseSearch.distanceLabels[v];
+    meetingVertices.setVertex(v, distances < tentativeDistances);
+    tentativeDistances.min(distances);
     maxTentativeDistance = tentativeDistances.horizontalMax();
   }
 
   using StoppingCriterion = StoppingCriterionT<typename DijkstraT::Queue>;
+  using DistanceLabel = typename DijkstraT::DistanceLabel;
+  using ParentLabel = typename DijkstraT::ParentLabel;
 
   DijkstraT forwardSearch;             // The forward search from the source(s).
   DijkstraT reverseSearch;             // The reverse search from the target(s).
-  StoppingCriterion stoppingCriterion; // The stopping criterion for the bidirectional search.
+  StoppingCriterion stoppingCriterion; // The criterion used to stop the search.
 
-  DistanceLabel tentativeDistances; // One tentative distance for each simultaneous search.
-  ParentLabel meetingVertices;      // One meeting vertex for each simultaneous search.
+  DistanceLabel tentativeDistances; // One tentative distance per simultaneous search.
+  ParentLabel meetingVertices;      // One meeting vertex per simultaneous search.
   int maxTentativeDistance;         // The largest of all k tentative distances.
 };

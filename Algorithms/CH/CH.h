@@ -3,6 +3,7 @@
 #include <cassert>
 #include <fstream>
 #include <utility>
+#include <vector>
 
 #include <routingkit/contraction_hierarchy.h>
 
@@ -10,24 +11,25 @@
 #include "DataStructures/Graph/Attributes/UnpackingInfoAttribute.h"
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/Permutation.h"
+#include "Tools/Constants.h"
 
 // A weighted contraction hierarchy. The contraction order is determined online and bottom-up.
 class CH {
  public:
   // The type of the upward and downward graph.
-  using EdgeAttributes = EdgeAttrs<TraversalCostAttribute, UnpackingInfoAttribute>;
-  using SearchGraph = StaticGraph<VertexAttrs<>, EdgeAttributes>;
+  using Weight = TraversalCostAttribute;
+  using SearchGraph = StaticGraph<VertexAttrs<>, EdgeAttrs<Weight, UnpackingInfoAttribute>>;
 
   // Constructs an empty CH.
   CH() = default;
 
   // Constructs a CH from the specified upward and downward graph.
-  template <typename UpGraphT, typename DownGraphT, typename OrderT, typename RanksT>
-  CH(UpGraphT&& upGraph, DownGraphT&& downGraph, OrderT&& order, RanksT&& ranks) noexcept
-      : upGraph(std::forward<UpGraphT>(upGraph)),
-        downGraph(std::forward<DownGraphT>(downGraph)),
-        order(std::forward<OrderT>(order)),
-        ranks(std::forward<RanksT>(ranks)) {
+  template <typename SearchGraphT, typename PermT>
+  CH(SearchGraphT&& upGraph, SearchGraphT&& downGraph, PermT&& order, PermT&& ranks) noexcept
+      : upGraph(std::forward<SearchGraphT>(upGraph)),
+        downGraph(std::forward<SearchGraphT>(downGraph)),
+        order(std::forward<PermT>(order)),
+        ranks(std::forward<PermT>(ranks)) {
     assert(this->upGraph.numVertices() == this->downGraph.numVertices());
     assert(this->upGraph.numVertices() == this->order.size());
     assert(this->ranks == this->order.getInversePermutation());
@@ -51,16 +53,17 @@ class CH {
       heads[e] = inputGraph.edgeHead(e);
       weights[e] = inputGraph.template get<WeightT>(e);
     }
+
     const auto ch = RoutingKit::ContractionHierarchy::build(numVertices, tails, heads, weights);
 
     upGraph.clear();
     downGraph.clear();
     upGraph.reserve(numVertices, ch.forward.head.size());
     downGraph.reserve(numVertices, ch.backward.head.size());
-    for (int u = 0; u < numVertices; ++u) {
+    for (auto u = 0; u < numVertices; ++u) {
       upGraph.appendVertex();
       downGraph.appendVertex();
-      for (int e = ch.forward.first_out[u]; e < ch.forward.first_out[u + 1]; ++e) {
+      for (auto e = ch.forward.first_out[u]; e < ch.forward.first_out[u + 1]; ++e) {
         upGraph.appendEdge(ch.forward.head[e]);
         upGraph.traversalCost(e) = ch.forward.weight[e];
         upGraph.unpackingInfo(e).first = ch.forward.shortcut_first_arc[e];
@@ -68,7 +71,7 @@ class CH {
         if (ch.forward.is_shortcut_an_original_arc.is_set(e))
           upGraph.unpackingInfo(e).second = INVALID_EDGE;
       }
-      for (int e = ch.backward.first_out[u]; e < ch.backward.first_out[u + 1]; ++e) {
+      for (auto e = ch.backward.first_out[u]; e < ch.backward.first_out[u + 1]; ++e) {
         downGraph.appendEdge(ch.backward.head[e]);
         downGraph.traversalCost(e) = ch.backward.weight[e];
         downGraph.unpackingInfo(e).first = ch.backward.shortcut_first_arc[e];
@@ -93,14 +96,12 @@ class CH {
   }
 
   // Returns the i-th vertex in the contraction order.
-  int contractionOrder(const int i) const noexcept {
-    assert(i >= 0); assert(i < order.size());
+  int contractionOrder(const int i) const {
     return order[i];
   }
 
-  // Returns the position of vertex v in the contraction order
-  int rank(const int v) const noexcept {
-    assert(v >= 0); assert(v < ranks.size());
+  // Returns the location of vertex v in the contraction order.
+  int rank(const int v) const {
     return ranks[v];
   }
 

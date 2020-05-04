@@ -95,11 +95,11 @@ class ODPairGenerator {
   }
 
  private:
-  using Dijkstra = StandardDijkstra<GraphT, WeightT, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
+  using Dij = Dijkstra<GraphT, WeightT, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
 
   std::minstd_rand rand;                        // A Lehmer random number generator.
   std::uniform_int_distribution<> distribution; // A functor returning uniform random indices.
-  Dijkstra dijkstra;                            // Dijkstra's shortest-path algorithm.
+  Dij dijkstra;                                 // Dijkstra's shortest-path algorithm.
 
   const BitVector isVertexInStudyArea;  // Indicates whether a vertex is in the study area.
   std::vector<int> verticesInStudyArea; // All vertices in study area, i.e., all possible sources.

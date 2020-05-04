@@ -77,9 +77,9 @@ class BiDijkstraAdapter {
     }
 
    private:
-    using Dijkstra = StandardDijkstra<InputGraph, WeightT, LabelSet>;
+    using Dij = Dijkstra<InputGraph, WeightT, LabelSet>;
 
-    BiDijkstra<Dijkstra> search;               // The bidirectional search.
+    BiDijkstra<Dij> search;                    // The bidirectional search.
     AlignedVector<int>& flowsOnForwardEdges;   // The flows in the forward graph.
     AlignedVector<int>& flowsOnReverseEdges;   // The flows in the reverse graph.
     std::vector<int> localFlowsOnForwardEdges; // The local flows in the forward graph.
