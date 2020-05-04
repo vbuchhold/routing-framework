@@ -45,7 +45,7 @@ class FormulaDemandCalculator {
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(maxNumSources);
 
-    assert(lambda >= 0); assert(lambda <= 1);
+    assert(lambda >= 0); assert(lambda < 1);
     using Dij = Dijkstra<GraphT, TravelTimeAttribute, BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
 
     #pragma omp parallel
