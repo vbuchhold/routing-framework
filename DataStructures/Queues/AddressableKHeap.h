@@ -90,6 +90,25 @@ class AddressableKHeap {
     siftUp(idx);
   }
 
+  // Increases the key of the element with the specified ID to newKey.
+  void increaseKey(const int id, const int newKey) {
+    assert(contains(id));
+    const int idx = elementIdToHeapIndex[id];
+    assert(newKey >= heap[idx].key);
+    heap[idx].key = newKey;
+    siftDown(idx);
+  }
+
+  // Updates the key of the element with the specified ID to newKey.
+  void updateKey(const int id, const int newKey) {
+    assert(contains(id));
+    const int idx = elementIdToHeapIndex[id];
+    if (newKey <= heap[idx].key)
+      decreaseKey(id, newKey);
+    else
+      increaseKey(id, newKey);
+  }
+
  private:
   // An element in this heap, with an associated ID and key.
   struct HeapElement {
