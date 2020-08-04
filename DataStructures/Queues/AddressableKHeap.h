@@ -25,6 +25,11 @@ class AddressableKHeap {
     return heap.empty();
   }
 
+  // Returns the number of elements in this heap.
+  int size() const noexcept {
+    return heap.size();
+  }
+
   // Returns true if this heap contains an element with the specified ID.
   bool contains(const int id) const {
     assert(0 <= id); assert(id < elementIdToHeapIndex.size());
