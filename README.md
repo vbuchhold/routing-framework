@@ -44,7 +44,7 @@ $ cd randomc && sudo mkdir /usr/local/include/randomc && sudo cp *.cpp *.h $_ &&
 $ cd rapidxml && sudo cp *.hpp /usr/local/include && cd ..
 $ cd RoutingKit && make && sudo cp -r include lib /usr/local && cd ..
 $ cd stocc && sudo mkdir /usr/local/include/stocc && sudo cp *.cpp *.h $_ && cd ..
-$ cd vectorclass && sudo mkdir /usr/local/include/vectorclass && sudo cp *.h special/* $_ && cd ..
+$ cd vectorclass && sudo mkdir /usr/local/include/vectorclass && sudo cp *.h $_ && cd ..
 ```
 
 ## Building

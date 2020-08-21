@@ -7,7 +7,6 @@
 #include <vectorclass/vectorclass.h>
 
 #include "DataStructures/Labels/ParentInfo.h"
-#include "Tools/Simd/HorizontalOps.h"
 #include "Tools/TemplateProgramming.h"
 
 // A set of consistent distance and parent labels for Dijkstra's algorithm. The template arguments
