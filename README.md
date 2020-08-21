@@ -17,6 +17,13 @@ This repository contains the C++17 source code used in the following publication
   Engineered Customizable Contraction Hierarchies. ACM Journal of Experimental Algorithmics,
   24(2):2.4:1-2.4:28, 2019. [doi:10.1145/3362693](http://dx.doi.org/10.1145/3362693).
 
+## License
+
+All files in this repository except the files in the directory `External` are licensed under the MIT
+license. External libraries are licensed under their respective licenses. Note that the compiled
+program `CalculateDemand` uses libraries that are released under the GNU GPLv3, and thus the
+compiled program `CalculateDemand` has to be under the GNU GPLv3.
+
 ## Prerequisites
 
 You need to have some tools and libraries installed. On Debian and its derivatives (such as Ubuntu)
