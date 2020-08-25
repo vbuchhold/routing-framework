@@ -113,7 +113,7 @@ class MatSimImporter {
 
     double lng, lat;
     trans.forward(currentVertex.coordinate.x(), currentVertex.coordinate.y(), lng, lat);
-    currentVertex.latLng = {toDegrees(lat), toDegrees(lng)};
+    currentVertex.latLng = {lat, lng};
 
     currentVertexElem = currentVertexElem->next_sibling();
     return true;

@@ -23,7 +23,6 @@
 #include "DataStructures/Graph/Attributes/VertexIdAttribute.h"
 #include "Tools/Constants.h"
 #include "Tools/LexicalCast.h"
-#include "Tools/Math.h"
 #include "Tools/StringHelpers.h"
 
 // An importer to read graphs in Visum network file format. The transport system (e.g. pedestrian,
@@ -120,7 +119,7 @@ class VisumImporter {
     trans.forward(
         currentVertex.coordinate.x() / coordinatePrecision,
         currentVertex.coordinate.y() / coordinatePrecision, lng, lat);
-    currentVertex.latLng = {toDegrees(lat), toDegrees(lng)};
+    currentVertex.latLng = {lat, lng};
     return true;
   }
 
@@ -185,7 +184,7 @@ class VisumImporter {
           assert(idx == currentPolyline.size() + 1);
           double lng, lat;
           trans.forward(currentInterPoint.easting, currentInterPoint.northing, lng, lat);
-          currentPolyline.emplace_back(toDegrees(lat), toDegrees(lng));
+          currentPolyline.emplace_back(lat, lng);
           currentInterPoint.tail = INVALID_ID;
           interPointReader.read_row(
               currentInterPoint.tail, currentInterPoint.head, idx,

@@ -22,7 +22,6 @@
 #include "DataStructures/Geometry/Point.h"
 #include "RawData/Visum/ZonePolygons.h"
 #include "Tools/CommandLine/CommandLineParser.h"
-#include "Tools/Math.h"
 #include "Tools/StringHelpers.h"
 
 inline void printUsage() {
@@ -203,7 +202,7 @@ int main(int argc, char* argv[]) {
     for (const auto& vertex : *union_.begin()) {
       double lng, lat;
       trans.forward(vertex.x() / precision, vertex.y() / precision, lng, lat);
-      LatLng latLng(toDegrees(lat), toDegrees(lng));
+      LatLng latLng(lat, lng);
       Point latLngPoint(latLng.longitude(), latLng.latitude());
       if (latLngFace.size() >= 2 && *(latLngFace.end() - 2) == latLngPoint)
         latLngFace.removeBack();

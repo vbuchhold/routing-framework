@@ -10,7 +10,6 @@
 
 #include "DataStructures/Geometry/CoordinateTransformation.h"
 #include "Tools/CommandLine/CommandLineParser.h"
-#include "Tools/Math.h"
 #include "Tools/StringHelpers.h"
 
 inline void printUsage() {
@@ -70,7 +69,7 @@ int main(int argc, char* argv[]) {
         poiFileReader.read_header(io::ignore_extra_column, "XKOORD", "YKOORD");
         while (poiFileReader.read_row(easting, northing)) {
           trans.forward(easting, northing, lng, lat);
-          outputFile << cat.second << ',' << toDegrees(lng) << ',' << toDegrees(lat) << '\n';
+          outputFile << cat.second << ',' << lng << ',' << lat << '\n';
         }
         std::cout << " done.\n";
       }

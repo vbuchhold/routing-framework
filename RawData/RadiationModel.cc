@@ -111,18 +111,18 @@ int main(int argc, char* argv[]) {
     bgi::rtree<RoadSegment, bgi::quadratic<16>> rTree(roadSegments);
 
     // Map each cell C inside the area under study to the road segment nearest to the center of C.
-    const auto primaryCrs = CoordinateTransformation::WGS_84;
-    const auto secondaryCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
-    CoordinateTransformation trans(primaryCrs, secondaryCrs);
+    const auto sourceCrs = CoordinateTransformation::WGS_84;
+    const auto targetCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
+    CoordinateTransformation trans(sourceCrs, targetCrs);
     Area area;
     area.importFromOsmPolyFile(areaFilename);
     const auto box = area.boundingBox();
     LatLng nw(box.northEast().y(), box.southWest().x());
     LatLng se(box.southWest().y(), box.northEast().x());
     double easting, northing;
-    trans.forward(toRadians(nw.lngInDeg()), toRadians(nw.latInDeg()), easting, northing);
+    trans.forward(nw.lngInDeg(), nw.latInDeg(), easting, northing);
     const auto min = ::Point(std::round(easting), std::round(northing)) - minCell;
-    trans.forward(toRadians(se.lngInDeg()), toRadians(se.latInDeg()), easting, northing);
+    trans.forward(se.lngInDeg(), se.latInDeg(), easting, northing);
     const auto max = ::Point(std::round(easting), std::round(northing)) - minCell;
     const ::Point minCoveredCell((min.x() + 50) / 100, numRows - (min.y() + 50) / 100 - 1);
     const ::Point maxCoveredCell((max.x() + 50) / 100, numRows - (max.y() + 50) / 100 - 1);
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
         const auto c = ::Point(x * 100, (numRows - y - 1) * 100) + minCell;
         double lng, lat;
         trans.reverse(c.x(), c.y(), lng, lat);
-        const LatLng center(toDegrees(lat), toDegrees(lng));
+        const LatLng center(lat, lng);
         if (area.contains({center.longitude(), center.latitude()})) {
           population += populationGrid(y, x);
           const Point queryPoint(center.lngInDeg(), center.latInDeg());

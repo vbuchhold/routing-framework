@@ -12,7 +12,6 @@
 #include "DataStructures/Graph/Graph.h"
 #include "DataStructures/Utilities/Matrix.h"
 #include "Tools/LexicalCast.h"
-#include "Tools/Math.h"
 #include "Tools/OpenMP.h"
 #include "Tools/Timer.h"
 
@@ -66,9 +65,9 @@ class PopulationAssignment {
  private:
   // Assigns each vertex to the grid cell containing it.
   void assignVerticesToCells() {
-    const auto primaryCrs = CoordinateTransformation::WGS_84;
-    const auto secondaryCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
-    CoordinateTransformation trans(primaryCrs, secondaryCrs);
+    const auto sourceCrs = CoordinateTransformation::WGS_84;
+    const auto targetCrs = CoordinateTransformation::ETRS89_LAEA_EUROPE;
+    CoordinateTransformation trans(sourceCrs, targetCrs);
     double easting, northing;
     std::vector<Point> cellsByVertex;
 
@@ -76,7 +75,7 @@ class PopulationAssignment {
          v != -1;
          v = isVertexInStudyArea.nextSetBit(v)) {
       const auto& latLng = graph.latLng(v);
-      trans.forward(toRadians(latLng.lngInDeg()), toRadians(latLng.latInDeg()), easting, northing);
+      trans.forward(latLng.lngInDeg(), latLng.latInDeg(), easting, northing);
       cellsByVertex.emplace_back(easting / gridResolution, northing / gridResolution);
       boundingBox.extend(cellsByVertex.back());
     }
