@@ -21,8 +21,9 @@ This repository contains the C++17 source code used in the following publication
 
 All files in this repository except the files in the directory `External` are licensed under the MIT
 license. External libraries are licensed under their respective licenses. Note that the compiled
-program `CalculateDemand` uses libraries that are released under the GNU GPLv3, and thus the
-compiled program `CalculateDemand` has to be under the GNU GPLv3.
+programs `CalculateDemand` and `ComputeUnionBoundary` use libraries that are released under the GNU
+GPLv3, and thus the compiled programs `CalculateDemand` and `ComputeUnionBoundary` have to be under
+the GNU GPLv3.
 
 ## Prerequisites
 
