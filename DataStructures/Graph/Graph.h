@@ -174,6 +174,11 @@ class Graph<VertexAttrs<VertexAttributes...>, EdgeAttrs<EdgeAttributes...>, dyna
     return edgeHeads.size() - 1;
   }
 
+  // Returns the degree of vertex v.
+  int degree(const int v) const {
+    return lastEdge(v) - firstEdge(v);
+  }
+
   // Returns the index of the first edge out of vertex v.
   int firstEdge(const int v) const {
     assert(v >= 0); assert(v < numVertices());
