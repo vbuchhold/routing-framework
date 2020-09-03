@@ -9,17 +9,17 @@
 // Road categories defined by OpenStreetMap.
 enum class OsmRoadCategory {
   MOTORWAY,
+  MOTORWAY_LINK,
   TRUNK,
+  TRUNK_LINK,
   PRIMARY,
+  PRIMARY_LINK,
   SECONDARY,
+  SECONDARY_LINK,
   TERTIARY,
+  TERTIARY_LINK,
   UNCLASSIFIED,
   RESIDENTIAL,
-  MOTORWAY_LINK,
-  TRUNK_LINK,
-  PRIMARY_LINK,
-  SECONDARY_LINK,
-  TERTIARY_LINK,
   LIVING_STREET,
   ROAD,
 };
@@ -29,17 +29,17 @@ template <>
 void EnumParser<OsmRoadCategory>::initNameToEnumMap() {
   nameToEnum = {
     {"motorway",       OsmRoadCategory::MOTORWAY},
+    {"motorway_link",  OsmRoadCategory::MOTORWAY_LINK},
     {"trunk",          OsmRoadCategory::TRUNK},
+    {"trunk_link",     OsmRoadCategory::TRUNK_LINK},
     {"primary",        OsmRoadCategory::PRIMARY},
+    {"primary_link",   OsmRoadCategory::PRIMARY_LINK},
     {"secondary",      OsmRoadCategory::SECONDARY},
+    {"secondary_link", OsmRoadCategory::SECONDARY_LINK},
     {"tertiary",       OsmRoadCategory::TERTIARY},
+    {"tertiary_link",  OsmRoadCategory::TERTIARY_LINK},
     {"unclassified",   OsmRoadCategory::UNCLASSIFIED},
     {"residential",    OsmRoadCategory::RESIDENTIAL},
-    {"motorway_link",  OsmRoadCategory::MOTORWAY_LINK},
-    {"trunk_link",     OsmRoadCategory::TRUNK_LINK},
-    {"primary_link",   OsmRoadCategory::PRIMARY_LINK},
-    {"secondary_link", OsmRoadCategory::SECONDARY_LINK},
-    {"tertiary_link",  OsmRoadCategory::TERTIARY_LINK},
     {"living_street",  OsmRoadCategory::LIVING_STREET},
     {"road",           OsmRoadCategory::ROAD}
   };
@@ -49,17 +49,17 @@ void EnumParser<OsmRoadCategory>::initNameToEnumMap() {
 inline std::ostream& operator<<(std::ostream& os, const OsmRoadCategory cat) {
   switch (cat) {
     case OsmRoadCategory::MOTORWAY:       os << "motorway";       break;
+    case OsmRoadCategory::MOTORWAY_LINK:  os << "motorway_link";  break;
     case OsmRoadCategory::TRUNK:          os << "trunk";          break;
+    case OsmRoadCategory::TRUNK_LINK:     os << "trunk_link";     break;
     case OsmRoadCategory::PRIMARY:        os << "primary";        break;
+    case OsmRoadCategory::PRIMARY_LINK:   os << "primary_link";   break;
     case OsmRoadCategory::SECONDARY:      os << "secondary";      break;
+    case OsmRoadCategory::SECONDARY_LINK: os << "secondary_link"; break;
     case OsmRoadCategory::TERTIARY:       os << "tertiary";       break;
+    case OsmRoadCategory::TERTIARY_LINK:  os << "tertiary_link";  break;
     case OsmRoadCategory::UNCLASSIFIED:   os << "unclassified";   break;
     case OsmRoadCategory::RESIDENTIAL:    os << "residential";    break;
-    case OsmRoadCategory::MOTORWAY_LINK:  os << "motorway_link";  break;
-    case OsmRoadCategory::TRUNK_LINK:     os << "trunk_link";     break;
-    case OsmRoadCategory::PRIMARY_LINK:   os << "primary_link";   break;
-    case OsmRoadCategory::SECONDARY_LINK: os << "secondary_link"; break;
-    case OsmRoadCategory::TERTIARY_LINK:  os << "tertiary_link";  break;
     case OsmRoadCategory::LIVING_STREET:  os << "living_street";  break;
     case OsmRoadCategory::ROAD:           os << "road";           break;
   }

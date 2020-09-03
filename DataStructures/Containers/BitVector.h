@@ -49,10 +49,8 @@ class BitVector {
   static constexpr int BITS_PER_BLOCK = std::numeric_limits<Block>::digits;
 
   // Constructs a bit vector of the specified size. All bits are initialized to init.
-  explicit BitVector(const int size, const bool init = false)
-      : blocks((size + BITS_PER_BLOCK - 1) / BITS_PER_BLOCK, init ? -1 : 0), numBits(size) {
-    const auto numUnusedBits = (BITS_PER_BLOCK - size % BITS_PER_BLOCK) % BITS_PER_BLOCK;
-    blocks.back() &= static_cast<Block>(-1) >> numUnusedBits;
+  explicit BitVector(const int size = 0, const bool init = false) : numBits(0) {
+    resize(size, init);
   }
 
   // Returns the number of bits in this bit vector.
@@ -71,6 +69,17 @@ class BitVector {
     for (const auto block : blocks)
       cardinality += bitCount(block);
     return cardinality;
+  }
+
+  // Changes the number of bits in this bit vector. Newly inserted bits are initialized to init.
+  void resize(const int size, const bool init = false) {
+    const auto numUsedBits = numBits % BITS_PER_BLOCK;
+    if (init && numUsedBits > 0)
+      blocks.back() |= static_cast<Block>(-1) << numUsedBits;
+    blocks.resize((size + BITS_PER_BLOCK - 1) / BITS_PER_BLOCK, init ? -1 : 0);
+    const auto numUnusedBits = (BITS_PER_BLOCK - size % BITS_PER_BLOCK) % BITS_PER_BLOCK;
+    blocks.back() &= static_cast<Block>(-1) >> numUnusedBits;
+    numBits = size;
   }
 
   // Returns the bit with the specified index.

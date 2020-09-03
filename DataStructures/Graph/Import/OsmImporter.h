@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <string>
@@ -12,6 +13,7 @@
 #include <routingkit/osm_graph_builder.h>
 #include <routingkit/tag_map.h>
 
+#include "DataStructures/Containers/BitVector.h"
 #include "DataStructures/Graph/Attributes/CapacityAttribute.h"
 #include "DataStructures/Graph/Attributes/FreeFlowSpeedAttribute.h"
 #include "DataStructures/Graph/Attributes/LatLngAttribute.h"
@@ -38,42 +40,40 @@ class OsmImporter {
     // Returns the direction in which the road segment is open.
     auto getRoadDirection = [&](const OsmRoadCategory cat, const RoutingKit::TagMap& tags) {
       assert(cat != OsmRoadCategory::ROAD);
-      const char* oneway = tags["oneway"];
+
+      const auto oneway = tags["oneway"];
       if (oneway) {
-        if (stringEq(oneway, "yes") || stringEq(oneway, "true") || stringEq(oneway, "1"))
+        if (stringEq(oneway, "no") || stringEq(oneway, "false") || stringEq(oneway, "0"))
+          return RoadDirection::OPEN_IN_BOTH;
+        else if (stringEq(oneway, "yes") || stringEq(oneway, "true") || stringEq(oneway, "1"))
           return RoadDirection::FORWARD;
         else if (stringEq(oneway, "-1") || stringEq(oneway, "reverse"))
           return RoadDirection::REVERSE;
-        else if (stringEq(oneway, "no") || stringEq(oneway, "false") || stringEq(oneway, "0"))
-          return RoadDirection::OPEN_IN_BOTH;
       }
 
-      const char* junction = tags["junction"];
+      const auto junction = tags["junction"];
       if (junction && stringEq(junction, "roundabout"))
         return RoadDirection::FORWARD;
+
       return roadDefaults.at(cat).direction;
     };
 
     // Returns the speed limit.
     auto getSpeedLimit = [&](const OsmRoadCategory cat, const RoutingKit::TagMap& tags) {
       assert(cat != OsmRoadCategory::ROAD);
-      const char* maxspeed = tags["maxspeed"];
+      const auto maxspeed = tags["maxspeed"];
       if (maxspeed) {
         try {
           if (endsWith(maxspeed, "mph")) {
             std::string maxspeedWithoutUnit(maxspeed, std::strlen(maxspeed) - 3);
             trim(maxspeedWithoutUnit);
-            const double speedLimit = lexicalCast<double>(maxspeedWithoutUnit);
-            if (speedLimit > 0)
-              return speedLimit * 1.609344; // mph to km/h
+            return std::make_pair(lexicalCast<double>(maxspeedWithoutUnit) * 1.609344, true);
           } else {
-            const double speedLimit = lexicalCast<double>(maxspeed);
-            if (speedLimit > 0)
-              return speedLimit;
+            return std::make_pair(lexicalCast<double>(maxspeed), true);
           }
         } catch (std::logic_error& /*e*/) {}
       }
-      return static_cast<double>(roadDefaults.at(cat).speedLimit);
+      return std::make_pair(static_cast<double>(roadDefaults.at(cat).speedLimit), false);
     };
 
     // Returns the number of lanes in the forward and reverse direction.
@@ -82,59 +82,46 @@ class OsmImporter {
       assert(cat != OsmRoadCategory::ROAD);
       assert(dir != RoadDirection::CLOSED);
       const auto& defaults = roadDefaults.at(cat);
-      double numLanesInForward = defaults.numLanesOnOneWay;
-      double numLanesInReverse = defaults.numLanesOnOneWay;
-      if (dir == RoadDirection::OPEN_IN_BOTH) {
-        numLanesInForward = defaults.numLanesOnTwoWay;
-        numLanesInReverse = defaults.numLanesOnTwoWay;
+      auto numForwardLanes = defaults.numLanesPerDirection;
+      auto numReverseLanes = defaults.numLanesPerDirection;
+
+      const auto lanes = tags["lanes"];
+      if (lanes) {
+        try {
+          auto numLanes = lexicalCast<double>(lanes);
+          if (dir == RoadDirection::OPEN_IN_BOTH)
+            numLanes /= 2;
+          numForwardLanes = numLanes;
+          numReverseLanes = numLanes;
+        } catch (std::logic_error& /*e*/) {}
       }
 
-      const char* lanes = tags["lanes"];
-      if (lanes)
+      const auto lanesForward = tags["lanes:forward"];
+      if (lanesForward) {
         try {
-          const double totalNumLanes = lexicalCast<double>(lanes);
-          if (totalNumLanes > 0) {
-            // Get the number of lanes in the forward direction.
-            const char* lanesForward = tags["lanes:forward"];
-            if (lanesForward) {
-              const double parsedNumLanesInForward = lexicalCast<double>(lanesForward);
-              if (parsedNumLanesInForward > 0)
-                numLanesInForward = parsedNumLanesInForward;
-            } else {
-              // If this is a two-way segment, distribute the lanes evenly over both directions.
-              if (dir != RoadDirection::OPEN_IN_BOTH)
-                numLanesInForward = totalNumLanes;
-              else
-                numLanesInForward = totalNumLanes / 2;
-            }
-
-            // Get the number of lanes in the reverse direction.
-            const char* lanesBackward = tags["lanes:backward"];
-            if (lanesBackward) {
-              const double parsedNumLanesInReverse = lexicalCast<double>(lanesBackward);
-              if (parsedNumLanesInReverse > 0)
-                numLanesInReverse = parsedNumLanesInReverse;
-            } else {
-              // If this is a two-way segment, distribute the lanes evenly over both directions.
-              if (dir != RoadDirection::OPEN_IN_BOTH)
-                numLanesInReverse = totalNumLanes;
-              else
-                numLanesInReverse = totalNumLanes / 2;
-            }
-          }
+          auto numLanes = lexicalCast<double>(lanesForward);
+          if (numLanes > 0)
+            numForwardLanes = numLanes;
         } catch (std::logic_error& /*e*/) {}
-      return std::make_pair(numLanesInForward, numLanesInReverse);
+      }
+
+      const auto lanesBackward = tags["lanes:backward"];
+      if (lanesBackward) {
+        try {
+          auto numLanes = lexicalCast<double>(lanesBackward);
+          if (numLanes > 0)
+            numReverseLanes = numLanes;
+        } catch (std::logic_error& /*e*/) {}
+      }
+
+      return std::make_pair(numForwardLanes, numReverseLanes);
     };
 
     EnumParser<OsmRoadCategory> parseOsmRoadCategory;
 
-    // Returns true if the OSM way is open for cars.
-    auto isWayOpenForCars = [&](const uint64_t /*origId*/, const RoutingKit::TagMap& tags) {
-      const char* access = tags["access"];
-      if (access && stringEq(access, "no"))
-        return false;
-
-      const char* highway = tags["highway"];
+    // Returns true if the specified way is open for vehicles.
+    auto isWayOpenForVehicles = [&](uint64_t, const RoutingKit::TagMap& tags) {
+      const auto highway = tags["highway"];
       if (highway)
         try {
           return parseOsmRoadCategory(highway) != OsmRoadCategory::ROAD;
@@ -142,10 +129,8 @@ class OsmImporter {
       return false;
     };
 
-    // Invoked when a way is discovered that is open for cars.
-    auto wayCallback = [=, &parseOsmRoadCategory]
-        (const uint64_t /*origId*/, const unsigned int seqId, const RoutingKit::TagMap& tags)
-        -> RoutingKit::OSMWayDirectionCategory {
+    // Invoked when a way is discovered that is open for vehicles.
+    auto wayCallback = [&](uint64_t, const unsigned int seqId, const RoutingKit::TagMap& tags) {
       assert(seqId < wayCategory.size());
       assert(tags["highway"]);
       const auto cat = parseOsmRoadCategory(tags["highway"]);
@@ -153,8 +138,9 @@ class OsmImporter {
       assert(dir != RoadDirection::CLOSED);
 
       wayCategory[seqId] = cat;
-      waySpeed[seqId] = getSpeedLimit(cat, tags);
-      std::tie(numLanesInForward[seqId], numLanesInReverse[seqId]) = getNumLanes(cat, dir, tags);
+      auto bit = isWaySpeedLimitGiven[seqId];
+      std::tie(waySpeedLimit[seqId], bit) = getSpeedLimit(cat, tags);
+      std::tie(numForwardLanes[seqId], numReverseLanes[seqId]) = getNumLanes(cat, dir, tags);
 
       switch (dir) {
         case RoadDirection::OPEN_IN_BOTH:
@@ -169,17 +155,18 @@ class OsmImporter {
       }
     };
 
-    // Eventually, actually perform the work. Extract a graph from OSM data.
-    const auto mapping =
-        RoutingKit::load_osm_id_mapping_from_pbf(filename + ".osm.pbf", nullptr, isWayOpenForCars);
-    const int numWaysOpenForCars = mapping.is_routing_way.population_count();
-    wayCategory.resize(numWaysOpenForCars);
-    waySpeed.resize(numWaysOpenForCars);
-    numLanesInForward.resize(numWaysOpenForCars);
-    numLanesInReverse.resize(numWaysOpenForCars);
+    // Actually perform the work. Extract a graph from OSM data.
+    const auto idMap = RoutingKit::load_osm_id_mapping_from_pbf(
+        filename + ".osm.pbf", nullptr, isWayOpenForVehicles);
+    const auto numWaysOpenForVehicles = idMap.is_routing_way.population_count();
+    wayCategory.resize(numWaysOpenForVehicles);
+    waySpeedLimit.resize(numWaysOpenForVehicles);
+    isWaySpeedLimitGiven.resize(numWaysOpenForVehicles);
+    numForwardLanes.resize(numWaysOpenForVehicles);
+    numReverseLanes.resize(numWaysOpenForVehicles);
     osmGraph = load_osm_routing_graph_from_pbf(
-        filename + ".osm.pbf", mapping, wayCallback, nullptr, nullptr,
-        false, RoutingKit::OSMRoadGeometry::uncompressed);
+        filename + ".osm.pbf", idMap, wayCallback, nullptr,
+        nullptr, false, RoutingKit::OSMRoadGeometry::uncompressed);
   }
 
   // Returns the number of vertices in the graph, or 0 if the number is not yet known.
@@ -206,7 +193,7 @@ class OsmImporter {
   bool nextEdge() {
     ++currentEdge;
     while (currentTail < static_cast<int>(osmGraph.node_count()) &&
-        osmGraph.first_out[currentTail + 1] == currentEdge)
+           osmGraph.first_out[currentTail + 1] == currentEdge)
       ++currentTail;
     return currentEdge < osmGraph.arc_count();
   }
@@ -235,56 +222,39 @@ class OsmImporter {
  private:
   // A struct that carries standard values for a set of static road properties.
   struct RoadDefaults {
-    int speedLimit;          // The speed limit in km/h.
-    double freeFlowFactor;   // free-flow speed = free-flow factor * speed limit
-    int numLanesOnOneWay;    // The number of lanes on one-way road segments.
-    int numLanesOnTwoWay;    // The number of lanes in each direction on two-way road segments.
-    int laneCapacity;        // The capacity per lane in veh/h.
-    RoadDirection direction; // The direction in which the road segment is open.
+    int speedLimit;           // The speed limit in km/h.
+    int numLanesPerDirection; // The number of lanes per direction.
+    int laneCapacity;         // The capacity per lane in veh/h.
+    RoadDirection direction;  // The direction in which the road segment is open.
   };
 
-  // A map that carries default road properties for a set of OSM road categories.
-  const std::unordered_map<OsmRoadCategory, RoadDefaults> roadDefaults = {
-#ifndef CALIBRATE_OSM
-    {OsmRoadCategory::MOTORWAY,       {120, 1.0, 2, 2, 800, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK,          {80,  1.0, 2, 1, 800, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY,        {80,  1.0, 2, 1, 600, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY,      {60,  1.0, 2, 1, 400, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY,       {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::UNCLASSIFIED,   {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::RESIDENTIAL,    {30,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::MOTORWAY_LINK,  {80,  1.0, 1, 1, 600, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK_LINK,     {50,  1.0, 1, 1, 600, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY_LINK,   {60,  1.0, 1, 1, 600, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY_LINK, {60,  1.0, 1, 1, 400, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY_LINK,  {45,  1.0, 1, 1, 240, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::LIVING_STREET,  {15,  1.0, 1, 1, 120, RoadDirection::OPEN_IN_BOTH}}
-#else
-    {OsmRoadCategory::MOTORWAY,       {-1, 1.0, 2, 2, -1, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK,          {-1, 1.0, 2, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY,        {-1, 1.0, 2, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY,      {-1, 1.0, 2, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY,       {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::UNCLASSIFIED,   {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::RESIDENTIAL,    {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::MOTORWAY_LINK,  {-1, 1.0, 1, 1, -1, RoadDirection::FORWARD}},
-    {OsmRoadCategory::TRUNK_LINK,     {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::PRIMARY_LINK,   {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::SECONDARY_LINK, {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::TERTIARY_LINK,  {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}},
-    {OsmRoadCategory::LIVING_STREET,  {-1, 1.0, 1, 1, -1, RoadDirection::OPEN_IN_BOTH}}
-#endif
+  // A map that contains default road properties for a set of OSM road categories.
+  inline static const std::unordered_map<OsmRoadCategory, RoadDefaults> roadDefaults = {
+    {OsmRoadCategory::MOTORWAY,       {120, 2, 2000, RoadDirection::FORWARD     }},
+    {OsmRoadCategory::MOTORWAY_LINK,  { 80, 1, 1500, RoadDirection::FORWARD     }},
+    {OsmRoadCategory::TRUNK,          { 80, 1, 2000, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::TRUNK_LINK,     { 50, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::PRIMARY,        { 80, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::PRIMARY_LINK,   { 60, 1, 1500, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::SECONDARY,      { 30, 1,  800, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::SECONDARY_LINK, { 30, 1,  800, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::TERTIARY,       { 25, 1,  600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::TERTIARY_LINK,  { 25, 1,  600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::UNCLASSIFIED,   { 15, 1,  600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::RESIDENTIAL,    { 15, 1,  600, RoadDirection::OPEN_IN_BOTH}},
+    {OsmRoadCategory::LIVING_STREET,  { 10, 1,  300, RoadDirection::OPEN_IN_BOTH}},
   };
 
   RoutingKit::OSMRoutingGraph osmGraph;     // The graph extracted from OSM data.
   std::vector<OsmRoadCategory> wayCategory; // The OSM road category for each way.
-  std::vector<double> waySpeed;             // The speed limit for each way.
-  std::vector<double> numLanesInForward;    // The number of forward lanes for each way.
-  std::vector<double> numLanesInReverse;    // The number of reverse lanes for each way.
+  std::vector<double> waySpeedLimit;        // The speed limit for each way.
+  BitVector isWaySpeedLimitGiven;           // Indicates for each way whether speed limit is given.
+  std::vector<double> numForwardLanes;      // The number of forward lanes for each way.
+  std::vector<double> numReverseLanes;      // The number of reverse lanes for each way.
 
   int currentVertex = -1; // The index of the current vertex in the OSM graph.
-  int currentTail = -1;   // The tail vertex of the current edge.
   int currentEdge = -1;   // The index of the current edge in the OSM graph.
+  int currentTail = -1;   // The tail of the current edge.
 };
 
 // Returns the value of the LatLng attribute for the current vertex.
@@ -292,25 +262,6 @@ template <>
 inline LatLngAttribute::Type OsmImporter::getValue<LatLngAttribute>() const {
   assert(currentVertex >= 0); assert(currentVertex < osmGraph.node_count());
   return {osmGraph.latitude[currentVertex], osmGraph.longitude[currentVertex]};
-}
-
-// Returns the value of the capacity attribute for the current edge.
-template <>
-inline CapacityAttribute::Type OsmImporter::getValue<CapacityAttribute>() const {
-  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  const int way = osmGraph.way[currentEdge];
-  const double numLanes = osmGraph.is_arc_antiparallel_to_way[currentEdge] ?
-      numLanesInReverse[way] : numLanesInForward[way];
-  const int laneCapacity = roadDefaults.at(wayCategory[way]).laneCapacity;
-  return std::round(numLanes * laneCapacity);
-}
-
-// Returns the value of the free-flow speed attribute for the current edge.
-template <>
-inline FreeFlowSpeedAttribute::Type OsmImporter::getValue<FreeFlowSpeedAttribute>() const {
-  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  const int way = osmGraph.way[currentEdge];
-  return std::round(roadDefaults.at(wayCategory[way]).freeFlowFactor * waySpeed[way]);
 }
 
 // Returns the value of the length attribute for the current edge.
@@ -324,9 +275,9 @@ inline LengthAttribute::Type OsmImporter::getValue<LengthAttribute>() const {
 template <>
 inline NumLanesAttribute::Type OsmImporter::getValue<NumLanesAttribute>() const {
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  const int way = osmGraph.way[currentEdge];
-  return osmGraph.is_arc_antiparallel_to_way[currentEdge] ?
-      numLanesInReverse[way] : numLanesInForward[way];
+  const auto way = osmGraph.way[currentEdge];
+  return osmGraph.is_arc_antiparallel_to_way[currentEdge]
+      ? numReverseLanes[way] : numForwardLanes[way];
 }
 
 // Returns the value of the OSM road category attribute for the current edge.
@@ -340,10 +291,10 @@ inline OsmRoadCategoryAttribute::Type OsmImporter::getValue<OsmRoadCategoryAttri
 template <>
 inline RoadGeometryAttribute::Type OsmImporter::getValue<RoadGeometryAttribute>() const {
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  const int first = osmGraph.first_modelling_node[currentEdge];
-  const int last = osmGraph.first_modelling_node[currentEdge + 1];
+  const auto first = osmGraph.first_modelling_node[currentEdge];
+  const auto last = osmGraph.first_modelling_node[currentEdge + 1];
   std::vector<LatLng> path(last - first);
-  for (int v = first, i = 0; v != last; ++v, ++i)
+  for (int v = first, i = 0; v < last; ++v, ++i)
     path[i] = {osmGraph.modelling_node_latitude[v], osmGraph.modelling_node_longitude[v]};
   return path;
 }
@@ -352,12 +303,40 @@ inline RoadGeometryAttribute::Type OsmImporter::getValue<RoadGeometryAttribute>(
 template <>
 inline SpeedLimitAttribute::Type OsmImporter::getValue<SpeedLimitAttribute>() const {
   assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  return std::round(waySpeed[osmGraph.way[currentEdge]]);
+  return std::round(waySpeedLimit[osmGraph.way[currentEdge]]);
+}
+
+// Returns the value of the capacity attribute for the current edge.
+template <>
+inline CapacityAttribute::Type OsmImporter::getValue<CapacityAttribute>() const {
+  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
+  auto laneCapacity = roadDefaults.at(wayCategory[osmGraph.way[currentEdge]]).laneCapacity;
+  if (getValue<LengthAttribute>() < 100)
+    laneCapacity *= 2;
+  return std::round(getValue<NumLanesAttribute>() * laneCapacity);
+}
+
+// Returns the value of the free-flow speed attribute for the current edge.
+template <>
+inline FreeFlowSpeedAttribute::Type OsmImporter::getValue<FreeFlowSpeedAttribute>() const {
+  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
+  const auto way = osmGraph.way[currentEdge];
+  if (isWaySpeedLimitGiven[way]) {
+    return std::round(waySpeedLimit[way] < 51 ? 0.5 * waySpeedLimit[way] : waySpeedLimit[way]);
+  } else {
+    if (getValue<OsmRoadCategoryAttribute>() >= OsmRoadCategory::TRUNK &&
+        getValue<OsmRoadCategoryAttribute>() <= OsmRoadCategory::TERTIARY_LINK &&
+        getValue<LengthAttribute>() < 300) {
+      return std::round((waySpeedLimit[way] - 10) / 300 * getValue<LengthAttribute>() + 10);
+    }
+    return std::round(waySpeedLimit[way]);
+  }
 }
 
 // Returns the value of the travel time attribute for the current edge.
 template <>
 inline TravelTimeAttribute::Type OsmImporter::getValue<TravelTimeAttribute>() const {
-  assert(currentEdge >= 0); assert(currentEdge < osmGraph.arc_count());
-  return std::round(36 * osmGraph.geo_distance[currentEdge] / waySpeed[osmGraph.way[currentEdge]]);
+  if (getValue<FreeFlowSpeedAttribute>() == 0)
+    return INFTY;
+  return std::round(36.0 * getValue<LengthAttribute>() / getValue<FreeFlowSpeedAttribute>());
 }
