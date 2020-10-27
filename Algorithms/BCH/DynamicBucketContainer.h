@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <vector>
 
@@ -54,6 +55,13 @@ class DynamicBucketContainer {
       }
     }
     return false;
+  }
+
+  // Removes all entries from all buckets.
+  void clear() {
+    for (auto& bucketPos : bucketPositions)
+      bucketPos.end = bucketPos.start;
+    std::fill(entries.begin(), entries.end(), BucketEntryT());
   }
 
   // Returns the number of bucket entries visited during the last remove operation.
