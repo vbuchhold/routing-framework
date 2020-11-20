@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 
 // A timer to measure how long some code takes to execute.
 class Timer {
@@ -10,7 +11,7 @@ class Timer {
 
   // Returns the time elapsed since the timer was started.
   template <typename UnitT = std::chrono::milliseconds>
-  int elapsed() const {
+  int64_t elapsed() const {
     const auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<UnitT>(now - startTime).count();
   }
