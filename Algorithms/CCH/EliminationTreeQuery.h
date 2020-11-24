@@ -11,9 +11,16 @@
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "Tools/Constants.h"
 
-// Implementation of an elimination tree query, which computes shortest paths in CCH without using
-// priority queues. Depending on the used label set, it keeps parent vertices and/or edges, and
-// computes multiple shortest paths simultaneously, optionally using SSE or AVX instructions.
+// An implementation of an elimination tree query, which computes shortest paths in a customizable
+// contraction hierarchy without using priority queues. Depending on the used label set, it keeps
+// parent vertices and/or edges, and computes multiple shortest paths simultaneously, optionally
+// using SSE or AVX instructions.
+//
+// While the run() methods interleave the forward and reverse elimination tree search, the methods
+// pinForwardSearch() and runReverseSearch() allow us to perform the forward and reverse search one
+// after another. This is useful when performing multiple queries from the same source (or sources)
+// in succession. In that case, it suffices to perform the forward search once and use its distance
+// labels for multiple reverse searches.
 template <typename LabelSetT>
 class EliminationTreeQuery {
  private:
@@ -83,6 +90,34 @@ class EliminationTreeQuery {
       } else {
         reverseSearch.distanceLabels[reverseSearch.settleNextVertex()] = INFTY;
       }
+  }
+
+  // Runs a forward search from s and pins (stores) its distance labels.
+  void pinForwardSearch(const int s) {
+    pinForwardSearch(&s, &s + 1);
+  }
+
+  // Runs a forward search from multiple sources and pins (stores) its distance labels.
+  template <typename IteratorT>
+  void pinForwardSearch(const IteratorT firstSource, const IteratorT lastSource) {
+    tentativeDistances = INFTY;
+    forwardSearch.run(firstSource, lastSource);
+  }
+
+  // Runs a reverse search from t, which considers the pinned forward labels.
+  void runReverseSearch(const int t) {
+    runReverseSearch(&t, &t + 1);
+  }
+
+  // Runs a reverse search from multiple targets, which considers the pinned forward labels.
+  template <typename IteratorT>
+  void runReverseSearch(const IteratorT firstTarget, const IteratorT lastTarget) {
+    reverseSearch.init(firstTarget, lastTarget);
+    tentativeDistances = INFTY;
+    while (reverseSearch.nextVertices.minKey() != INVALID_VERTEX) {
+      updateTentativeDistances(reverseSearch.nextVertices.minKey());
+      reverseSearch.distanceLabels[reverseSearch.settleNextVertex()] = INFTY;
+    }
   }
 
   // Returns the length of the i-th shortest path.
