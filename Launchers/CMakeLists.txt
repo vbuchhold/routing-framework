@@ -42,3 +42,9 @@ option(USE_FAST_ELIMINATION_TREE_QUERY "Use the fast elimination tree query." ON
 if(NOT USE_FAST_ELIMINATION_TREE_QUERY)
   target_compile_definitions(RunP2PAlgo PRIVATE NO_FAST_ELIMINATION_TREE_QUERY)
 endif()
+
+add_executable(RunPoiAlgo RunPoiAlgo.cc)
+target_link_libraries(RunPoiAlgo ${RoutingKit_LIBRARY})
+if(OpenMP_FOUND)
+  target_link_libraries(RunPoiAlgo OpenMP::OpenMP_CXX)
+endif()
