@@ -89,6 +89,11 @@ class CCH {
     firstDownInputEdge.back() = downInputEdges.size();
   }
 
+  // Returns the separator decomposition used to build this CCH.
+  const SeparatorDecomposition& getSeparatorDecomposition() const noexcept {
+    return decomp;
+  }
+
   // Returns the order in which vertices were contracted.
   const Permutation& getContractionOrder() const noexcept {
     return decomp.order;
