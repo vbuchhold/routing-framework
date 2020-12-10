@@ -104,6 +104,20 @@ class AddressableKHeap {
     siftDown(idx);
   }
 
+  // Attempts to decrease the key of the element with the specified ID to newKey.
+  void decreaseKeyIfPossible(const int id, const int newKey) {
+    assert(contains(id));
+    if (newKey < heap[elementIdToHeapIndex[id]].key)
+      decreaseKey(id, newKey);
+  }
+
+  // Attempts to increase the key of the element with the specified ID to newKey.
+  void increaseKeyIfPossible(const int id, const int newKey) {
+    assert(contains(id));
+    if (newKey > heap[elementIdToHeapIndex[id]].key)
+      increaseKey(id, newKey);
+  }
+
   // Updates the key of the element with the specified ID to newKey.
   void updateKey(const int id, const int newKey) {
     assert(contains(id));

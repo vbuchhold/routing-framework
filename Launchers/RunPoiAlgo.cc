@@ -9,9 +9,12 @@
 #include <string>
 #include <vector>
 
+#include "Algorithms/Buckets/BCCHClosestPoiQuery.h"
+#include "Algorithms/Buckets/BCHClosestPoiQuery.h"
 #include "Algorithms/CCH/CCH.h"
 #include "Algorithms/CCH/CCHClosestPoiQuery.h"
 #include "Algorithms/CCH/CCHMetric.h"
+#include "Algorithms/CH/CH.h"
 #include "Algorithms/Dijkstra/Dijkstra.h"
 #include "Algorithms/Dijkstra/DijkstraClosestPoiQuery.h"
 #include "DataStructures/Graph/Attributes/LengthAttribute.h"
@@ -28,6 +31,7 @@
 inline void printUsage() {
   std::cout <<
       "Usage: RunPoiAlgo -a Dij  -b <nums> -p <nums> -g <file> -o <file>\n"
+      "       RunPoiAlgo -a BCH  -b <nums> -p <nums> -g <file> -h <file> -o <file>\n"
       "       RunPoiAlgo -a BCCH -b <nums> -p <nums> -g <file> -d <file> -o <file>\n"
       "       RunPoiAlgo -a CCH  -b <nums> -p <nums> -g <file> -d <file> -o <file>\n"
       "Run the selection and query phase of various closest-POI algorithms. POI sets\n"
@@ -39,11 +43,12 @@ inline void printUsage() {
       "  -m <num>          run <num> queries per POI set (default: 100)\n"
       "  -s <seed>         start the random number generator with <seed> (default: 0)\n"
       "  -a <algo>         use <algo> as closest-POI algorithm\n"
-      "                     possible values: Dij BCCH CCH (default)\n"
+      "                     possible values: Dij BCH BCCH CCH (default)\n"
       "  -b <nums>         space-separated list of ball sizes\n"
       "  -p <nums>         space-separated list of POI set sizes\n"
       "  -k <nums>         space-separated list of POI amounts to be reported\n"
       "  -g <file>         input graph in binary format\n"
+      "  -h <file>         standard contraction hierarchy in binary format\n"
       "  -d <file>         separator decomposition in binary format\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
@@ -128,7 +133,7 @@ inline void runClosestPoiAlgorithm(
         // Run the selection phase of the closest-POI algorithm.
         Timer selectionTimer;
         const auto poiIndex = algo.buildPoiIndexFor(pointsOfInterest);
-        const auto selectionTime = selectionTimer.elapsed<std::chrono::microseconds>();
+        const auto selectionTime = selectionTimer.elapsed<std::chrono::nanoseconds>();
         selectionStats << b << ',' << p << ',' << selectionTime << '\n';
 
         for (auto j = 0; j < numQueriesPerPoiSet; ++j) {
@@ -137,7 +142,7 @@ inline void runClosestPoiAlgorithm(
             const auto source = translate(randomVertex(gen));
             Timer queryTimer;
             const auto& closestPois = algo.findClosestPois(source, poiIndex, k);
-            const auto queryTime = queryTimer.elapsed<std::chrono::microseconds>();
+            const auto queryTime = queryTimer.elapsed<std::chrono::nanoseconds>();
 
             // Compute the checksum for the query.
             int64_t checksum = 0;
@@ -165,7 +170,8 @@ int main(int argc, char* argv[]) {
     const auto useLengths = clp.isSet("l");
     const auto algorithmName = clp.getValue<std::string>("a", "CCH");
     const auto graphFileName = clp.getValue<std::string>("g");
-    const auto decompFileName = clp.getValue<std::string>("d");
+    const auto hierarchyFileName = clp.getValue<std::string>("h");
+    const auto sepDecompFileName = clp.getValue<std::string>("d");
 
     // Read the input graph from file.
     std::cout << "Reading input graph from file... " << std::flush;
@@ -182,33 +188,46 @@ int main(int argc, char* argv[]) {
 
     // Run a closest-POI algorithm.
     if (algorithmName == "Dij") {
-      DijkstraClosestPoiQuery<InputGraph, TravelTimeAttribute> closestPoiAlgorithm(graph);
-      runClosestPoiAlgorithm(clp, graph, [](const int v) { return v; }, closestPoiAlgorithm);
+      DijkstraClosestPoiQuery<InputGraph, TravelTimeAttribute> closestPoiAlgo(graph);
+      runClosestPoiAlgorithm(clp, graph, [](const int v) { return v; }, closestPoiAlgo);
+    } else if (algorithmName == "BCH") {
+      // Read the CH from file.
+      std::cout << "Reading CH from file... " << std::flush;
+      std::ifstream hierarchyFile(hierarchyFileName, std::ios::binary);
+      if (!hierarchyFile.good())
+        throw std::invalid_argument("file not found -- '" + hierarchyFileName + "'");
+      CH ch(hierarchyFile);
+      hierarchyFile.close();
+      std::cout << "done.\n";
+
+      BCHClosestPoiQuery closestPoiAlgo(ch);
+      runClosestPoiAlgorithm(clp, graph, [&](const int v) { return ch.rank(v); }, closestPoiAlgo);
     } else if (algorithmName == "BCCH" || algorithmName == "CCH") {
       // Read the separator decomposition from file.
       std::cout << "Reading separator decomposition from file... " << std::flush;
-      std::ifstream decompFile(decompFileName, std::ios::binary);
-      if (!decompFile.good())
-        throw std::invalid_argument("file not found -- '" + decompFileName + "'");
-      SeparatorDecomposition decomp;
-      decomp.readFrom(decompFile);
-      decompFile.close();
+      std::ifstream sepDecompFile(sepDecompFileName, std::ios::binary);
+      if (!sepDecompFile.good())
+        throw std::invalid_argument("file not found -- '" + sepDecompFileName + "'");
+      SeparatorDecomposition sepDecomp;
+      sepDecomp.readFrom(sepDecompFile);
+      sepDecompFile.close();
       std::cout << "done.\n";
 
       // Build and customize a CCH.
       std::cout << "Building and customizing CCH... " << std::flush;
       CCH cch;
-      cch.preprocess(graph, decomp);
+      cch.preprocess(graph, sepDecomp);
       CCHMetric metric(cch, &graph.travelTime(0));
       const auto minWeightedCH = metric.buildMinimumWeightedCH();
       auto translate = [&](const int v) { return minWeightedCH.rank(v); };
       std::cout << "done.\n";
 
       if (algorithmName == "BCCH") {
-        throw std::invalid_argument("BCCH not yet supported");
+        BCCHClosestPoiQuery closestPoiAlgo(cch, minWeightedCH);
+        runClosestPoiAlgorithm(clp, graph, translate, closestPoiAlgo);
       } else {
-        CCHClosestPoiQuery closestPoiAlgorithm(cch, minWeightedCH);
-        runClosestPoiAlgorithm(clp, graph, translate, closestPoiAlgorithm);
+        CCHClosestPoiQuery closestPoiAlgo(cch, minWeightedCH);
+        runClosestPoiAlgorithm(clp, graph, translate, closestPoiAlgo);
       }
     } else {
       throw std::invalid_argument("invalid closest-POI algorithm -- '" + algorithmName + "'");
