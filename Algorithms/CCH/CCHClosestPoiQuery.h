@@ -130,7 +130,7 @@ class CCHClosestPoiQuery {
     int firstVertex; // The first vertex in this subgraph.
   };
 
-  static constexpr int RECURSION_THRESHOLD = 4; // Used to stop the recursion during queries.
+  static constexpr int RECURSION_THRESHOLD = 8; // Used to stop the recursion during queries.
 
   // Checks for each specified POI whether it improves the farthest of the k currently closest POIs.
   void handleBaseCase(const int firstPoi, const int lastPoi, const PoiIndex& idx, const int k) {
