@@ -24,6 +24,11 @@ class StaticBucketContainer {
     return {entries.begin() + bucketPositions[v], entries.begin() + bucketPositions[v + 1]};
   }
 
+  // Returns the space (in bytes) consumed by these buckets.
+  int spaceConsumption() const noexcept {
+    return bucketPositions.size() * sizeof(int32_t) + entries.size() * sizeof(BucketEntry);
+  }
+
  private:
   // Default constructor.
   StaticBucketContainer() noexcept = default;

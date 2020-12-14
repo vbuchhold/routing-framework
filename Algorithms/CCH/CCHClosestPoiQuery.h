@@ -21,6 +21,13 @@ class CCHClosestPoiQuery {
   // Precomputed auxiliary information to accelerate POI queries.
   struct PoiIndex {
     friend class CCHClosestPoiQuery;
+
+   public:
+    // Returns the space (in bytes) consumed by this POI index.
+    int spaceConsumption() const noexcept {
+      return numPoisAmongFirst.size() * sizeof(int32_t);
+    }
+
    private:
     // Builds the POI index for the specified set of POI vertices.
     PoiIndex(const std::vector<int32_t>& pointsOfInterest, const int numVertices)

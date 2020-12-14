@@ -83,6 +83,12 @@ class BucketClosestPoiQuery {
   struct PoiIndex {
     friend class BucketClosestPoiQuery;
 
+   public:
+    // Returns the space (in bytes) consumed by this POI index.
+    int spaceConsumption() const noexcept {
+      return bucketContainer.spaceConsumption();
+    }
+
    private:
     // Builds the POI index for the specified set of POI vertices.
     PoiIndex(const std::vector<int32_t>& pointsOfInterest, StaticBucketContainer&& bucketCont)
@@ -95,7 +101,7 @@ class BucketClosestPoiQuery {
   // A point of interest returned by a POI query.
   struct Poi {
     // Returns true if this POI is closer to the source than the specified POI.
-    constexpr bool operator<(const Poi& rhs) noexcept {
+    constexpr bool operator<(const Poi& rhs) const noexcept {
       return dist < rhs.dist;
     }
 

@@ -105,7 +105,7 @@ inline void runClosestPoiAlgorithm(
   std::ofstream selectionStats(outputFileName + ".index.csv");
   if (!selectionStats.good())
     throw std::invalid_argument("file cannot be opened -- '" + outputFileName + ".index.csv'");
-  selectionStats << "ball_size,num_pois,time\n";
+  selectionStats << "ball_size,num_pois,space,time\n";
 
   std::ofstream queryStats(outputFileName + ".query.csv");
   if (!queryStats.good())
@@ -134,7 +134,8 @@ inline void runClosestPoiAlgorithm(
         Timer selectionTimer;
         const auto poiIndex = algo.buildPoiIndexFor(pointsOfInterest);
         const auto selectionTime = selectionTimer.elapsed<std::chrono::nanoseconds>();
-        selectionStats << b << ',' << p << ',' << selectionTime << '\n';
+        const auto selectionSpace = poiIndex.spaceConsumption();
+        selectionStats << b << ',' << p << ',' << selectionSpace << ',' << selectionTime << '\n';
 
         for (auto j = 0; j < numQueriesPerPoiSet; ++j) {
           for (const auto k : maxPoiAmounts) {

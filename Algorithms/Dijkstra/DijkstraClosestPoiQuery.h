@@ -20,6 +20,13 @@ class DijkstraClosestPoiQuery {
   // Precomputed auxiliary information to accelerate POI queries.
   struct PoiIndex {
     friend class DijkstraClosestPoiQuery;
+
+   public:
+    // Returns the space (in bytes) consumed by this POI index.
+    constexpr int spaceConsumption() const noexcept {
+      return 0;
+    }
+
    private:
     // Builds the POI index for the specified set of POI vertices.
     PoiIndex(const std::vector<int32_t>& pointsOfInterest, const int numVertices)
