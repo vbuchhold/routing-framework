@@ -1,0 +1,44 @@
+#!/bin/bash
+xatfData=$1
+baseDir=$2
+
+inputDir=$baseDir/Inputs
+outputDir=$baseDir/Experiments/NearestNeighbors/SEA21
+
+sourceDir=${BASH_SOURCE%/*}/../../..
+binaryDir=$sourceDir/Build/Release
+
+mkdir -p $inputDir/CHs $inputDir/Graphs $inputDir/RawData/XATF_sorted $inputDir/SepDecomps
+mkdir -p $outputDir/POIs
+
+cmake -D CMAKE_BUILD_TYPE=Release -S $sourceDir -B $binaryDir
+cmake --build $binaryDir
+
+export OMP_NUM_THREADS=1
+export OMP_DYNAMIC=false
+export OMP_PROC_BIND=true
+export OMP_PLACES=cores
+
+#######################################################
+# Building the Graph, CH, and Separator Decomposition #
+#######################################################
+
+$sourceDir/RawData/XatfMergeCountries.py -I $xatfData -O $inputDir/RawData/XATF_sorted -o eur
+$binaryDir/RawData/ConvertGraph -s xatf -d binary -scc -a capacity free_flow_speed lat_lng length num_lanes travel_time xatf_road_category -i $inputDir/RawData/XATF_sorted/eur/eur -o $inputDir/Graphs/DIMACS_eur
+
+$binaryDir/Launchers/RunP2PAlgo -a CH  -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/CHs/DIMACS_eur_time
+$binaryDir/Launchers/RunP2PAlgo -a CCH -g $inputDir/Graphs/DIMACS_eur.gr.bin -o $inputDir/SepDecomps/DIMACS_eur_nd30
+
+###########################
+# Closest-POI Experiments #
+###########################
+
+ballSizes=$(for exp in {14..24}; do echo $((2**exp)); done)
+poiSetSizes=$(for exp in {2..18}; do echo $((2**exp)); done)
+
+for algo in Dij BCH BCCH CCH; do
+  $binaryDir/Launchers/RunPoiAlgo -a $algo -b $((2**20)) -p $((2**12))   -k 1 4 8 -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/b20_p12_$algo
+  $binaryDir/Launchers/RunPoiAlgo -a $algo -b $((2**25)) -p $((2**14))   -k 1 4 8 -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/b25_p14_$algo
+  $binaryDir/Launchers/RunPoiAlgo -a $algo -b $ballSizes -p $((2**14))   -k 4     -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/VaryingBallSize_$algo
+  $binaryDir/Launchers/RunPoiAlgo -a $algo -b $((2**25)) -p $poiSetSizes -k 4     -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/VaryingPOISetSize_$algo
+done
