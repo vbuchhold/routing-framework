@@ -19,9 +19,11 @@ if(NOT TA_LOG_K STREQUAL "")
   target_compile_definitions(AssignTraffic PRIVATE TA_LOG_K=${TA_LOG_K})
 endif()
 
-add_executable(CalculateDemand CalculateDemand.cc)
+add_executable(
+    CalculateDemand CalculateDemand.cc
+    ../External/randomc/mersenne.cpp ../External/randomc/userintf.cpp ../External/stocc/stoc1.cpp)
 target_compile_definitions(CalculateDemand PRIVATE CSV_IO_NO_THREAD)
-target_link_libraries(CalculateDemand ${PROJ_LIBRARY})
+target_link_libraries(CalculateDemand ${PROJ_LIBRARY} ${RoutingKit_LIBRARY})
 if(OpenMP_FOUND)
   target_link_libraries(CalculateDemand OpenMP::OpenMP_CXX)
 endif()

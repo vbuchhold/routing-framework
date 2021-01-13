@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -9,6 +10,9 @@
 
 #include <csv.h>
 
+#include "Algorithms/CCH/CCH.h"
+#include "Algorithms/CCH/CCHMetric.h"
+#include "Algorithms/DemandCalculation/CCHOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/ChooserDemandCalculator.h"
 #include "Algorithms/DemandCalculation/DijkstraOpportunityChooser.h"
 #include "Algorithms/DemandCalculation/FormulaDemandCalculator.h"
@@ -25,9 +29,11 @@
 #include "DataStructures/Graph/Attributes/SequentialVertexIdAttribute.h"
 #include "DataStructures/Graph/Attributes/TravelTimeAttribute.h"
 #include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Partitioning/SeparatorDecomposition.h"
 #include "Tools/CommandLine/CommandLineParser.h"
 #include "Tools/Constants.h"
 #include "Tools/StringHelpers.h"
+#include "Tools/Timer.h"
 
 inline void printUsage() {
   std::cout <<
@@ -35,6 +41,7 @@ inline void printUsage() {
       "Calculates travel demand in a road network according to the radiation model with\n"
       "selection, which requires as input only a population grid.\n"
       "  -len              use physical lengths as metric (default: travel time)\n"
+      "  -t                output calculation times\n"
       "  -n <num>          number of OD pairs to be generated\n"
       "  -l <real>         radiation model's parameter lambda (defaults to 0.999988)\n"
       "  -p <prob>         swap src and dst of each OD pair with <prob> (defaults to 0)\n"
@@ -44,11 +51,12 @@ inline void printUsage() {
       "  -f <fmt>          format of the population grid file\n"
       "                      possible values: DE EU\n"
       "  -m <algo>         use method <algo> to calculate travel demand\n"
-      "                      possible values: formula Dij (default) kd-tree\n"
+      "                      possible values: formula Dij kd-tree CCH (default)\n"
       "  -g <file>         input graph in binary format\n"
       "  -a <file>         restrict origins and destinations to polygonal study area\n"
       "  -pop <file>       population grid\n"
       "  -poi <file>       use density of POIs as proxy for trip attraction rates\n"
+      "  -sep <file>       separator decomposition in binary format (CCH only)\n"
       "  -o <file>         place output in <file>\n"
       "  -help             display this help and exit\n";
 }
@@ -63,6 +71,7 @@ int main(int argc, char* argv[]) {
 
     // Parse the command-line options.
     const auto useLengths = clp.isSet("len");
+    const auto printTimes = clp.isSet("t");
     const auto numODPairs = clp.getValue<int>("n");
     const auto lambda = clp.getValue<double>("l", 0.999988);
     const auto swapProb = clp.getValue<double>("p", 0.0);
@@ -70,11 +79,12 @@ int main(int argc, char* argv[]) {
     const auto maxDistance = clp.getValue<int>("d", 200);
     const auto seed = clp.getValue<int>("s", 0);
     const auto popFileFormat = clp.getValue<std::string>("f");
-    const auto algo = clp.getValue<std::string>("m", "Dij");
+    const auto algo = clp.getValue<std::string>("m", "CCH");
     const auto graphFileName = clp.getValue<std::string>("g");
     const auto areaFileName = clp.getValue<std::string>("a");
     const auto popFileName = clp.getValue<std::string>("pop");
     const auto poiFileName = clp.getValue<std::string>("poi");
+    const auto sepFileName = clp.getValue<std::string>("sep");
     auto outputFileName = clp.getValue<std::string>("o");
     if (!endsWith(outputFileName, ".csv"))
       outputFileName += ".csv";
@@ -208,6 +218,33 @@ int main(int argc, char* argv[]) {
     } else if (algo == "kd-tree") {
       ChooserDemandCalculator<GraphT, KDTreeOpportunityChooser> calculator(graph, seed, true);
       calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem);
+    } else if (algo == "CCH") {
+      // Read the separator decomposition from file.
+      std::cout << "Reading separator decomposition from file..." << std::flush;
+      std::ifstream sepFile(sepFileName, std::ios::binary);
+      if (!sepFile.good())
+        throw std::invalid_argument("file not found -- '" + sepFileName + "'");
+      SeparatorDecomposition sepDecomp;
+      sepDecomp.readFrom(sepFile);
+      sepFile.close();
+      std::cout << " done.\n";
+
+      // Build the CCH.
+      Timer timer;
+      std::cout << "Building CCH..." << std::flush;
+      CCH cch;
+      cch.preprocess(graph, sepDecomp);
+      std::cout << " done (" << timer.elapsed() << "ms)." << std::endl;
+
+      // Customize the CCH.
+      timer.restart();
+      std::cout << "Customizing CCH..." << std::flush;
+      CCHMetric metric(cch, &graph.travelTime(0));
+      const auto minWeightedCH = metric.buildMinimumWeightedCH();
+      std::cout << " done (" << timer.elapsed() << "ms)." << std::endl;
+
+      ChooserDemandCalculator<GraphT, CCHOpportunityChooser> calculator(graph, seed, true);
+      calculator.calculateDemand(numODPairs, lambda, swapProb, partFileStem, cch, minWeightedCH);
     } else {
       throw std::invalid_argument("invalid method -- '" + algo + "'");
     }
@@ -220,17 +257,25 @@ int main(int argc, char* argv[]) {
     outputFile << "# Input graph: " << graphFileName << '\n';
     outputFile << "# Methodology: radiation model with selection (";
     outputFile << algo << ", " << popFileFormat << ", l=" << lambda << ", r=" << maxRange << ")\n";
-    outputFile << "origin,destination\n";
+    outputFile << "origin,destination";
+    if (printTimes)
+      outputFile << ",calculation_time";
+    outputFile << '\n';
     int src, dst;
+    int64_t time;
     for (auto i = 0; true; ++i) {
       const auto partFileName = partFileStem + ".part" + std::to_string(i);
       std::ifstream partFile(partFileName);
       if (!partFile.good())
         break;
-      io::CSVReader<2> partFileReader(partFileName, partFile);
-      partFileReader.set_header("origin", "destination");
-      while (partFileReader.read_row(src, dst))
-        outputFile << graph.sequentialVertexId(src) << ',' << graph.sequentialVertexId(dst) << '\n';
+      io::CSVReader<3> partFileReader(partFileName, partFile);
+      partFileReader.set_header("origin", "destination", "calculation_time");
+      while (partFileReader.read_row(src, dst, time)) {
+        outputFile << graph.sequentialVertexId(src) << ',' << graph.sequentialVertexId(dst);
+        if (printTimes)
+          outputFile << ',' << time;
+        outputFile << '\n';
+      }
       partFile.close();
       std::remove(partFileName.c_str());
     }

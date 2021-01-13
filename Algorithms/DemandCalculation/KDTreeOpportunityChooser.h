@@ -9,9 +9,6 @@
 #include <vector>
 
 #include <stocc/stocc.h>
-#include <randomc/mersenne.cpp>
-#include <randomc/userintf.cpp>
-#include <stocc/stoc1.cpp>
 
 #include "DataStructures/Geometry/Point.h"
 #include "DataStructures/Geometry/Rectangle.h"

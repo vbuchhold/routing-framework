@@ -27,8 +27,10 @@ class ChooserDemandCalculator {
   }
 
   // Generates OD pairs and writes them to the specified file.
+  template <typename ...ChooserParameters>
   void calculateDemand(
-      int numODPairs, double lambda, double swapProb, const std::string& fileName) const {
+      int numODPairs, double lambda, double swapProb, const std::string& fileName,
+      ChooserParameters&& ...params) const {
     Timer timer;
     if (verbose) std::cout << "Calculating demand: ";
     ProgressBar bar(numODPairs, verbose);
@@ -38,7 +40,7 @@ class ChooserDemandCalculator {
 
     #pragma omp parallel
     {
-      OpportunityChooserT<GraphT> chooser(graph, seed);
+      OpportunityChooserT<GraphT> chooser(graph, seed, params...);
       std::minstd_rand rand(seed + omp_get_thread_num() + 1);
       std::discrete_distribution<> sourceDist(firstWeight, lastWeight);
       std::uniform_int_distribution<> rankDist(1, numOpportunities);
@@ -49,7 +51,8 @@ class ChooserDemandCalculator {
 
       #pragma omp for schedule(static, 1) nowait
       for (auto i = 0; i < numODPairs; ++i) {
-        const auto src = sourceDist(rand);
+        Timer tripTimer;
+        auto src = sourceDist(rand);
         auto dst = src;
         while (src == dst) {
           auto numFitOpportunities = 0;
@@ -60,9 +63,9 @@ class ChooserDemandCalculator {
           dst = chooser.findClosestOpportunityWithHighFitness(src, numFitOpportunities);
         }
         if (swapDist(rand))
-          out << dst << ',' << src << '\n';
-        else
-          out << src << ',' << dst << '\n';
+          std::swap(src, dst);
+        const auto timeToCalculateTrip = tripTimer.elapsed<std::chrono::nanoseconds>();
+        out << src << ',' << dst << ',' << timeToCalculateTrip << '\n';
         ++bar;
       }
     }
