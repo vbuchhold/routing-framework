@@ -16,6 +16,9 @@ This repository contains the C++17 source code used in the following publication
 * Valentin Buchhold, Peter Sanders, and Dorothea Wagner. Real-time Traffic Assignment Using
   Engineered Customizable Contraction Hierarchies. ACM Journal of Experimental Algorithmics,
   24(2):2.4:1-2.4:28, 2019. [doi:10.1145/3362693](http://dx.doi.org/10.1145/3362693).
+* Valentin Buchhold and Dorothea Wagner. Nearest-Neighbor Queries in Customizable Contraction
+  Hierarchies and Applications. Submitted to the 19th International Symposium on Experimental
+  Algorithms (SEA'21).
 
 ## License
 
@@ -138,4 +141,20 @@ Now, enter the following command at the top-level directory of the framework:
 
 ```
 $ Publications/DemandCalculation/SIGSPATIAL19/RunExperiments <base-dir>
+```
+
+## Experiments in *Nearest-Neighbor Queries in Customizable Contraction Hierarchies and Applications*
+
+To get the version of the source code used in the publication, check out the `SEA21` tag:
+
+```
+$ git checkout SEA21
+```
+
+To run the experiments presented in the submission, enter the following command at the top-level
+directory of the framework, with a freely chosen output directory `<base-directory>`:
+
+```
+$ Publications/NearestNeighbors/SEA21/RunExperiments \
+>     <path-to-xatf-data> <path-to-euro-grid> <base-directory>
 ```

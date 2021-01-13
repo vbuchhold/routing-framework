@@ -1,6 +1,7 @@
 #!/bin/bash
 xatfData=$1
-baseDir=$2
+europeanGrid=$2
+baseDir=$3
 
 inputDir=$baseDir/Inputs
 outputDir=$baseDir/Experiments/NearestNeighbors/SEA21
@@ -9,7 +10,7 @@ sourceDir=${BASH_SOURCE%/*}/../../..
 binaryDir=$sourceDir/Build/Release
 
 mkdir -p $inputDir/CHs $inputDir/Graphs $inputDir/RawData/XATF_sorted $inputDir/SepDecomps
-mkdir -p $outputDir/POIs
+mkdir -p $outputDir/POIs $outputDir/TravelDemand
 
 cmake -D CMAKE_BUILD_TYPE=Release -S $sourceDir -B $binaryDir
 cmake --build $binaryDir
@@ -41,4 +42,15 @@ for algo in Dij BCH BCCH CCH; do
   $binaryDir/Launchers/RunPoiAlgo -a $algo -b $((2**25)) -p $((2**14))   -k 1 4 8 -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/b25_p14_$algo
   $binaryDir/Launchers/RunPoiAlgo -a $algo -b $ballSizes -p $((2**14))   -k 4     -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/VaryingBallSize_$algo
   $binaryDir/Launchers/RunPoiAlgo -a $algo -b $((2**25)) -p $poiSetSizes -k 4     -g $inputDir/Graphs/DIMACS_eur.gr.bin -h $inputDir/CHs/DIMACS_eur_time.ch.bin -d $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/POIs/VaryingPOISetSize_$algo
+done
+
+#############################
+# Travel Demand Experiments #
+#############################
+
+for algo in Dij CCH kd-tree; do
+  for ((i = 1; i <= 10; ++i)); do
+    lambda=$(bc -l <<< "1 - 1/10^4 / $i^2")
+    $binaryDir/Launchers/CalculateDemand -t -n 100000 -l $lambda -r 0 -f EU -m $algo -g $inputDir/Graphs/DIMACS_eur.gr.bin -pop $europeanGrid -sep $inputDir/SepDecomps/DIMACS_eur_nd30.sep.bin -o $outputDir/TravelDemand/${algo}_$(($i**2)).csv > $outputDir/TravelDemand/${algo}_$(($i**2)).log
+  done
 done
