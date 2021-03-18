@@ -17,8 +17,9 @@ This repository contains the C++17 source code used in the following publication
   Engineered Customizable Contraction Hierarchies. ACM Journal of Experimental Algorithmics,
   24(2):2.4:1-2.4:28, 2019. [doi:10.1145/3362693](http://dx.doi.org/10.1145/3362693).
 * Valentin Buchhold and Dorothea Wagner. Nearest-Neighbor Queries in Customizable Contraction
-  Hierarchies and Applications. Submitted to the 19th International Symposium on Experimental
-  Algorithms (SEA'21).
+  Hierarchies and Applications. In David Coudert and Emanuele Natale, editors, *Proceedings of the
+  19th International Symposium on Experimental Algorithms (SEA'21)*, pages 18:1-18:18. Schloss
+  Dagstuhl, 2021. [doi:10.4230/LIPIcs.SEA.2021.18](http://dx.doi.org/10.4230/LIPIcs.SEA.2021.18).
 
 ## License
 
