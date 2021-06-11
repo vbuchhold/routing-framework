@@ -9,8 +9,10 @@
 #include <stocc/stocc.h>
 
 #include "Algorithms/CCH/CCH.h"
-#include "Algorithms/CCH/EliminationTreeQuery.h"
+#include "Algorithms/CCH/UpwardEliminationTreeSearch.h"
 #include "Algorithms/CH/CH.h"
+#include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 #include "Tools/Constants.h"
@@ -25,12 +27,14 @@ class CCHOpportunityChooser {
  public:
   // Creates an opportunity chooser based on the specified CCH (and the corresponding minimum CH).
   CCHOpportunityChooser(const GraphT& graph, const int seed, const CCH& cch, const CH& minCH)
-      : urbg(seed + omp_get_thread_num() + 1),
-        nrng(seed + omp_get_thread_num()),
-        cch(cch),
-        elimTreeQuery(minCH, cch.getEliminationTree()),
+      : cch(cch),
+        minWeightedCH(minCH),
         numLocationsAmongFirst(graph.numVertices() + 1),
-        numOpportunitiesAmongFirst(graph.numVertices() + 1) {
+        numOpportunitiesAmongFirst(graph.numVertices() + 1),
+        urbg(seed + omp_get_thread_num() + 1),
+        nrng(seed + omp_get_thread_num()),
+        forwardSearch(minCH.upwardGraph(), cch.getEliminationTree()),
+        distFromSource(graph.numVertices()) {
     assert(graph.numVertices() == cch.getUpwardGraph().numVertices());
     assert(graph.numVertices() == minCH.upwardGraph().numVertices());
     assert(seed >= 0);
@@ -59,11 +63,14 @@ class CCHOpportunityChooser {
   // Returns the vertex with the closest opportunity with sufficiently high fitness.
   int findClosestOpportunityWithHighFitness(const int src, const int numFitOpportunities) {
     assert(numFitOpportunities > 0);
+    const auto numVertices = cch.getUpwardGraph().numVertices();
     const auto& decomp = cch.getSeparatorDecomposition();
     const auto s = cch.getRanks()[src];
-    elimTreeQuery.pinForwardSearch(s);
     recursionStack.push_back({0, 0, 0, numFitOpportunities});
     distToClosestOpportunity = INFTY;
+    forwardSearch.run(s);
+    distFromSource.init();
+    distFromSource[numVertices - 1] = forwardSearch.getDistance(numVertices - 1);
 
     while (!recursionStack.empty()) {
       const auto parent = recursionStack.back();
@@ -163,8 +170,7 @@ class CCHOpportunityChooser {
       assert(opportunityCounts[j] > 0);
       --opportunityCounts[j];
       const auto loc = locations[firstLoc + j];
-      elimTreeQuery.runReverseSearch(loc);
-      const auto dist = elimTreeQuery.getDistance();
+      const auto dist = computeDistToVertex(loc);
       if (dist < distToClosestOpportunity) {
         closestOpportunity = loc;
         distToClosestOpportunity = dist;
@@ -174,21 +180,39 @@ class CCHOpportunityChooser {
 
   // Returns a lower bound on the distance from the source to any vertex in the specified subgraph.
   int computeDistToSubgraph(const int node) {
-    const auto& upwardGraph = cch.getUpwardGraph();
-    const auto highestVertex = cch.getSeparatorDecomposition().lastSeparatorVertex(node) - 1;
-    const auto firstBoundaryVertex = &upwardGraph.edgeHead(upwardGraph.firstEdge(highestVertex));
-    const auto lastBoundaryVertex = &upwardGraph.edgeHead(upwardGraph.lastEdge(highestVertex));
-    elimTreeQuery.runReverseSearch(firstBoundaryVertex, lastBoundaryVertex);
-    return elimTreeQuery.getDistance();
+    const auto highestRankedVertex = cch.getSeparatorDecomposition().lastSeparatorVertex(node) - 1;
+    auto dist = INFTY;
+    FORALL_INCIDENT_EDGES(cch.getUpwardGraph(), highestRankedVertex, e)
+      dist = std::min(dist, computeDistToVertex(cch.getUpwardGraph().edgeHead(e)));
+    return dist;
   }
 
-  using ElimTreeQuery = EliminationTreeQuery<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
+  // Returns the exact distance from the source to the specified vertex.
+  int computeDistToVertex(int v) {
+    assert(searchSpace.empty());
+    while (distFromSource[v] == INFTY) {
+      searchSpace.push_back(v);
+      v = cch.getEliminationTree()[v];
+    }
 
-  std::minstd_rand urbg; // A uniform random bit generator.
-  StochasticLib1 nrng;   // A nonuniform random number generator.
+    while (!searchSpace.empty()) {
+      v = searchSpace.back();
+      searchSpace.pop_back();
+      distFromSource[v] = forwardSearch.getDistance(v);
+      FORALL_INCIDENT_EDGES(minWeightedCH.downwardGraph(), v, e) {
+        const auto tail = minWeightedCH.downwardGraph().edgeHead(e);
+        const auto cost = minWeightedCH.downwardGraph().traversalCost(e);
+        distFromSource[v] = std::min(distFromSource[v], distFromSource[tail] + cost);
+      }
+    }
 
-  const CCH& cch;              // The metric-independent CCH.
-  ElimTreeQuery elimTreeQuery; // A standard elimination tree query.
+    return distFromSource[v];
+  }
+
+  using ForwardSearch = UpwardEliminationTreeSearch<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
+
+  const CCH& cch;          // The metric-independent CCH.
+  const CH& minWeightedCH; // The minimum weighted CH resulting from perfect customization.
 
   std::vector<int32_t> locations;                   // Vertices with nonzero no. of opportunities.
   std::vector<int32_t> numOpportunitiesPerLocation; // No. of opportunities for each location.
@@ -200,4 +224,11 @@ class CCHOpportunityChooser {
   std::vector<int32_t> opportunityCounts;     // Temporary storage holding opportunity counts.
   int closestOpportunity;                     // The closest fit opportunity so far encountered.
   int distToClosestOpportunity;               // The distance to the closest fit opportunity.
+
+  std::minstd_rand urbg; // A uniform random bit generator.
+  StochasticLib1 nrng;   // A nonuniform random number generator.
+
+  ForwardSearch forwardSearch;                           // A forward elimination tree search.
+  StampedDistanceLabelContainer<int32_t> distFromSource; // The distance from source to each vertex.
+  std::vector<int32_t> searchSpace;                      // The search space of the current vertex.
 };

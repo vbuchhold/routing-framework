@@ -7,8 +7,10 @@
 #include <vector>
 
 #include "Algorithms/CCH/CCH.h"
-#include "Algorithms/CCH/EliminationTreeQuery.h"
+#include "Algorithms/CCH/UpwardEliminationTreeSearch.h"
 #include "Algorithms/CH/CH.h"
+#include "DataStructures/Graph/Graph.h"
+#include "DataStructures/Labels/Containers/StampedDistanceLabelContainer.h"
 #include "DataStructures/Labels/BasicLabelSet.h"
 #include "DataStructures/Labels/ParentInfo.h"
 
@@ -58,7 +60,10 @@ class CCHClosestPoiQuery {
 
   // Creates an instance of a closest-POI query in the specified hierarchy.
   CCHClosestPoiQuery(const CCH& cch, const CH& minWeightedCH)
-      : cch(cch), elimTreeQuery(minWeightedCH, cch.getEliminationTree()) {
+      : cch(cch),
+        minWeightedCH(minWeightedCH),
+        forwardSearch(minWeightedCH.upwardGraph(), cch.getEliminationTree()),
+        distFromSource(cch.getUpwardGraph().numVertices()) {
     assert(cch.getUpwardGraph().numVertices() == minWeightedCH.upwardGraph().numVertices());
   }
 
@@ -69,11 +74,14 @@ class CCHClosestPoiQuery {
 
   // Returns the k closest POI vertices to s.
   const std::vector<Poi>& findClosestPois(const int s, const PoiIndex& idx, const int k = 1) {
-    assert(idx.numPoisAmongFirst.size() == cch.getUpwardGraph().numVertices() + 1);
+    const auto numVertices = cch.getUpwardGraph().numVertices();
+    assert(idx.numPoisAmongFirst.size() == numVertices + 1);
     const auto& decomp = cch.getSeparatorDecomposition();
-    elimTreeQuery.pinForwardSearch(s);
     recursionStack.emplace_back();
     currentlyClosestPois.push({INVALID_VERTEX, INFTY});
+    forwardSearch.run(s);
+    distFromSource.init();
+    distFromSource[numVertices - 1] = forwardSearch.getDistance(numVertices - 1);
 
     while (!recursionStack.empty()) {
       const auto subgraph = recursionStack.back();
@@ -145,8 +153,7 @@ class CCHClosestPoiQuery {
     assert(lastPoi <= idx.pointsOfInterest.size());
     for (auto i = firstPoi; i < lastPoi; ++i) {
       const auto poi = idx.pointsOfInterest[i];
-      elimTreeQuery.runReverseSearch(poi);
-      const auto distToPoi = elimTreeQuery.getDistance();
+      const auto distToPoi = computeDistToVertex(poi);
       if (currentlyClosestPois.size() < k) {
         currentlyClosestPois.push({poi, distToPoi});
       } else if (distToPoi < currentlyClosestPois.top().dist) {
@@ -159,20 +166,45 @@ class CCHClosestPoiQuery {
 
   // Returns a lower bound on the distance from the source to any vertex in the specified subgraph.
   int computeDistToSubgraph(const int node) {
-    const auto& upwardGraph = cch.getUpwardGraph();
-    const auto highestVertex = cch.getSeparatorDecomposition().lastSeparatorVertex(node) - 1;
-    const auto firstBoundaryVertex = &upwardGraph.edgeHead(upwardGraph.firstEdge(highestVertex));
-    const auto lastBoundaryVertex = &upwardGraph.edgeHead(upwardGraph.lastEdge(highestVertex));
-    elimTreeQuery.runReverseSearch(firstBoundaryVertex, lastBoundaryVertex);
-    return elimTreeQuery.getDistance();
+    const auto highestRankedVertex = cch.getSeparatorDecomposition().lastSeparatorVertex(node) - 1;
+    auto dist = INFTY;
+    FORALL_INCIDENT_EDGES(cch.getUpwardGraph(), highestRankedVertex, e)
+      dist = std::min(dist, computeDistToVertex(cch.getUpwardGraph().edgeHead(e)));
+    return dist;
   }
 
-  using ElimTreeQuery = EliminationTreeQuery<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
+  // Returns the exact distance from the source to the specified vertex.
+  int computeDistToVertex(int v) {
+    assert(searchSpace.empty());
+    while (distFromSource[v] == INFTY) {
+      searchSpace.push_back(v);
+      v = cch.getEliminationTree()[v];
+    }
 
-  const CCH& cch;              // The metric-independent CCH.
-  ElimTreeQuery elimTreeQuery; // A standard elimination tree query.
+    while (!searchSpace.empty()) {
+      v = searchSpace.back();
+      searchSpace.pop_back();
+      distFromSource[v] = forwardSearch.getDistance(v);
+      FORALL_INCIDENT_EDGES(minWeightedCH.downwardGraph(), v, e) {
+        const auto tail = minWeightedCH.downwardGraph().edgeHead(e);
+        const auto cost = minWeightedCH.downwardGraph().traversalCost(e);
+        distFromSource[v] = std::min(distFromSource[v], distFromSource[tail] + cost);
+      }
+    }
+
+    return distFromSource[v];
+  }
+
+  using ForwardSearch = UpwardEliminationTreeSearch<BasicLabelSet<0, ParentInfo::NO_PARENT_INFO>>;
+
+  const CCH& cch;          // The metric-independent CCH.
+  const CH& minWeightedCH; // The minimum weighted CH resulting from perfect customization.
 
   std::vector<ActiveSubgraph> recursionStack;    // The stack of active subgraphs.
   std::priority_queue<Poi> currentlyClosestPois; // The closest POIs, with the farthest one on top.
   std::vector<Poi> closestPois;                  // The result of the last query, from close to far.
+
+  ForwardSearch forwardSearch;                           // A forward elimination tree search.
+  StampedDistanceLabelContainer<int32_t> distFromSource; // The distance from source to each vertex.
+  std::vector<int32_t> searchSpace;                      // The search space of the current vertex.
 };
